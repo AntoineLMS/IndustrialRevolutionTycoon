@@ -1,0 +1,168 @@
+using RailTycoon.Sim.Core;
+
+namespace RailTycoon.Sim.Economy;
+
+/// <summary>
+/// L'état d'une marchandise sur un marché local. C'est l'unité de base de toute
+/// l'économie : il y a un Market par (ville, marchandise).
+/// </summary>
+public sealed class Market
+{
+    public required string CargoId { get; init; }
+    public required string CityId { get; init; }
+
+    /// <summary>Stock disponible, en chargements.</summary>
+    public double Stock;
+
+    /// <summary>Prix local courant, recalculé à chaque tick.</summary>
+    public double Price;
+
+    /// <summary>Consommation de base par tick, avant élasticité.</summary>
+    public double BaseDemandRate;
+
+    /// <summary>Production primaire par tick, avant saturation.</summary>
+    public double BaseProductionRate;
+
+    /// <summary>Demande induite par les usines locales (somme de leurs intrants).</summary>
+    public double IndustryDemandRate;
+
+    // --- Télémétrie du tick courant. Remise à zéro au début de chaque tick.
+    // Ces compteurs ne sont pas cosmétiques : ils servent à vérifier
+    // l'invariant de conservation et à tracer les courbes.
+    public double ProducedThisTick;
+    public double ConsumedThisTick;
+    public double ImportedThisTick;
+    public double ExportedThisTick;
+
+    // --- Cumuls sur toute la partie, pour l'invariant de conservation.
+    public double TotalProduced;
+    public double TotalConsumed;
+
+    public void BeginTick()
+    {
+        ProducedThisTick = 0;
+        ConsumedThisTick = 0;
+        ImportedThisTick = 0;
+        ExportedThisTick = 0;
+    }
+
+    public void Produce(double qty)
+    {
+        if (qty <= 0) return;
+        Stock += qty;
+        ProducedThisTick += qty;
+        TotalProduced += qty;
+    }
+
+    /// <summary>Consomme au plus <paramref name="qty"/>, et renvoie la quantité réellement consommée.</summary>
+    public double Consume(double qty)
+    {
+        if (qty <= 0) return 0;
+        double actual = Math.Min(qty, Stock);
+        Stock = Maths.SnapToZero(Stock - actual);
+        ConsumedThisTick += actual;
+        TotalConsumed += actual;
+        return actual;
+    }
+
+    /// <summary>
+    /// Part du stock qu'un train peut acheter : l'excédent au-delà de ce que la
+    /// ville garde pour elle. Voir <see cref="EconomyDef.RetainedCoverage"/> pour
+    /// la raison d'être de cette réserve.
+    /// </summary>
+    public double SellableStock(double horizonTicks, double retainedCoverage)
+    {
+        double demand = BaseDemandRate + IndustryDemandRate;
+        if (demand <= 0) return Stock; // aucun besoin local : tout est cessible
+        return Math.Max(0, Stock - demand * horizonTicks * retainedCoverage);
+    }
+
+    /// <summary>
+    /// Retire du stock pour chargement dans un train. Contrairement à
+    /// <see cref="Consume"/>, la marchandise n'est pas détruite : elle change de
+    /// détenteur, et l'invariant de conservation en tient compte.
+    /// </summary>
+    public double Withdraw(double qty)
+    {
+        if (qty <= 0) return 0;
+        double actual = Math.Min(qty, Stock);
+        Stock = Maths.SnapToZero(Stock - actual);
+        ExportedThisTick += actual;
+        return actual;
+    }
+
+    public void Deposit(double qty)
+    {
+        if (qty <= 0) return;
+        Stock += qty;
+        ImportedThisTick += qty;
+    }
+}
+
+public sealed class Industry
+{
+    public required RecipeDef Recipe { get; init; }
+    public double Capacity;
+
+    /// <summary>Taux d'utilisation du dernier tick, dans [0, 1]. Sert au diagnostic d'équilibrage.</summary>
+    public double Utilization;
+}
+
+public sealed class City
+{
+    public required CityDef Def { get; init; }
+    public string Id => Def.Id;
+
+    public readonly Dictionary<string, Market> Markets = new();
+    public readonly List<Industry> Industries = new();
+
+    public Market Market(string cargoId) => Markets[cargoId];
+}
+
+/// <summary>
+/// La compagnie du joueur. Dans ce prototype on ne modélise que la trésorerie
+/// et le compte d'exploitation ; la bourse, les obligations et la distinction
+/// entre caisse personnelle et caisse de la société arrivent avec le module
+/// finance (voir docs/CONTRACTS.md).
+/// </summary>
+public sealed class Company
+{
+    public double Cash;
+
+    public double TotalHaulRevenue;
+    public double TotalCargoPurchases;
+    public double TotalOperatingCost;
+
+    public double RevenueThisTick;
+    public double CostThisTick;
+
+    public void BeginTick()
+    {
+        RevenueThisTick = 0;
+        CostThisTick = 0;
+    }
+
+    public void Earn(double amount)
+    {
+        Cash += amount;
+        RevenueThisTick += amount;
+        TotalHaulRevenue += amount;
+    }
+
+    public void PayForCargo(double amount)
+    {
+        Cash -= amount;
+        CostThisTick += amount;
+        TotalCargoPurchases += amount;
+    }
+
+    public void PayOperating(double amount)
+    {
+        Cash -= amount;
+        CostThisTick += amount;
+        TotalOperatingCost += amount;
+    }
+
+    /// <summary>Résultat net cumulé depuis le début de la partie.</summary>
+    public double NetProfit => TotalHaulRevenue - TotalCargoPurchases - TotalOperatingCost;
+}

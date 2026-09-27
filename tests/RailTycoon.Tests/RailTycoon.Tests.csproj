@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>RailTycoon.Tests</RootNamespace>
+    <AssemblyName>railtycoon-tests</AssemblyName>
+    <!-- Volontairement sans xUnit ni NUnit : zéro paquet NuGet, donc la suite se
+         compile et s'exécute hors ligne, sur une machine neuve, et dans une CI
+         sans cache de paquets. On ajoutera un vrai runner le jour où le besoin
+         dépassera « rouge ou vert ». -->
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RailTycoon.Sim\RailTycoon.Sim.csproj" />
+  </ItemGroup>
+</Project>

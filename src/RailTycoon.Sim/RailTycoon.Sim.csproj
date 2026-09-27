@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>RailTycoon.Sim</RootNamespace>
+    <!-- Aucune dépendance moteur, aucun paquet NuGet : cette bibliothèque doit
+         pouvoir être compilée et testée sans Godot, sans Unity et hors ligne. -->
+  </PropertyGroup>
+</Project>

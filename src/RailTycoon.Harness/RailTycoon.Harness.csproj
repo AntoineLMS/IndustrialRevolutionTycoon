@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>RailTycoon.Harness</RootNamespace>
+    <AssemblyName>railtycoon</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RailTycoon.Sim\RailTycoon.Sim.csproj" />
+  </ItemGroup>
+</Project>

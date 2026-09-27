@@ -1,0 +1,147 @@
+{
+  "id": "heartland",
+  "name": "La Plaine centrale — 1870",
+  "seed": 20260927,
+  "startingCash": 100000,
+  "initialCoverage": 1.0,
+
+  "//horizon": "15 jours, pas 30. L'horizon fixe l'échelle du stock qui compte, donc ce qu'un seul train peut changer en arrivant. À 30 jours, amener le blé de Millbrook sous le seuil de rentabilité de son moulin demandait 31 chargements pour une capacité de 24 : aucune livraison ne pouvait démarrer l'usine, et le moulin restait à 7 %. À 15 jours il en faut 16, et un train suffit à débloquer un site — ce qui est la décision que le joueur doit pouvoir prendre.",
+
+  "priceModel": {
+    "coverageHorizonTicks": 15,
+    "shape": 0.5,
+    "minMultiplier": 0.12,
+    "maxMultiplier": 3.0
+  },
+
+  "economy": {
+    "productionStorageTicks": 30,
+    "minProductionFactor": 0.1,
+    "minConsumptionResponse": 0.3,
+    "maxConsumptionResponse": 1.5
+  },
+
+  "haulage": {
+    "minMargin": 0.10,
+    "minProfitPerUnit": 1.5,
+    "expectedLoadFactor": 0.6,
+    "priceImpactSlices": 8,
+    "minTradeQty": 0.25
+  },
+
+  "//prix": "Chaque maillon ajoute environ 70 % de valeur au prix de référence. Cette marge n'est pas décorative : elle est la réserve dans laquelle l'usine peut absorber un intrant devenu cher avant de s'arrêter. Trop mince (le moulin à 10 % du premier jet), l'usine ne démarre jamais ; trop large (la scierie à 350 %), elle tourne quoi qu'il arrive et le prix de ses intrants cesse de compter.",
+
+  "cargos": [
+    { "id": "grain",  "name": "Blé",         "basePrice": 10, "elasticity": 0.4 },
+    { "id": "flour",  "name": "Farine",      "basePrice": 34, "elasticity": 0.5 },
+    { "id": "food",   "name": "Nourriture",  "basePrice": 58, "elasticity": 0.3 },
+    { "id": "logs",   "name": "Grumes",      "basePrice": 8,  "elasticity": 0.7 },
+    { "id": "boards", "name": "Planches",    "basePrice": 14, "elasticity": 0.8 },
+    { "id": "coal",   "name": "Charbon",     "basePrice": 14, "elasticity": 0.2 }
+  ],
+
+  "recipes": [
+    {
+      "id": "mill", "name": "Moulin",
+      "//": "2 × 10 → 34 : marge 1,70",
+      "inputs":  [ { "cargo": "grain", "qty": 2.0 } ],
+      "outputs": [ { "cargo": "flour", "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    },
+    {
+      "id": "bakery", "name": "Boulangerie",
+      "//": "34 → 58 : marge 1,71",
+      "inputs":  [ { "cargo": "flour", "qty": 1.0 } ],
+      "outputs": [ { "cargo": "food",  "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    },
+    {
+      "id": "sawmill", "name": "Scierie",
+      "//": "8 → 14 : marge 1,75",
+      "inputs":  [ { "cargo": "logs",   "qty": 1.0 } ],
+      "outputs": [ { "cargo": "boards", "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    }
+  ],
+
+  "cities": [
+    {
+      "id": "fairview", "name": "Fairview", "population": 4000,
+      "production": { "grain": 2.0 },
+      "demand": { "food": 0.05, "coal": 0.04, "boards": 0.02 },
+      "initialStock": { "grain": 30 }
+    },
+    {
+      "id": "millbrook", "name": "Millbrook", "population": 9000,
+      "demand": { "food": 0.07, "coal": 0.06, "boards": 0.04 },
+      "industries": [ { "recipe": "mill", "capacity": 2.0 } ]
+    },
+    {
+      "id": "pinegrove", "name": "Pinegrove", "population": 6000,
+      "production": { "logs": 0.8 },
+      "demand": { "food": 0.05, "coal": 0.04 },
+      "industries": [ { "recipe": "sawmill", "capacity": 0.7 } ],
+      "initialStock": { "logs": 20 }
+    },
+    {
+      "id": "coalburg", "name": "Coalburg", "population": 11000,
+      "production": { "coal": 1.15 },
+      "demand": { "food": 0.10, "boards": 0.04, "grain": 0.05 },
+      "initialStock": { "coal": 30 }
+    },
+    {
+      "id": "rivertown", "name": "Rivertown", "population": 18000,
+      "demand": { "food": 0.11, "coal": 0.08, "boards": 0.05 },
+      "industries": [ { "recipe": "bakery", "capacity": 1.1 } ]
+    },
+    {
+      "id": "ashford", "name": "Ashford", "population": 26000,
+      "demand": { "food": 0.16, "coal": 0.14, "boards": 0.09 },
+      "industries": [ { "recipe": "mill", "capacity": 1.1 } ]
+    },
+    {
+      "id": "kingsport", "name": "Kingsport", "population": 62000,
+      "demand": { "food": 0.28, "coal": 0.22, "boards": 0.15 },
+      "industries": [ { "recipe": "bakery", "capacity": 1.7 } ]
+    },
+    {
+      "id": "weston", "name": "Weston", "population": 5000,
+      "production": { "grain": 1.5 },
+      "demand": { "food": 0.07, "coal": 0.05 },
+      "initialStock": { "grain": 25 }
+    },
+    {
+      "id": "ironhill", "name": "Ironhill", "population": 21000,
+      "demand": { "coal": 0.20, "boards": 0.11, "food": 0.13 },
+      "industries": [ { "recipe": "sawmill", "capacity": 0.7 } ]
+    },
+    {
+      "id": "northgate", "name": "Northgate", "population": 48000,
+      "demand": { "food": 0.25, "coal": 0.20, "boards": 0.13 }
+    }
+  ],
+
+  "lines": [
+    {
+      "id": "main", "name": "Ligne principale",
+      "stops": [
+        { "city": "fairview",  "distanceKm": 0 },
+        { "city": "millbrook", "distanceKm": 45 },
+        { "city": "pinegrove", "distanceKm": 95 },
+        { "city": "coalburg",  "distanceKm": 150 },
+        { "city": "rivertown", "distanceKm": 210 },
+        { "city": "ashford",   "distanceKm": 265 },
+        { "city": "kingsport", "distanceKm": 330 },
+        { "city": "weston",    "distanceKm": 385 },
+        { "city": "ironhill",  "distanceKm": 440 },
+        { "city": "northgate", "distanceKm": 500 }
+      ]
+    }
+  ],
+
+  "trains": [
+    { "id": "t1", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 0 },
+    { "id": "t2", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 4 },
+    { "id": "t3", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 9 }
+  ]
+}
