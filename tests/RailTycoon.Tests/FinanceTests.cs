@@ -241,9 +241,15 @@ internal static class FinanceTests
             // sur ce scénario, et il faut alors soit relâcher le scénario de finance,
             // soit redériver ses chiffres de référence. Ceux de heartland, eux, ne
             // dépendent d'aucun réglage financier — il n'en a plus.
-            string Fingerprint(string path)
+            //
+            // Il se vérifie sous les deux solveurs. Sous la référence seule, il est
+            // resté vert pendant que heartland-finance.json n'avait pas le bloc
+            // anticipating de heartland : la référence ignore ce bloc, donc
+            // l'écart ne pouvait pas se voir, et `--solver anticipating` faisait
+            // diverger les deux scénarios sans que rien ne le signale.
+            string Fingerprint(string path, IEconomySolver solver)
             {
-                var sim = new Simulation(ScenarioLoader.Load(path));
+                var sim = new Simulation(ScenarioLoader.Load(path), solver);
                 var recorder = new CsvRecorder();
                 recorder.Record(sim.World);
                 for (int i = 0; i < 720; i++)
@@ -254,8 +260,14 @@ internal static class FinanceTests
                 return recorder.Fingerprint();
             }
 
-            Check.Equal(Fingerprint(Fixtures.HeartlandPath()), Fingerprint(FinancePath()),
-                "empreinte de la trace des marchés, sans finance puis avec");
+            Check.Equal(
+                Fingerprint(Fixtures.HeartlandPath(), new ReferenceEconomySolver()),
+                Fingerprint(FinancePath(), new ReferenceEconomySolver()),
+                "empreinte de la trace des marchés, sans finance puis avec (solveur de référence)");
+            Check.Equal(
+                Fingerprint(Fixtures.HeartlandPath(), new AnticipatingEconomySolver()),
+                Fingerprint(FinancePath(), new AnticipatingEconomySolver()),
+                "empreinte de la trace des marchés, sans finance puis avec (solveur anticipant)");
         });
 
         runner.Add("finance — le scénario de régression de l'économie n'active pas la finance", () =>
@@ -275,13 +287,22 @@ internal static class FinanceTests
                 "heartland-finance.json doit activer le module");
 
             // Et les deux doivent bien décrire la même économie, sinon la
-            // comparaison d'empreintes ci-dessus ne prouverait rien.
-            Check.True(reference.Cargos.Count == dedicated.Cargos.Count &&
-                       reference.Cities.Count == dedicated.Cities.Count &&
-                       reference.Recipes.Count == dedicated.Recipes.Count &&
-                       reference.Trains.Count == dedicated.Trains.Count &&
-                       reference.Seed == dedicated.Seed,
-                "les deux scénarios doivent décrire la même économie");
+            // comparaison d'empreintes ci-dessus ne prouverait rien. La comparaison
+            // porte sur le contenu, pas sur le nombre d'éléments : compter les
+            // villes n'avait pas vu qu'un bloc entier manquait. Seuls l'identité et
+            // le bloc finance ont le droit de différer ; tout bloc ajouté plus tard
+            // au scénario tombe automatiquement sous la comparaison.
+            string Economy(ScenarioDef scenario)
+            {
+                scenario.Id = "";
+                scenario.Name = "";
+                scenario.Finance = new FinanceDef();
+                return System.Text.Json.JsonSerializer.Serialize(scenario);
+            }
+
+            Check.True(Economy(reference) == Economy(dedicated),
+                "heartland.json et heartland-finance.json doivent décrire la même économie, " +
+                "à l'identité et au bloc finance près");
         });
 
         runner.Add("finance — un scénario sans bloc finance tourne comme avant", () =>

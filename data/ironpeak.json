@@ -15,6 +15,12 @@
 
   "//trains": "Mesuré sur 720 ticks avec les 3 trains ci-dessous (non exigé par le critère de réussite, qui ne porte que sur le bilan et les invariants — les deux passent) : résultat net 236 682 à 1 train, 290 251 à 2 (optimum), 258 331 à 3 (config par défaut du fichier), 131 334 à 4. Toujours clairement positif, optimum à 2 trains, dégradation nette au-delà — même forme que Heartland (FINDINGS.md). Santé du signal-prix mesurée avec la configuration à 3 trains : 6 marchandises sur 7 « exploitable » (nourriture, charbon, grumes, planches, minerai, acier), seule la fonte reste « trop uniforme » (écart ×1,3) malgré ses deux acheteurs actifs (Steelford 100 %, Forgeton 77 % d'utilisation) — Heartland a le même symptôme sur sa farine et sa nourriture (écart ×1,4 chacune, voir sa propre santé du signal-prix), donc pas une anomalie propre à ce fichier mais une limite connue du solveur de référence sur un bien bien desservi par ses deux acheteurs.",
 
+  "//anticipating": "Pas de bloc anticipating, en connaissance de cause : sans réglage, le solveur anticipant rend ici la trace de la référence au bit près — ses gains mesurés sur heartland sont ceux de heartland, pas ceux du moteur. Régler ce bloc pour la chaîne acier est un travail d'équilibrage à part entière (mesurer mobilité et résultat, comme l'a fait heartland), pas une copie de ses valeurs.",
+
+  "//network": "Pas de relief : la montagne est représentée par l'isolement d'Ironpeak et par les distances saisies à la main (voir « //geographie »). Poser ce scénario sur une carte déplacerait tous les chiffres de « //trains ».",
+
+  "//finance": "Pas de finance : ce scénario éprouve la chaîne de production du module content, et un scénario éprouve une chose à la fois. Le volet financier vit dans data/heartland-finance.json.",
+
   "priceModel": {
     "coverageHorizonTicks": 15,
     "shape": 0.5,

@@ -9,6 +9,10 @@
 
   "//routes": "Deux itinéraires sur la même carte, et c'est le cœur de l'arbitrage : « main » franchit la chaîne au col, « crest » la franchit quatorze kilomètres plus à l'ouest, là où rien ne l'abaisse. Même longueur, même relief, deux devis qui n'ont rien à voir. Un troisième choix — contourner par la vallée — coûte le devis de terrain-valley.json plus le raccordement.",
 
+  "//anticipating": "Carte d'essai du module réseau : elle chiffre un tracé, elle ne mesure pas l'économie. Pas de bloc anticipating, donc le solveur anticipant y rendrait la trace de la référence. Le scénario qui fera tourner relief et économie ensemble sera un scénario neuf, pas une mutation de cette carte, dont le devis sert de référence aux tests.",
+
+  "//finance": "Pas de finance : une carte d'essai du réseau éprouve le devis de construction et rien d'autre.",
+
   "priceModel": { "coverageHorizonTicks": 15, "shape": 0.5, "minMultiplier": 0.12, "maxMultiplier": 3.0 },
 
   "cargos": [

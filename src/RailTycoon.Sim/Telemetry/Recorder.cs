@@ -87,10 +87,20 @@ public sealed class CsvRecorder
     /// la même graine doivent produire la même empreinte : c'est le test de
     /// déterminisme le moins cher qui existe.
     /// </summary>
-    public string Fingerprint()
+    public string Fingerprint() => Hash(_markets.ToString());
+
+    /// <summary>
+    /// Empreinte des trois traces — marchés, compagnie, usines — suivie d'un
+    /// complément libre. C'est celle des traces de référence : l'empreinte des
+    /// marchés seule ne verrait pas un changement de la trésorerie ou de
+    /// l'utilisation des usines qui laisserait les prix intacts.
+    /// </summary>
+    public string TraceFingerprint(string extra = "")
+        => Hash(_markets.ToString() + _company.ToString() + _industries.ToString() + extra);
+
+    private static string Hash(string text)
     {
-        byte[] bytes = System.Security.Cryptography.SHA256.HashData(
-            Encoding.UTF8.GetBytes(_markets.ToString()));
+        byte[] bytes = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(text));
         return Convert.ToHexString(bytes, 0, 8);
     }
 }

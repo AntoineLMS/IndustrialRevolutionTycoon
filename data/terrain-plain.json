@@ -7,6 +7,10 @@
 
   "//": "Carte de référence n° 1. Un large bombement et une rugosité de quelques dizaines de mètres, rien qui dépasse la pente maximale sur plus d'une maille. Le devis doit donc être presque entièrement de la pose de voie : c'est le plancher auquel les deux autres cartes se comparent.",
 
+  "//anticipating": "Carte d'essai du module réseau : elle chiffre un tracé, elle ne mesure pas l'économie. Pas de bloc anticipating, donc le solveur anticipant y rendrait la trace de la référence. Le scénario qui fera tourner relief et économie ensemble sera un scénario neuf, pas une mutation de cette carte, dont le devis sert de référence aux tests.",
+
+  "//finance": "Pas de finance : une carte d'essai du réseau éprouve le devis de construction et rien d'autre.",
+
   "priceModel": { "coverageHorizonTicks": 15, "shape": 0.5, "minMultiplier": 0.12, "maxMultiplier": 3.0 },
 
   "cargos": [

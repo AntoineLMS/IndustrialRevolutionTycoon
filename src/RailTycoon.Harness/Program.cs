@@ -29,6 +29,12 @@ internal static class Program
 
         var scenario = ScenarioLoader.Load(opts.ScenarioPath);
 
+        // Un bloc absent rend son module inerte sans le dire. Le signaler ne coûte
+        // qu'une ligne ; ne pas le signaler a déjà coûté une conclusion fausse.
+        foreach (var block in ScenarioLoader.UndeclaredModuleBlocks(File.ReadAllText(opts.ScenarioPath)))
+            Console.Error.WriteLine(
+                $"Attention : aucun bloc « {block} » ni « //{block} » dans ce scénario — le module tourne sur ses défauts.");
+
         if (opts.BalanceOnly)
         {
             Report.PrintBalance(scenario);

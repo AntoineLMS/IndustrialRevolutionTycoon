@@ -21,6 +21,14 @@ produisent du code qui ne s'assemble pas.
 5. Toute valeur équilibrable vit dans `data/*.json`, jamais en dur dans le code.
 6. `dotnet run --project tests/RailTycoon.Tests` doit rester vert, et chaque
    module ajoute ses propres invariants à la suite.
+7. Un changement qui déplace une trace de référence (`ReferenceTraceTests`) met
+   à jour l'empreinte **et** dit dans son message de commit pourquoi la trace a
+   bougé. Une empreinte recopiée sans explication rend le test aussi creux que
+   celui qu'il remplace.
+8. Chaque scénario de `data/` déclare les blocs de tous les modules
+   (`anticipating`, `network`, `finance`), ou écarte explicitement ceux dont il
+   se passe avec une clé `"//<bloc>"` qui dit pourquoi. Un module qui ajoute un
+   bloc l'inscrit dans `ScenarioLoader.ModuleBlocks`.
 
 ## Modules
 

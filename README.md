@@ -42,8 +42,10 @@ dotnet run --project tests/RailTycoon.Tests
 ```
 
 La suite vérifie les invariants — conservation de la matière, positivité des
-stocks, bornes de prix, équilibre de la trésorerie, reproductibilité de la trace,
-et côté finance l'équilibre du bilan au centime à chaque tick.
+stocks, bornes de prix, équilibre de la trésorerie, et côté finance l'équilibre du
+bilan au centime à chaque tick. Elle compare aussi chaque scénario livré à une
+**trace de référence** figée : tout changement de comportement de la simulation
+la fait échouer, et doit être justifié dans le commit qui met l'empreinte à jour.
 Elle n'utilise aucun paquet NuGet et fonctionne hors ligne.
 
 Avant toute simulation, vérifier que le scénario est réalisable :
