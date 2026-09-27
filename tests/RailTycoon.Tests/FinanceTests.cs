@@ -13,6 +13,16 @@ namespace RailTycoon.Tests;
 /// </summary>
 internal static class FinanceTests
 {
+    /// <summary>
+    /// Le scénario dédié au module finance. <c>heartland.json</c> reste la trace de
+    /// régression de l'<em>économie</em> et n'active pas la finance : tous les
+    /// chiffres de docs/FINDINGS.md la supposent exempte d'effets financiers, et un
+    /// scénario doit éprouver une chose à la fois. Celui-ci reprend la même économie
+    /// au caractère près et n'ajoute que le bloc <c>finance</c>.
+    /// </summary>
+    private static string FinancePath()
+        => Path.Combine(Fixtures.RepoRoot(), "data", "heartland-finance.json");
+
     public static void Register(TestRunner runner)
     {
         // LE test du contrat finance. Il ne vérifie pas une tolérance mais une
@@ -21,7 +31,7 @@ internal static class FinanceTests
         // et une tolérance relative de 1e-9 ne la verrait jamais.
         runner.Add("finance — 720 ticks : tout bilan s'équilibre au centime", () =>
         {
-            var sim = new Simulation(ScenarioLoader.Load(Fixtures.HeartlandPath()));
+            var sim = new Simulation(ScenarioLoader.Load(FinancePath()));
             double initialStock = Invariants.InitialStockTotal(sim.World);
             var finance = sim.World.Finance;
             Check.True(finance.Enabled, "le scénario de référence doit activer le module finance");
@@ -74,7 +84,7 @@ internal static class FinanceTests
 
         runner.Add("finance — la dette plus les intérêts payés correspond aux emprunts", () =>
         {
-            var sim = new Simulation(ScenarioLoader.Load(Fixtures.HeartlandPath()));
+            var sim = new Simulation(ScenarioLoader.Load(FinancePath()));
             sim.Run(720);
 
             foreach (var company in sim.World.Finance.Companies)
@@ -97,7 +107,7 @@ internal static class FinanceTests
 
         runner.Add("finance — la somme des actions détenues égale le nombre d'actions émises", () =>
         {
-            var sim = new Simulation(ScenarioLoader.Load(Fixtures.HeartlandPath()));
+            var sim = new Simulation(ScenarioLoader.Load(FinancePath()));
             sim.Run(720);
 
             foreach (var company in sim.World.Finance.Companies)
@@ -123,7 +133,7 @@ internal static class FinanceTests
             // société : ce qui sort de l'une entre dans l'autre, à l'action près.
             // C'est la propriété qui permet de ruiner la compagnie et de
             // s'enrichir soi-même, donc celle qu'il faut vérifier exactement.
-            var sim = new Simulation(ScenarioLoader.Load(Fixtures.HeartlandPath()));
+            var sim = new Simulation(ScenarioLoader.Load(FinancePath()));
             var player = sim.World.Finance.Player!;
             var tycoon = sim.World.Finance.Magnate!;
 
@@ -219,33 +229,59 @@ internal static class FinanceTests
 
         runner.Add("finance — le module n'influence pas l'économie", () =>
         {
-            // Garantie de non-régression pour les trois autres modules : sur le
-            // scénario de référence, activer la finance ne déplace ni un chargement
-            // ni un centime. La finance reflète la trésorerie d'exploitation sans
-            // jamais l'écrire, et son aléa vit sur une séquence qui lui est propre.
+            // Le scénario de finance reprend l'économie de heartland au caractère
+            // près : la trace des marchés doit donc être la même de part et d'autre,
+            // et c'est ce qui protège les chiffres de docs/FINDINGS.md.
             //
-            // Une réserve, et elle est volontaire : le découvert autorisé assouplit
-            // la règle d'achat du transporteur, qui refusait tout achat sous zéro.
-            // Sur un scénario où la trésorerie frôle zéro, activer la finance
-            // changerait donc la trace — c'est l'intérêt même du crédit. Ici la
-            // trésorerie ne descend jamais sous 90 000 et la facilité ne joue pas.
-            string Fingerprint(bool financeEnabled)
+            // Ce test peut légitimement casser un jour, et il faut savoir comment le
+            // lire. Depuis que les prélèvements financiers sortent réellement de la
+            // trésorerie, la pression financière peut atteindre le point où le
+            // transporteur n'a plus de quoi acheter. Si cette égalité tombe, ce n'est
+            // pas la finance qui a fuité : c'est le couplage qui est devenu mordant
+            // sur ce scénario, et il faut alors soit relâcher le scénario de finance,
+            // soit redériver ses chiffres de référence. Ceux de heartland, eux, ne
+            // dépendent d'aucun réglage financier — il n'en a plus.
+            string Fingerprint(string path)
             {
-                var scenario = ScenarioLoader.Load(Fixtures.HeartlandPath());
-                scenario.Finance.Enabled = financeEnabled;
-                var sim = new Simulation(scenario);
+                var sim = new Simulation(ScenarioLoader.Load(path));
                 var recorder = new CsvRecorder();
                 recorder.Record(sim.World);
-                for (int i = 0; i < 240; i++)
+                for (int i = 0; i < 720; i++)
                 {
                     sim.Step();
                     recorder.Record(sim.World);
                 }
-                return $"{recorder.Fingerprint()}/{sim.World.Company.Cash:0.########}";
+                return recorder.Fingerprint();
             }
 
-            Check.Equal(Fingerprint(false), Fingerprint(true),
-                "la trace des marchés et la trésorerie d'exploitation avec et sans finance");
+            Check.Equal(Fingerprint(Fixtures.HeartlandPath()), Fingerprint(FinancePath()),
+                "empreinte de la trace des marchés, sans finance puis avec");
+        });
+
+        runner.Add("finance — le scénario de régression de l'économie n'active pas la finance", () =>
+        {
+            // Décision de conception, et elle se protège par un test : heartland est
+            // la trace de régression de l'économie, et tous les chiffres de
+            // docs/FINDINGS.md la supposent exempte d'effets financiers. Activer la
+            // finance dessus déplacerait la trésorerie disponible du transporteur,
+            // donc ses achats, donc l'empreinte et le résultat de 240 374 que trois
+            // documents citent. Un scénario éprouve une chose à la fois.
+            var reference = ScenarioLoader.Load(Fixtures.HeartlandPath());
+            Check.True(!reference.Finance.Enabled,
+                "heartland.json doit garder finance.enabled = false");
+
+            var dedicated = ScenarioLoader.Load(FinancePath());
+            Check.True(dedicated.Finance.Enabled,
+                "heartland-finance.json doit activer le module");
+
+            // Et les deux doivent bien décrire la même économie, sinon la
+            // comparaison d'empreintes ci-dessus ne prouverait rien.
+            Check.True(reference.Cargos.Count == dedicated.Cargos.Count &&
+                       reference.Cities.Count == dedicated.Cities.Count &&
+                       reference.Recipes.Count == dedicated.Recipes.Count &&
+                       reference.Trains.Count == dedicated.Trains.Count &&
+                       reference.Seed == dedicated.Seed,
+                "les deux scénarios doivent décrire la même économie");
         });
 
         runner.Add("finance — un scénario sans bloc finance tourne comme avant", () =>
@@ -261,6 +297,107 @@ internal static class FinanceTests
             Check.True(sim.World.Finance.Player is null, "aucune société ne doit être ouverte");
             Check.True(Invariants.Check(sim.World, initialStock).Count == 0,
                 "les invariants doivent tenir sans module finance");
+        });
+
+        runner.Add("finance — la trésorerie s'explique intégralement par ses quatre flux", () =>
+        {
+            // `bilan-tresorerie` a changé de formule, et c'est une correction, pas un
+            // assouplissement. Tant que la finance tenait sa propre caisse, il ne
+            // vérifiait qu'une moitié de la vérité : un dividende sortait du bilan de
+            // la société sans sortir de la trésorerie du transporteur, qui pouvait
+            // donc dépenser le même argent. Les deux bilans s'équilibraient au
+            // centime et la fuite était pourtant réelle — la signature exacte du
+            // lavage de fret. Le quatrième flux ferme cette porte.
+            var sim = new Simulation(ScenarioLoader.Load(FinancePath()));
+            var co = sim.World.Company;
+            double worstGap = 0;
+
+            for (int i = 0; i < 720; i++)
+            {
+                sim.Step();
+                double expected = sim.World.Def.StartingCash + co.NetProfit + co.TotalFinanceFlow;
+                double gap = Math.Abs(co.Cash - expected);
+                if (gap > worstGap) worstGap = gap;
+            }
+
+            Check.True(worstGap <= 1e-4,
+                $"la trésorerie s'écarte de {worstGap:0.########} de ses quatre flux");
+
+            // Le test ne prouverait rien si le quatrième flux valait zéro : il faut
+            // que la finance ait réellement prélevé de l'argent au transporteur.
+            Check.Less(co.TotalFinanceFlow, -1000.0,
+                $"les prélèvements financiers doivent être significatifs, or {co.TotalFinanceFlow:0.00}");
+
+            // Et le résultat net doit rester une mesure du transport seul, sinon la
+            // sentinelle de marge au kilomètre ne veut plus rien dire.
+            double km = sim.World.Trains.Sum(t => t.TotalKmTravelled);
+            Check.Less(co.NetProfit / km, 3.0,
+                "le résultat net ne doit pas absorber les flux financiers");
+        });
+
+        runner.Add("finance — un prélèvement financier non reflété est détecté", () =>
+        {
+            // LA sentinelle de la faille corrigée. On la réintroduit à la main : un
+            // dividende occulte, passé au bilan de la société — caisse et capitaux
+            // propres en baisse du même montant, écriture parfaitement équilibrée —
+            // mais jamais répercuté sur la trésorerie du transporteur.
+            //
+            // C'est exactement ce que faisait le module avant correction, et aucun
+            // invariant ne s'en apercevait. `frontiere-tresorerie` doit l'attraper.
+            var sim = new Simulation(ScenarioLoader.Load(FinancePath()));
+            double initialStock = Invariants.InitialStockTotal(sim.World);
+            sim.Run(120);
+
+            Check.True(Invariants.Check(sim.World, initialStock).Count == 0,
+                "les invariants doivent être sains avant l'injection");
+
+            var player = sim.World.Finance.Player!;
+            decimal stolen = 5_000m;
+            player.Book.Post("dividende occulte",
+                new Leg(Accounts.RetainedEarnings, stolen),
+                new Leg(Accounts.Cash, -stolen));
+
+            var violations = Invariants.Check(sim.World, initialStock);
+            bool caught = violations.Any(v => v.Rule == "frontiere-tresorerie");
+            Check.True(caught,
+                "un prélèvement non reflété doit violer frontiere-tresorerie ; " +
+                $"violations obtenues : {(violations.Count == 0 ? "aucune" : string.Join(", ", violations.Select(v => v.Rule)))}");
+
+            // Et le bilan de la société, lui, reste parfaitement équilibré : c'est
+            // bien là le piège. Une comptabilité juste ne dit pas que l'argent est
+            // au bon endroit.
+            Check.True(player.Book.Residual == 0m,
+                "l'écriture injectée est équilibrée : c'est ce qui rend la fuite invisible au bilan");
+            Check.True(!violations.Any(v => v.Rule == "bilan-actif-passif"),
+                "aucune violation de bilan ne doit apparaître — la fuite n'est pas un déséquilibre");
+        });
+
+        runner.Add("finance — un dividende réduit ce que le transporteur peut engager", () =>
+        {
+            // Le sens de la correction, côté jeu : distribuer aux actionnaires, c'est
+            // retirer de l'argent aux trains. Avant, le magnat encaissait et le
+            // transporteur ne s'en apercevait pas.
+            var sim = new Simulation(ScenarioLoader.Load(FinancePath()));
+            var player = sim.World.Finance.Player!;
+            var co = sim.World.Company;
+
+            for (int i = 0; i < 720; i++)
+            {
+                double cashBefore = co.Cash;
+                double flowBefore = co.TotalFinanceFlow;
+                sim.Step();
+                if (player.DividendThisTick <= 0m) continue;
+
+                // Le tick contient aussi l'exploitation : on mesure donc sur le flux
+                // financier, qui est la part que la finance revendique.
+                double drawn = flowBefore - co.TotalFinanceFlow;
+                Check.True(drawn > 0,
+                    $"un dividende de {player.DividendThisTick} n'a rien prélevé " +
+                    $"(trésorerie {cashBefore:0.00} → {co.Cash:0.00})");
+                return;
+            }
+
+            Check.True(false, "aucune distribution en 720 ticks");
         });
 
         runner.Add("finance — une trésorerie négative devient une dette explicite au bilan", () =>
@@ -375,7 +512,7 @@ internal static class FinanceTests
             // par un demi-centime pour toujours, au lieu de croître d'un
             // demi-centime par tick — ce qui ferait 3,60 par an, invisible dans
             // une tolérance relative.
-            var sim = new Simulation(ScenarioLoader.Load(Fixtures.HeartlandPath()));
+            var sim = new Simulation(ScenarioLoader.Load(FinancePath()));
             var finance = sim.World.Finance;
             double worstGap = 0;
 

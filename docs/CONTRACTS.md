@@ -81,17 +81,36 @@ dividendes au prorata, achat sur marge avec appel de marge, augmentation de
 capital, prise de participation dans un concurrent piloté par les données, OPA sur
 le flottant et fusion-absorption.
 
+**Scénarios** : `data/heartland-finance.json` est le scénario du module. Il reprend
+l'économie de `heartland.json` au caractère près et n'ajoute que le bloc
+`finance` ; `heartland.json` reste la trace de régression de l'**économie** et
+n'active pas la finance. Cette séparation est une décision, protégée par un test :
+tous les chiffres de [FINDINGS.md](FINDINGS.md) supposent `heartland` exempte
+d'effets financiers, et un scénario doit éprouver une chose à la fois.
+
 **Ce qui manque** : un vrai concurrent (le module `ai` — les concurrents actuels
 sont des bilans animés par des données, pas des réseaux), les dividendes des
 concurrents, la prime de contrôle négociée plutôt que fixée, la faillite
-liquidative, l'amortissement du matériel réellement acheté plutôt qu'une valeur de
-départ, et — le point le plus important — **la caisse de la société au sens
-finance et la trésorerie d'exploitation du module transport sont deux
-représentations du même argent**. La finance reflète la seconde et ne peut pas
-l'écrire, faute de quoi `bilan-tresorerie` changerait de formule. Une dépense
-financière n'est donc pas visible du transporteur. La correction tient en une
-ligne : ajouter un quatrième flux cumulé à `Company` et l'inclure dans
-`bilan-tresorerie`.
+liquidative (l'administration judiciaire gèle, elle ne liquide pas), et
+l'amortissement du matériel réellement acheté plutôt qu'une valeur de départ.
+
+**Dette connue, assumée, à traiter plus tard.** Deux points sont identifiés et
+volontairement laissés en l'état :
+
+1. **Le flottant est une contrepartie de profondeur infinie.** Il absorbe n'importe
+   quel volume au cours affiché, et les plus-values que le magnat y réalise
+   viennent de l'extérieur du modèle — sur le scénario de finance, plusieurs
+   centaines de milliers. L'impact de marché (`valuation.marketImpact`) rend
+   l'aller-retour coûteux mais ne referme pas la boucle. Même famille que le lavage
+   de fret, en atténué : à traiter par une profondeur de carnet finie, sur le
+   modèle du découpage en tranches d'une grosse livraison.
+2. **Aucune statistique moyennée côté finance.** Le harnais affiche la fortune du
+   magnat telle qu'elle est au dernier tick, or un tick sur trente est un tick
+   d'ordre de bourse, et le cours y porte encore l'impact que l'ordre vient de
+   produire. C'est précisément l'erreur d'instantané final que
+   [FINDINGS.md](FINDINGS.md) documente pour les marchés. Il faut l'équivalent de
+   `RunStatistics` pour les grandeurs financières avant de tirer une conclusion
+   d'équilibrage de ces chiffres.
 
 **Critère de réussite** : tout bilan s'équilibre au centime à chaque tick, et
 l'invariant `bilan-tresorerie` reste vérifié. En finance, une fuite d'un

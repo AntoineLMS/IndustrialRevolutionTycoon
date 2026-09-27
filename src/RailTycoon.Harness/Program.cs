@@ -269,6 +269,10 @@ internal static class Report
         Console.WriteLine($"  Achats de fret      -{co.TotalCargoPurchases.ToString("N0", Ci),12}");
         Console.WriteLine($"  Exploitation        -{co.TotalOperatingCost.ToString("N0", Ci),12}");
         Console.WriteLine($"  Résultat net         {co.NetProfit.ToString("N0", Ci),12}");
+        // Quatrième flux de bilan-tresorerie. Négatif = la finance a prélevé au
+        // transporteur ; c'est de l'argent qui n'est plus disponible pour le fret.
+        if (Math.Abs(co.TotalFinanceFlow) > 0.005)
+            Console.WriteLine($"  Flux financiers      {co.TotalFinanceFlow.ToString("N0", Ci),12}");
         double totalKm = w.Trains.Sum(t => t.TotalKmTravelled);
         Console.WriteLine($"  Kilomètres parcourus {totalKm.ToString("N0", Ci),12}");
         if (totalKm > 0)

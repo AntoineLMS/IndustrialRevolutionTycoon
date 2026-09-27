@@ -194,6 +194,49 @@ public sealed class Company
         TotalOperatingCost += amount;
     }
 
-    /// <summary>Résultat net cumulé depuis le début de la partie.</summary>
+    /// <summary>
+    /// Cumul net des mouvements financiers passés en trésorerie : positif si la
+    /// finance a apporté de l'argent (emprunt, apport en capital, cession de
+    /// titres), négatif si elle en a prélevé (intérêts, dividende, achat de
+    /// titres, remboursement).
+    /// <para>
+    /// Ce quatrième flux existe pour refermer une fuite réelle. Le module finance
+    /// tenait sa propre caisse et la trésorerie d'exploitation en ignorait les
+    /// mouvements : un dividende de 88 000 ou une OPA de 75 000 sortaient du bilan
+    /// de la société sans jamais sortir de la caisse du transporteur, qui pouvait
+    /// donc dépenser le même argent. Chaque bilan s'équilibrait pourtant au
+    /// centime — c'est exactement la signature du lavage de fret, une fuite que
+    /// tous les invariants laissent passer parce qu'ils vérifient chacun une
+    /// moitié de la vérité.
+    /// </para>
+    /// <para>
+    /// <see cref="Cash"/> reste la seule vérité sur l'argent disponible à
+    /// l'exploitation. La finance ne tient plus de caisse parallèle : elle écrit
+    /// ici, et <c>bilan-tresorerie</c> exige que la trésorerie s'explique
+    /// intégralement par recettes − achats − exploitation + flux financiers.
+    /// </para>
+    /// </summary>
+    public double TotalFinanceFlow;
+
+    /// <summary>
+    /// Mouvement de trésorerie décidé par le module finance. Le signe porte le
+    /// sens : positif apporte, négatif prélève.
+    /// </summary>
+    public void ApplyFinanceFlow(double amount)
+    {
+        if (amount == 0) return;
+        Cash += amount;
+        TotalFinanceFlow += amount;
+    }
+
+    /// <summary>
+    /// Résultat net cumulé de l'exploitation depuis le début de la partie.
+    /// <para>
+    /// Volontairement <b>hors</b> flux financiers : un emprunt n'est pas une
+    /// recette et un dividende n'est pas une charge d'exploitation. C'est ce qui
+    /// garde la marge au kilomètre interprétable comme une mesure du transport, et
+    /// la sentinelle anti-lavage-de-fret utilisable.
+    /// </para>
+    /// </summary>
     public double NetProfit => TotalHaulRevenue - TotalCargoPurchases - TotalOperatingCost;
 }

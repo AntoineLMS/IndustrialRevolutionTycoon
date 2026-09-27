@@ -183,6 +183,51 @@ donc pas une propriété qu'on espère et qu'on vérifie après coup, c'est une
 conséquence du type — et l'invariant se compare à **zéro exactement**, sans
 tolérance.
 
+## Une seule caisse, et un quatrième flux qui l'explique
+
+Le module finance a d'abord tenu **sa propre caisse**, distincte de la trésorerie
+d'exploitation qu'il se contentait de refléter. Chaque bilan s'équilibrait au
+centime, et la fuite était pourtant réelle : un dividende de 88 000 ou une OPA de
+75 000 sortaient du bilan de la société sans jamais sortir de la caisse du
+transporteur, qui pouvait donc dépenser le même argent. Mesuré en réintroduisant
+la faille : **23 520 dépensés deux fois dès le tick 15**.
+
+C'est exactement la famille du lavage de fret. Non pas une erreur de calcul, mais
+deux invariants dont chacun vérifie une moitié de la vérité — et qui, pris
+ensemble, ne couvrent pas l'intervalle entre les deux.
+
+La correction a demandé de changer la formule de `bilan-tresorerie`, ce qui n'est
+pas un assouplissement :
+
+```
+trésorerie = mise de départ
+           + recettes du transport − achats de fret − coûts d'exploitation
+           + flux financiers nets            ← le quatrième terme
+```
+
+`Company.Cash` est désormais **la seule vérité** sur l'argent disponible à
+l'exploitation. `NetProfit` reste volontairement hors flux financiers — un
+emprunt n'est pas une recette, un dividende n'est pas une charge d'exploitation —
+ce qui garde la marge au kilomètre interprétable et la sentinelle
+anti-lavage-de-fret utilisable.
+
+Deux détails de conception valent d'être connus :
+
+- **La position est déduite, pas reportée.** Dix sites d'écriture touchent la
+  caisse de la société ; en oublier un suffirait à recréer la fuite. Une seule
+  fonction, en fin de tick, lit la position nette du grand livre — caisse moins
+  découvert — et en déduit ce que la trésorerie doit valoir. La partie double sert
+  de source de vérité unique : ce qui n'est pas au bilan n'existe pas.
+- **Le transporteur voit une décision financière au tick suivant**, puisque la
+  finance clôture après lui. C'est le pendant de « les trains voient les prix
+  d'après-production » : la comptabilité arrête ses comptes le soir, le service du
+  trafic en prend connaissance le matin.
+
+L'invariant `frontiere-tresorerie` est la sentinelle de cette faille : la position
+nette du bilan doit valoir la trésorerie du transporteur au demi-centime près. Un
+prélèvement passé au bilan mais non répercuté fait apparaître son montant
+immédiatement. Un test le vérifie en **réintroduisant la faille à la main**.
+
 ## Une trésorerie négative est une dette, pas un actif négatif
 
 La trésorerie pouvait plonger indéfiniment dans le rouge sans que rien ne se
