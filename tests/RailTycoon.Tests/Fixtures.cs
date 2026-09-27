@@ -23,6 +23,12 @@ internal static class Fixtures
 
     public static string HeartlandPath() => Path.Combine(RepoRoot(), "data", "heartland.json");
 
+    /// <summary>Second scénario du module `content` : chaîne acier, géographie isolée.</summary>
+    public static string IronpeakPath() => Path.Combine(RepoRoot(), "data", "ironpeak.json");
+
+    /// <summary>Catalogue de locomotives historiques du module `content`.</summary>
+    public static string LocomotivesPath() => Path.Combine(RepoRoot(), "data", "locomotives.json");
+
     public static CargoDef Grain(double basePrice = 10, double elasticity = 0.4)
         => new() { Id = "grain", Name = "Blé", BasePrice = basePrice, Elasticity = elasticity };
 

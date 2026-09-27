@@ -106,6 +106,17 @@ public sealed class TrainDef
     /// endroit au même moment, ce qui n'apprendrait rien de plus qu'un seul train.
     /// </summary>
     public int StartStop { get; set; }
+
+    /// <summary>
+    /// Identifiant optionnel d'une locomotive du catalogue (data/locomotives.json,
+    /// voir <see cref="LocomotiveDef"/>). Purement informatif pour l'instant : la
+    /// simulation continue de lire <see cref="SpeedKmPerTick"/> et
+    /// <see cref="CostPerKm"/> directement sur le train, quelle que soit la
+    /// locomotive référencée. Ce champ est additif et n'est pas validé au
+    /// chargement du scénario — un futur module pourra s'en servir pour dériver
+    /// vitesse et coût automatiquement.
+    /// </summary>
+    public string? Locomotive { get; set; }
 }
 
 /// <summary>Paramètres du modèle de prix. Le cœur de l'équilibrage.</summary>

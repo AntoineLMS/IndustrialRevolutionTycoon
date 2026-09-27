@@ -1,0 +1,142 @@
+{
+  "id": "ironpeak",
+  "name": "La Cordillère de fer — 1900",
+  "seed": 19000601,
+  "startingCash": 100000,
+  "initialCoverage": 1.0,
+
+  "//geographie": "Géographie différente de heartland : une mine de minerai isolée en tête de ligne (Ironpeak), à 70 km du premier centre de transformation, et une ligne qui descend d'un massif montagneux vers la plaine industrielle. Le moteur ne modélise pas encore le relief (pente, déblai/remblai — voir le module `network` dans CONTRACTS.md) : la montagne est donc représentée par la distance et l'isolement d'Ironpeak, pas par un coût kilométrique différent. C'est le même choix de conception que le rayon économique des planches noté dans FINDINGS.md pour heartland.",
+
+  "//chaineacier": "Deuxième chaîne de production : minerai de fer → fonte (haut fourneau) → acier (aciérie), sur le même principe que heartland (chaque maillon multiplie la valeur par environ 1,7, voir docs/FINDINGS.md « une chaîne de valeur jamais calibrée »). Calcul vérifié : fonte = 46 = (3 × minerai à 9) × 1,7037 ; acier = 78 = (1 × fonte à 46) × 1,6957. Le minerai et la fonte ne sont jamais demandés par les habitants (comme le blé et la farine à Heartland) : seul l'acier, produit fini, l'est.",
+
+  "//trains": "Constaté à la mesure (non exigé par le critère de réussite, qui ne porte que sur le bilan et les invariants) : avec les 3 trains ci-dessous, la compagnie tourne à perte sur 720 ticks (résultat net environ -148 800, marge -0,57/km) alors qu'un seul train reste tout juste profitable (+5 500, marge +0,06/km). La ligne est plus longue (540 km) et les volumes par marchandise plus faibles qu'à Heartland : le rendement du capital s'y inverse plus tôt. C'est cohérent avec la géographie voulue — une ressource isolée ne devrait pas se rentabiliser aussi facilement qu'une plaine dense — mais à trancher par l'équipe avant de livrer ce scénario à un joueur : soit le vendre comme un défi plus dur, soit retendre l'économie.",
+
+  "priceModel": {
+    "coverageHorizonTicks": 15,
+    "shape": 0.5,
+    "minMultiplier": 0.12,
+    "maxMultiplier": 3.0
+  },
+
+  "economy": {
+    "productionStorageTicks": 30,
+    "minProductionFactor": 0.1,
+    "minConsumptionResponse": 0.3,
+    "maxConsumptionResponse": 1.5
+  },
+
+  "haulage": {
+    "minMargin": 0.10,
+    "minProfitPerUnit": 1.5,
+    "expectedLoadFactor": 0.6,
+    "priceImpactSlices": 8,
+    "minTradeQty": 0.25
+  },
+
+  "cargos": [
+    { "id": "food",    "name": "Nourriture",     "basePrice": 20, "elasticity": 0.3 },
+    { "id": "coal",    "name": "Charbon",        "basePrice": 12, "elasticity": 0.2 },
+    { "id": "logs",    "name": "Grumes",         "basePrice": 8,  "elasticity": 0.7 },
+    { "id": "boards",  "name": "Planches",       "basePrice": 14, "elasticity": 0.8 },
+    { "id": "ironore", "name": "Minerai de fer", "basePrice": 9,  "elasticity": 0.6 },
+    { "id": "pigiron", "name": "Fonte",          "basePrice": 46, "elasticity": 0.5 },
+    { "id": "steel",   "name": "Acier",          "basePrice": 78, "elasticity": 0.4 }
+  ],
+
+  "recipes": [
+    {
+      "id": "sawmill", "name": "Scierie",
+      "//": "8 → 14 : marge 1,75, identique à heartland.",
+      "inputs":  [ { "cargo": "logs", "qty": 1.0 } ],
+      "outputs": [ { "cargo": "boards", "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    },
+    {
+      "id": "smelter", "name": "Haut fourneau",
+      "//": "3 × 9 = 27 → 46 : marge 1,70.",
+      "inputs":  [ { "cargo": "ironore", "qty": 3.0 } ],
+      "outputs": [ { "cargo": "pigiron", "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    },
+    {
+      "id": "steelmill", "name": "Aciérie",
+      "//": "46 → 78 : marge 1,70.",
+      "inputs":  [ { "cargo": "pigiron", "qty": 1.0 } ],
+      "outputs": [ { "cargo": "steel", "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    }
+  ],
+
+  "cities": [
+    {
+      "id": "ironpeak", "name": "Ironpeak", "population": 3000,
+      "production": { "ironore": 0.95 },
+      "demand": { "food": 0.03, "coal": 0.02 },
+      "initialStock": { "ironore": 15 }
+    },
+    {
+      "id": "emberford", "name": "Emberford", "population": 9000,
+      "demand": { "food": 0.08, "coal": 0.05, "boards": 0.03 },
+      "industries": [ { "recipe": "smelter", "capacity": 0.54 } ]
+    },
+    {
+      "id": "steelford", "name": "Steelford", "population": 12000,
+      "demand": { "food": 0.10, "coal": 0.07, "boards": 0.04, "steel": 0.02 },
+      "industries": [ { "recipe": "steelmill", "capacity": 0.48 } ]
+    },
+    {
+      "id": "blackseam", "name": "Blackseam", "population": 7000,
+      "production": { "coal": 0.75 },
+      "demand": { "food": 0.06, "boards": 0.03 },
+      "initialStock": { "coal": 25 }
+    },
+    {
+      "id": "pinewood", "name": "Pinewood", "population": 5000,
+      "production": { "logs": 0.45 },
+      "demand": { "food": 0.05, "coal": 0.03 },
+      "industries": [ { "recipe": "sawmill", "capacity": 0.8 } ],
+      "initialStock": { "logs": 15 }
+    },
+    {
+      "id": "greenvale", "name": "Greenvale", "population": 4000,
+      "production": { "food": 1.0 },
+      "demand": { "coal": 0.04, "boards": 0.02 },
+      "initialStock": { "food": 20 }
+    },
+    {
+      "id": "rockford", "name": "Rockford", "population": 30000,
+      "demand": { "food": 0.20, "coal": 0.15, "boards": 0.08, "steel": 0.06 }
+    },
+    {
+      "id": "millhaven", "name": "Millhaven", "population": 45000,
+      "demand": { "food": 0.28, "coal": 0.20, "boards": 0.11, "steel": 0.09 }
+    },
+    {
+      "id": "northbridge", "name": "Northbridge", "population": 15000,
+      "demand": { "food": 0.10, "coal": 0.07, "boards": 0.04, "steel": 0.03 }
+    }
+  ],
+
+  "lines": [
+    {
+      "id": "cordillera", "name": "Ligne de la Cordillère",
+      "stops": [
+        { "city": "ironpeak",    "distanceKm": 0 },
+        { "city": "emberford",   "distanceKm": 70 },
+        { "city": "steelford",   "distanceKm": 140 },
+        { "city": "blackseam",   "distanceKm": 190 },
+        { "city": "pinewood",    "distanceKm": 250 },
+        { "city": "greenvale",   "distanceKm": 310 },
+        { "city": "rockford",    "distanceKm": 380 },
+        { "city": "millhaven",   "distanceKm": 460 },
+        { "city": "northbridge", "distanceKm": 540 }
+      ]
+    }
+  ],
+
+  "trains": [
+    { "id": "t1", "line": "cordillera", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 0, "locomotive": "prr_e6_atlantic" },
+    { "id": "t2", "line": "cordillera", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 4, "locomotive": "prr_e6_atlantic" },
+    { "id": "t3", "line": "cordillera", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 8, "locomotive": "prr_e6_atlantic" }
+  ]
+}
