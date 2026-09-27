@@ -83,6 +83,13 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
 
     public void Step(WorldState world, SimTick tick)
     {
+        // Une compagnie sous administration ne fait pas rouler ses trains. Sans
+        // cette porte, plus elle roulait plus elle creusait : les coûts
+        // kilométriques étaient prélevés sans condition alors que les achats de
+        // fret, eux, étaient déjà coupés. Voir Company.Grounded, posé par le
+        // module finance ; faux tant qu'aucun scénario n'active la finance.
+        if (world.Company.Grounded) return;
+
         foreach (var train in world.Trains)
             MoveTrain(world, train);
     }
@@ -215,9 +222,11 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
             var market = city.Market(cargoId);
             double wanted = Math.Min(free, Sellable(world, market));
 
-            // La compagnie ne peut pas acheter à crédit dans ce prototype.
-            if (world.Company.Cash <= 0) break;
-            double affordable = market.Price > 0 ? world.Company.Cash / market.Price : wanted;
+            // La compagnie n'achète qu'avec ce qu'elle a, plus le découvert que le
+            // module finance lui accorde. Sans finance, ce découvert vaut zéro et
+            // la règle est celle d'avant : pas d'achat de fret à crédit.
+            if (world.Company.SpendableCash <= 0) break;
+            double affordable = market.Price > 0 ? world.Company.SpendableCash / market.Price : wanted;
             wanted = Math.Min(wanted, affordable);
             if (wanted <= world.Def.Haulage.MinTradeQty) continue;
 

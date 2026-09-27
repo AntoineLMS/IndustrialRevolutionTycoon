@@ -67,15 +67,41 @@ test aléatoire massif : les interblocages n'apparaissent pas sur les cas simple
 
 ### `finance` — bourse et société
 
-**Interface** : à créer. `Company` est pour l'instant une simple trésorerie.
-**État actuel** : recettes, achats de fret, coûts d'exploitation.
+**Interface** : `IFinanceSolver` (`src/RailTycoon.Sim/Finance/FinanceSolver.cs`),
+phase 6 du tick.
+**État actuel** : `ReferenceFinanceSolver`, témoin piloté par les données.
+Comptabilité en partie double, montants en `decimal` arrondis au centime (voir
+[ARCHITECTURE.md](ARCHITECTURE.md) pour la frontière avec le monde en `double`).
 
-**Périmètre** : actions, obligations, dividendes, achat sur marge, OPA, fusions,
-distinction entre caisse personnelle du magnat et caisse de la société.
+**Ce qui est modélisé** : actions et registre des actionnaires, valeur
+d'entreprise et cours avec impact des ordres, obligations à taux et échéance,
+intérêts payés chaque tick, découvert bancaire explicite et administration
+judiciaire, caisse personnelle du magnat distincte de celle de la société,
+dividendes au prorata, achat sur marge avec appel de marge, augmentation de
+capital, prise de participation dans un concurrent piloté par les données, OPA sur
+le flottant et fusion-absorption.
+
+**Ce qui manque** : un vrai concurrent (le module `ai` — les concurrents actuels
+sont des bilans animés par des données, pas des réseaux), les dividendes des
+concurrents, la prime de contrôle négociée plutôt que fixée, la faillite
+liquidative, l'amortissement du matériel réellement acheté plutôt qu'une valeur de
+départ, et — le point le plus important — **la caisse de la société au sens
+finance et la trésorerie d'exploitation du module transport sont deux
+représentations du même argent**. La finance reflète la seconde et ne peut pas
+l'écrire, faute de quoi `bilan-tresorerie` changerait de formule. Une dépense
+financière n'est donc pas visible du transporteur. La correction tient en une
+ligne : ajouter un quatrième flux cumulé à `Company` et l'inclure dans
+`bilan-tresorerie`.
 
 **Critère de réussite** : tout bilan s'équilibre au centime à chaque tick, et
 l'invariant `bilan-tresorerie` reste vérifié. En finance, une fuite d'un
 millième par tick devient une fortune en deux ans de jeu.
+
+**Invariants apportés** : `bilan-actif-passif`, `actions-emises`,
+`dette-emprunts`, `tresorerie-non-negative`, `decouvert-explicite`,
+`frontiere-tresorerie`. Tous se comparent à zéro exactement, sans tolérance : la
+comptabilité est tenue en `decimal`, donc un écart d'un centime est un bug et non
+un résidu de calcul.
 
 ### `content` — données historiques
 

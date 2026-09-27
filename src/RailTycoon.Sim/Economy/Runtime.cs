@@ -136,6 +136,37 @@ public sealed class Company
     public double RevenueThisTick;
     public double CostThisTick;
 
+    /// <summary>
+    /// Découvert autorisé sur la trésorerie d'exploitation, accordé par le module
+    /// finance et gagé sur les capitaux propres de la société.
+    /// <para>
+    /// Il existe parce que la trésorerie pouvait plonger indéfiniment dans le
+    /// rouge sans que rien ne se passe : le transporteur refusait d'acheter du
+    /// fret à découvert, mais les coûts kilométriques étaient prélevés sans
+    /// condition. Plus la compagnie roulait, plus elle creusait, et aucun
+    /// invariant ne s'en apercevait — la trésorerie négative était parfaitement
+    /// cohérente avec le compte d'exploitation. Le découvert rend cette dette
+    /// explicite : elle figure au bilan, elle porte intérêt, et elle est bornée.
+    /// </para>
+    /// <para>
+    /// Zéro par défaut, donc un scénario sans module finance se comporte
+    /// exactement comme avant.
+    /// </para>
+    /// </summary>
+    public double CreditLimit;
+
+    /// <summary>
+    /// Vrai quand le module finance a placé la compagnie sous administration : le
+    /// découvert dépasse ce que son bilan peut gager. Les trains cessent de rouler
+    /// — un réseau qu'on ne peut plus financer ne creuse pas son déficit en
+    /// continuant à brûler du charbon. Le magnat peut lever cet état en
+    /// recapitalisant.
+    /// </summary>
+    public bool Grounded;
+
+    /// <summary>Ce que la compagnie peut encore engager : sa caisse, plus le découvert qu'on lui accorde.</summary>
+    public double SpendableCash => Cash + CreditLimit;
+
     public void BeginTick()
     {
         RevenueThisTick = 0;

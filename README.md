@@ -32,7 +32,8 @@ dotnet run --project tests/RailTycoon.Tests
 ```
 
 La suite vérifie les invariants — conservation de la matière, positivité des
-stocks, bornes de prix, équilibre de la trésorerie, reproductibilité de la trace.
+stocks, bornes de prix, équilibre de la trésorerie, reproductibilité de la trace,
+et côté finance l'équilibre du bilan au centime à chaque tick.
 Elle n'utilise aucun paquet NuGet et fonctionne hors ligne.
 
 Avant toute simulation, vérifier que le scénario est réalisable :
@@ -55,6 +56,8 @@ plafond de prix à jamais.
 | Une usine bloquée à 0 % | Mal approvisionnée, ou non rentable par construction |
 | Une marge kilométrique anormalement élevée | **Suspecter une faille d'arbitrage**, pas un succès |
 | Trésorerie en croissance monotone et lisse | L'arbitrage ne se referme pas : trop facile |
+| Un écart de bilan non nul, même d'un centime | **Fuite comptable**, jamais un résidu de calcul : la finance est tenue en `decimal` |
+| Une compagnie sous administration | Le découvert a dépassé ce que ses capitaux propres gagent ; les trains sont à l'arrêt |
 
 Les statistiques ignorent une période de chauffe (`--warmup`, 90 ticks par défaut)
 et ne mesurent que les marchés ayant de vrais acheteurs. Les deux précautions sont
@@ -68,6 +71,7 @@ src/RailTycoon.Sim/        bibliothèque de simulation, sans dépendance moteur
   Core/                    déterminisme, horloge, maths
   Economy/                 marchandises, marchés, prix, production
   Transport/               lignes, trains, échanges
+  Finance/                 société, emprunts, bourse, OPA (comptabilité en decimal)
   Telemetry/               traces CSV et invariants
 src/RailTycoon.Harness/    exécutable en ligne de commande
 tests/RailTycoon.Tests/    invariants, sans dépendance externe

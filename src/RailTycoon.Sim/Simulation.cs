@@ -1,5 +1,6 @@
 using RailTycoon.Sim.Core;
 using RailTycoon.Sim.Economy;
+using RailTycoon.Sim.Finance;
 using RailTycoon.Sim.Transport;
 
 namespace RailTycoon.Sim;
@@ -19,17 +20,23 @@ public sealed class Simulation
     public WorldState World { get; }
     public IEconomySolver Economy { get; }
     public IHaulageSolver Haulage { get; }
+    public IFinanceSolver Finance { get; }
 
-    public Simulation(ScenarioDef scenario, IEconomySolver? economy = null, IHaulageSolver? haulage = null)
+    public Simulation(ScenarioDef scenario, IEconomySolver? economy = null, IHaulageSolver? haulage = null,
+        IFinanceSolver? finance = null)
     {
         var priceModel = new HyperbolicPriceModel(scenario.PriceModel);
 
         World = WorldBuilder.Build(scenario, priceModel);
         Economy = economy ?? new ReferenceEconomySolver();
         Haulage = haulage ?? new OpportunisticHaulageSolver();
+        Finance = finance ?? new ReferenceFinanceSolver();
 
         Economy.Initialize(World);
         Haulage.Initialize(World);
+        // La finance ouvre ses comptes en dernier : elle reflète la trésorerie
+        // d'exploitation, or le transporteur a déjà pu échanger à l'initialisation.
+        Finance.Initialize(World);
     }
 
     public void Step()
@@ -49,6 +56,13 @@ public sealed class Simulation
         // Phase 2 — les trains roulent et échangent. Ils voient les prix
         // d'après-production : le joueur arrive sur un marché tel qu'il est.
         Haulage.Step(World, tick);
+
+        // Phase 6 du tableau de docs/ARCHITECTURE.md — la finance : société,
+        // emprunts, dividendes, bourse. Ajoutée en fin de tick, jamais avant : elle
+        // constate ce que l'exploitation a produit. La placer plus tôt ferait
+        // décider d'un dividende sur le résultat de la veille, et changerait le
+        // résultat de toutes les parties existantes.
+        Finance.Step(World, tick);
     }
 
     public void Run(int ticks)

@@ -219,6 +219,9 @@ public sealed class ScenarioDef
     public PriceModelDef PriceModel { get; set; } = new();
     public EconomyDef Economy { get; set; } = new();
     public HaulageDef Haulage { get; set; } = new();
+
+    /// <summary>Configuration du module finance. Voir <c>Finance/FinanceDefinitions.cs</c> ; inactive par défaut.</summary>
+    public RailTycoon.Sim.Finance.FinanceDef Finance { get; set; } = new();
     public List<CargoDef> Cargos { get; set; } = new();
     public List<RecipeDef> Recipes { get; set; } = new();
     public List<CityDef> Cities { get; set; } = new();
