@@ -426,7 +426,7 @@ internal static class Program
         {
             var scenario = ScenarioLoader.Load(Fixtures.IronpeakPath());
             Check.True(scenario.Cargos.Count == 7, $"7 marchandises attendues, {scenario.Cargos.Count} trouvées");
-            Check.True(scenario.Cities.Count == 9, $"9 villes attendues, {scenario.Cities.Count} trouvées");
+            Check.True(scenario.Cities.Count == 12, $"12 villes attendues, {scenario.Cities.Count} trouvées");
             Check.True(scenario.Recipes.Count == 3, $"3 recettes attendues, {scenario.Recipes.Count} trouvées");
         });
 
