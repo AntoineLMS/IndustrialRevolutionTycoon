@@ -26,7 +26,7 @@ produisent du code qui ne s'assemble pas.
    bougé. Une empreinte recopiée sans explication rend le test aussi creux que
    celui qu'il remplace.
 8. Chaque scénario de `data/` déclare les blocs de tous les modules
-   (`anticipating`, `network`, `finance`), ou écarte explicitement ceux dont il
+   (`anticipating`, `network`, `finance`, `events`), ou écarte explicitement ceux dont il
    se passe avec une clé `"//<bloc>"` qui dit pourquoi. Un module qui ajoute un
    bloc l'inscrit dans `ScenarioLoader.ModuleBlocks`.
 
@@ -144,6 +144,78 @@ millième par tick devient une fortune en deux ans de jeu.
 `frontiere-tresorerie`. Tous se comparent à zéro exactement, sans tolérance : la
 comptabilité est tenue en `decimal`, donc un écart d'un centime est un bug et non
 un résidu de calcul.
+
+### `events` — événements historiques et aléatoires
+
+**Interface** : `IEventSolver` (`src/RailTycoon.Sim/Events/EventSolver.cs`), phase
+0b du tick — voir le tableau des phases de [ARCHITECTURE.md](ARCHITECTURE.md) et
+la décision qui l'y a insérée.
+**État actuel** : `ReferenceEventSolver`, piloté par le bloc `events` du scénario.
+Inactif par défaut, et neutre au bit près tant qu'il l'est.
+
+**Périmètre** : des multiplicateurs sur le taux de **production primaire** et sur
+la **demande des habitants**, rien d'autre. Deux sortes d'événements :
+
+- *historiques* — datés (tick, ou année/mois/jour d'un calendrier de douze mois de
+  trente jours), ciblés (une liste de villes, ou toutes celles où l'effet a prise),
+  d'intensité et de durée fixées, avec une montée et une descente linéaires. Chacun
+  se déclare `historical` — et doit alors renvoyer à une source de
+  [SOURCES.md](SOURCES.md) — ou `inspired`. Le chargeur refuse un événement
+  historique sans source.
+- *aléatoires* — un catalogue de types : occurrences par an, mois où ils peuvent
+  commencer, une ville tirée parmi les admissibles ou toutes à la fois, bornes
+  d'intensité et de durée. Tirés sur la séquence propre du module ; quatre tirages
+  par type et par jour, quoi qu'il arrive.
+
+**Ce que le module publie** : `Market.EventProductionFactor` et
+`Market.EventDemandFactor`, recomposés chaque jour — produit des événements actifs,
+borné par `minFactor` et `maxFactor`. Et un journal public, `WorldState.Events` :
+les événements *déclenchés* avec leurs dates de début et de fin, leurs cibles et
+leurs multiplicateurs au plus fort, jamais ceux à venir. Le harnais l'affiche et
+l'écrit dans `events.csv`. C'est la frontière d'information : un joueur la lit dans
+la gazette, un concurrent IA a le droit d'en lire autant et pas davantage.
+
+**Ce que le module garantit** — et que les tests vérifient :
+
+1. Il ne touche ni stock, ni prix, ni argent. La matière passe toujours par
+   `Market.Produce` et `Market.Consume`, dans le solveur économique.
+2. Inactif, il n'écrit rien : bloc absent ou `enabled = false`, les traces sont
+   celles d'avant le module au bit près, sous les deux solveurs.
+3. Activé, il ne décale le flux aléatoire d'aucun autre module.
+4. Un événement historique agit à sa date, sur sa cible seule, avec l'enveloppe
+   annoncée, puis s'éteint ; intensités et durées aléatoires restent dans leurs
+   bornes ; une même définition ne s'empile pas sur une même ville.
+
+**Ce qu'il exige des solveurs économiques** : composer ces multiplicateurs dans
+leurs taux du jour, et dimensionner l'entrepôt d'un site sur son débit nominal.
+C'est une ligne par levier dans chacun des deux solveurs livrés.
+
+**Scénario** : `data/heartland-events.json` est le scénario du module, sur le
+modèle de heartland-finance : l'économie de `heartland.json` au caractère près, et
+le seul bloc `events` en plus. `heartland.json` n'en déclare pas, décision protégée
+par un test. Son catalogue aléatoire est **équilibré** — hausses et baisses se
+compensent en espérance pour chaque marchandise et chaque levier —, ce que
+`--balance` affiche et qu'un test exige : un catalogue à sens unique déplace
+l'équilibre du scénario sans rien animer (voir [FINDINGS.md](FINDINGS.md)).
+
+**Ce qui manque** : des événements sur les usines (un moulin en grève) et sur le
+transport (une voie coupée, un pont emporté) ; un mécanisme à somme nulle — une
+migration plutôt qu'un afflux — qui garantirait l'équilibre à chaque tick au lieu
+d'en espérance ; des chaînes d'événements (une sécheresse qui rend un incendie plus
+probable) ; des événements déclenchés par l'état du monde plutôt que par le
+calendrier (une pénurie prolongée qui provoque une émeute) ; une déclaration par
+`ironpeak`, dont la candidate — une grève de l'anthracite à l'automne 1900 — reste
+à sourcer ; et la déclaration du bloc par le scénario relief + économie en cours
+d'écriture dans un autre chantier.
+
+**Critère de réussite** : sur son scénario d'épreuve, comparé à un témoin qui joue
+le même calendrier d'aléas à intensité négligeable, faire changer la ville la plus
+chère d'un mois sur l'autre plus souvent **sans dégrader le résultat médian du
+transport**, et sans violer aucun invariant. Aujourd'hui : +2,6 points sous la
+référence et +1,9 sous l'anticipant pour les aléatoires seuls, médiane neutre ; la
+mobilité de l'amplitude, elle, ne bouge pas. Le critère du contrat `economy` n'est
+donc atteint qu'en partie, et la mesure dit pourquoi : le transporteur de mesure,
+une navette sans changement de parcours, ne peut pas exploiter un choc local.
 
 ### `content` — données historiques
 
