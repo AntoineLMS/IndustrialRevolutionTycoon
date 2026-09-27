@@ -66,8 +66,11 @@ aiguillages.
 **Ce qui manque** : les aiguillages comme objets (une bifurcation est pour l'instant
 un nœud sans contrainte de géométrie), la recherche automatique d'un tracé — le
 géomètre chiffre celui qu'on lui donne —, le terrassement à flanc de coteau, la
-construction en cours de partie (tout est calculé au chargement), et le passage de
-`heartland` sur un relief.
+construction en cours de partie (tout est calculé au chargement), le passage de
+`heartland` lui-même sur un relief — son économie tourne désormais sur relief dans
+`data/sierra.json` —, et surtout un relief qui pèse sur les décisions du
+transport : aujourd'hui il n'est que facturé (voir FINDINGS.md, « Relief et
+économie ensemble »).
 
 **Critère de réussite** : le coût de construction d'un tracé donné doit être
 reproductible et correspondre aux valeurs de référence sur les cartes de test.

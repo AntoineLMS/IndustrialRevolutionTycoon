@@ -237,7 +237,7 @@ Ce que la façade **ne** promet **pas** : aucune notion de temps, d'occupation, 
 signal ni de réservation. Le réseau décrit une géographie ; qui a le droit de rouler
 où appartient entièrement à `dispatch`.
 
-### Deux limites connues
+### Trois limites connues
 
 **Le géomètre chiffre le tracé qu'on lui donne, il ne le cherche pas.** Il ne sait
 pas allonger une ligne pour adoucir une rampe, ni inventer le lacet ou le
@@ -249,6 +249,15 @@ mauvais tracé, pas la meilleure façon de passer là.
 trapèze symétrique, ce qui surestime le déblai à flanc de coteau — précisément la
 technique qui rendrait praticable le franchissement de la crête. Corriger cela
 demande la pente transversale du terrain, donc un échantillonnage latéral du relief.
+
+**Le relief est facturé, pas décidé.** `LegCostFactor` multiplie le coût
+kilométrique que paie un train, mais le coût que le transporteur impute à un
+chargement pour décider de l'acheter reste calculé sur la distance plate — et les
+trains roulent de toute façon, pleins ou vides. Mesuré sur `data/sierra.json` : la
+trace des marchés est identique au bit près que la montagne coûte 0, 0,03 ou 0,2
+kilomètre par mètre. Le relief est un impôt sur le kilomètre-train, pas une
+géographie économique, et le devis n'est débité nulle part. Les options sont
+chiffrées dans [FINDINGS.md](FINDINGS.md), « Relief et économie ensemble ».
 
 ## La monnaie : `decimal` en finance, `double` partout ailleurs
 

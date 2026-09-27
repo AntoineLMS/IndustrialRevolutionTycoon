@@ -861,8 +861,10 @@ internal static class Program
         {
             // Le seul canal par lequel le relief touche l'économie. Sans lui, le
             // module réseau serait un décor : un col coûterait à construire et rien
-            // à exploiter, et le rayon économique des marchandises à bas prix
-            // (docs/FINDINGS.md) serait le même partout.
+            // à exploiter. Ce canal est facturé mais n'entre encore dans aucune
+            // décision du transporteur, si bien que le rayon économique reste le
+            // même partout : voir « Relief et économie ensemble » dans
+            // docs/FINDINGS.md, et le constat figé dans SierraTests.
             var pass = new Simulation(ScenarioLoader.Load(TerrainScenario("terrain-pass.json")));
             var col = pass.World.Lines.First(l => l.Id == "main");
             Check.True(col.LegCostFactor(0, 1) > 1.05,
@@ -994,6 +996,10 @@ internal static class Program
         // pour que trois modules qui avancent en parallèle n'entrent pas en
         // conflit sur cette liste.
         FinanceTests.Register(runner);
+
+        // Relief et économie ensemble : data/sierra.json. Même raison que pour la
+        // finance — un seul point d'entrée ici.
+        SierraTests.Register(runner);
 
         // ------------------------------------------------ traces de référence
         // En dernier : elles figent le comportement de tous les modules à la fois,

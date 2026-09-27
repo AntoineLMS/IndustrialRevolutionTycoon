@@ -225,6 +225,7 @@ blocs de configuration qu'ils déclarent.*
 | `heartland` | oui | non | oui |
 | `ironpeak` | **non** | non | non |
 | `terrain-plain` / `-valley` / `-pass` | **non** | oui | non |
+| `sierra` *(ajouté depuis)* | oui | oui | non |
 
 Chaque module est éprouvé par le scénario que son auteur a écrit, et par aucun
 autre. C'est la contrepartie attendue du travail en parallèle, et elle se voit
@@ -248,6 +249,15 @@ Deux conséquences à traiter, dans cet ordre :
    déplacerait tous les chiffres de ce document — c'est une décision de conception,
    pas une tâche technique, et elle mérite un scénario neuf plutôt qu'une mutation
    de la référence.
+
+   *Partiellement traité.* `data/sierra.json` pose l'économie de heartland, table
+   pour table, sur une sierra de 950 m, et la mesure est faite — voir « Relief et
+   économie ensemble » ci-dessous. Elle répond à la question posée, mais pas dans
+   le sens attendu : le relief ne fait **rien** aux écarts de prix, parce qu'il
+   n'entre dans aucune décision. Ce qui reste ouvert n'est plus technique : il faut
+   décider si et comment le relief doit peser sur les décisions, et les options y
+   sont chiffrées. `heartland.json` lui-même reste sur ses distances saisies à la
+   main.
 2. **Les scénarios de chaque module devraient déclarer les blocs des autres**, ou
    assumer explicitement de ne pas le faire. Un bloc absent n'est pas neutre : il
    est silencieusement inerte.
@@ -269,6 +279,299 @@ le banc de mesure qui reconstruisait son sujet : ce qui échappe à la vérifica
 n'est pas ce que chaque module fait, c'est **l'espace entre eux**. Quatre modules
 verts ne font pas un jeu vert.
 
+## Relief et économie ensemble : le relief est un impôt, pas une géographie
+
+*Deuxième campagne — 27 septembre 2026, scénario `sierra`, 720 ticks, 90 de
+chauffe exclus, statistiques moyennées chez les acheteurs seulement, sous le
+solveur de référence et sous l'anticipant.*
+
+### Le scénario
+
+`data/sierra.json` reprend l'économie de heartland **table pour table** —
+marchandises, recettes, demandes, capacités, ordre des villes le long de la ligne
+— et la pose sur un relief : 505 km de voie, une plaine à 150 m de chaque côté, le
+plateau forestier de Pinecrest à 378 m, et la mine de Coalpass dans un col à
+1 112 m. On y monte par 786 m de dénivelé cumulé depuis l'ouest et par 961 m
+depuis l'est, à la rampe maximale de 2,5 %. Reprendre des tables calibrées isole la seule variable
+neuve, la géographie : `--balance` donne chaque marchandise entre 1,10 et 1,14, et
+`--survey` un devis de 1 524 566, à 99 % de pose de voie, sans pont ni tunnel. La
+montagne pèse sur l'exploitation (la rampe est coûte 44 % de plus à la montée),
+pas sur la construction.
+
+### Méthode
+
+Chaque ligne des tableaux est le scénario **tel qu'il est écrit**, avec une seule
+valeur changée par un filtre `jq` : le nombre de trains (les *n* premiers trains
+déclarés, puis des copies du premier aux arrêts 7, 2, 6, comme le tableau de
+heartland), `network.traction.climbEquivalentKm`, l'amplitude du relief ou de sa
+rugosité, `haulage.expectedLoadFactor`. La ligne de référence de chaque tableau
+reproduit l'empreinte figée dans `ReferenceTraceTests` (`E60F3BB3F1F2B083` sous la
+référence, `6CEA03DA2C0CDB89` sous l'anticipant) : le banc mesure le scénario, il
+ne le reconstruit pas. Toutes les lignes se relisent dans la sortie du harnais,
+par exemple `jq '.network.traction.climbEquivalentKm = 0' data/sierra.json >
+out/s.json` puis `--scenario out/s.json` : l'« Empreinte » qu'il affiche est celle
+de la seule trace des marchés, qui dit si un réglage a changé un prix quelque part.
+Deux lignes y ont été ajoutées pour cette campagne : « dont relief » sous le coût
+d'exploitation (le facturé moins les mêmes kilomètres à plat) et la rotation du
+fret (chargements livrés ÷ produits, après chauffe). Le relevé de la mécanique
+imputée du transporteur (« gain » contre « coût imputé » par couple de villes) et
+la variante « relief décidé » viennent d'un banc hors dépôt ; la seconde se
+reproduit avec la ligne de code donnée plus bas.
+
+### Le nombre de trains : même forme que heartland
+
+| trains | résultat (référence) | résultat (anticipant) | usines desservies | mobilité réf. / ant. | écart planches réf. / ant. | écart charbon réf. / ant. |
+|---|---|---|---|---|---|---|
+| 1 | 76 695 | 76 243 | 72 % | 0,432 / 0,404 | ×4,7 / ×8,0 | ×12,7 / ×18,4 |
+| 2 | 178 139 | 160 108 | 75 % | 0,442 / 0,404 | ×4,9 / ×7,1 | ×10,6 / ×15,3 |
+| 3 | **219 411** | **242 254** | 78 % | 0,384 / 0,548 | ×4,8 / ×6,0 | ×10,1 / ×14,3 |
+| 4 | 200 890 | 228 096 | 81 % | 0,345 / 0,583 | ×3,8 / ×4,6 | ×8,6 / ×13,3 |
+| 5 | 134 325 | 171 811 | 82 % | 0,281 / 0,477 | ×3,5 / ×4,2 | ×8,1 / ×12,5 |
+| 6 | 47 819 | 103 973 | 82 % | 0,220 / 0,427 | ×3,4 / ×3,8 | ×8,9 / ×12,8 |
+
+*Usines desservies : utilisation moyenne sous le solveur de référence ;
+l'anticipant est à deux points près. La ligne « 3 » est le scénario sans option.*
+
+L'optimum est à trois trains sous les deux solveurs, le service monte pendant que
+le résultat s'effondre, la dispersion se referme quand on ajoute de la capacité :
+tout ce que la première campagne avait établi sur heartland tient sur relief. La
+scierie de Cedarton, à 355 km de sa forêt et de l'autre côté du col, reste à 0 %
+à tous les nombres de trains, comme celle d'Ironhill.
+
+### Le résultat central : la trace des marchés ne voit pas la montagne
+
+Trois trains, solveur de référence, une variable à la fois :
+
+| variante | surcoût du relief | exploitation | résultat net | trace des marchés |
+|---|---|---|---|---|
+| relief gratuit (`climbEquivalentKm` = 0) | 0 % | 207 360 | 237 647 | `A59A1898…` |
+| **scénario tel qu'écrit (0,03)** | 8,8 % | 225 596 | 219 411 | `A59A1898…` |
+| traction × 3 (0,09) | 26,4 % | 262 068 | 182 940 | `A59A1898…` |
+| traction « physique » (0,2) | 58,6 % | 328 933 | 116 075 | `A59A1898…` |
+| montagne seule (rugosité à 0) | 5,9 % | 219 642 | 225 365 | `A59A1898…` |
+| rugosité seule (montagne à 0) | 4,3 % | 216 380 | 228 628 | `A59A1898…` |
+| relief entièrement plat | 0 % | 207 360 | 234 085 | `EA95EF39…` |
+
+**Les six premières lignes ont la même trace des marchés au bit près.** Mêmes prix
+à chaque tick dans chaque ville, donc mêmes écarts, même mobilité, mêmes usines,
+mêmes flux ; seul le résultat net change, du montant exact du surcoût. Sous
+l'anticipant, même constat (`5CF06DE1…` pour les six, résultats 260 490 /
+242 254 / 205 782 / 138 917 de 0 à 0,2). La dernière ligne diffère, mais pas à
+cause de la montagne : sur un relief parfaitement plat, les tronçons mesurent
+exactement 50, 55, 75 km au lieu de 50,0004, 55,0012, 75,0066, et un train qui
+atteignait un arrêt au tout début d'un tick l'atteint à la fin du précédent. Dix-huit
+mètres sur 505 km suffisent à déplacer le résultat de 1,5 % : c'est la sensibilité
+à l'ordonnancement déjà relevée plus haut (3,5 % pour la seule position de départ
+des trains), pas un effet du relief.
+
+La raison est dans le code, et elle est double :
+
+1. **Le relief est facturé mais jamais décidé.** Le coût kilométrique d'un tronçon
+   est multiplié par son facteur de relief au moment où le train le parcourt
+   (`MoveTrain`), mais le coût que le transporteur impute à un chargement pour
+   décider de l'acheter (`HaulCostPerUnitAhead`) se calcule sur la distance plate.
+   Le commentaire de `RailLine.LegCostFactor` affirmait que le facteur « rétrécit
+   le rayon économique des marchandises à bas prix dans cette direction » : c'était
+   faux, il est corrigé.
+2. **Même décidé, il ne serait pas un coût marginal.** Les trains roulent de toute
+   façon, 120 km par tick, pleins ou vides. Le kilomètre est payé d'avance ; le
+   relief n'est donc pas le prix de *transporter* quelque chose, c'est le prix
+   d'*avoir* un train sur la ligne. Refuser un chargement parce qu'il franchit le
+   col n'économise rien.
+
+La seule chose que la montagne change réellement est ce que coûte chaque train :
+un impôt fixe d'environ 6 100 par train sur 720 ticks à 0,03, de 40 500 à 0,2. Il
+aplatit l'optimum sans le déplacer : à 0,2, deux trains font 109 268 contre
+116 075 pour trois (−6 %), là où l'écart est de 19 % à 0,03.
+
+### Le rayon économique est un réglage de l'instrument, pas de l'économie
+
+Puisque le kilomètre est payé d'avance, qu'est-ce qui borne le rayon de 250 km
+cité dans les questions ouvertes ? Le coût que le transporteur *impute*, qui
+répartit le coût kilométrique sur une charge escomptée (`expectedLoadFactor`).
+Une variable à la fois, solveur de référence, trois trains :
+
+| `expectedLoadFactor` | sierra : résultat | sierra : Cedarton | heartland : résultat | heartland : Ironhill |
+|---|---|---|---|---|
+| 0,3 | −185 356 | 0 % | −164 099 | 0 % |
+| **0,6 (tel qu'écrit)** | **219 411** | 0 % | **240 374** | 0 % |
+| 1,0 | 243 784 | 0 % | 260 829 | 0 % |
+| 2,0 | 249 952 | 19 % | 277 436 | 20 % |
+| 100 (coût imputé ≈ 0) | 171 136 | 20 % | 198 120 | 19 % |
+
+*Les variantes de heartland ont été mesurées sur une copie hors du dépôt ;
+`heartland.json` n'est pas modifié.*
+
+Imputer moins de coût — ce qui est plus fidèle à un kilomètre déjà payé — rapporte
+**14 à 15 % de plus** sur les deux cartes, et démarre la scierie lointaine à 20 %.
+Ce n'est pas un optimum à adopter : à 100, le transporteur accepte des marges
+minuscules, encombre ses trains et perd 18 à 22 % par rapport au réglage actuel ;
+à 0,3 il n'achète presque plus rien, et la trésorerie de la sierra descend à
+−85 356 faute de module finance pour arrêter les trains. Mais cela établit que
+**la scierie d'Ironhill ne meurt pas de la distance, elle meurt d'une règle de
+gestion du transporteur**. Même mécanisme à Cedarton : ses grumes y valent 12,4
+en moyenne contre 3,0 à Pinecrest, un gain de 7,6 par chargement contre un coût
+imputé de 19,7 à 355 km.
+
+Les planches obéissent à une autre règle de l'instrument. À Pinecrest elles valent
+1,7 ; à Cedarton et Farport, 40 à 42, soit un gain de 36 à 38 contre 21 à 24 de
+coût imputé : rentable selon les propres critères du transporteur. Elles n'y
+arrivent pourtant presque jamais (8 chargements en 630 ticks, contre 273 à
+Fordham) : le transporteur vend au premier acheteur qui lui laisse 10 % de marge
+(`SellHere`), et tout acheteur la lui laisse sur une marchandise payée au
+plancher. Le rayon des planches est la distance au prochain acheteur, pas un
+rapport entre prix et coût.
+
+### Ce que ferait le relief s'il entrait dans les décisions
+
+Mesuré en multipliant, dans `HaulCostPerUnitAhead` seulement, la distance par le
+facteur de relief du trajet — une ligne de code, **non retenue** (voir plus bas) :
+
+```csharp
+double km = train.Line.DistanceBetween(train.StopIndex, bestIndex)
+          * train.Line.LegCostFactor(train.StopIndex, bestIndex);
+```
+
+| traction | statu quo (référence) | relief décidé (référence) | statu quo (anticipant) | relief décidé (anticipant) |
+|---|---|---|---|---|
+| 0,03 | 219 411 | 207 810 (−5 %) | 242 254 | 236 380 (−2 %) |
+| 0,09 | 182 940 | 167 917 (−8 %) | 205 782 | 166 412 (−19 %) |
+| 0,2 | 116 075 | −50 486 | 138 917 | −25 278 |
+
+Là, une géographie apparaît. À 0,2, l'écart des planches passe de ×4,8 à ×9,7 :
+elles s'entassent à l'ouest (0,43 × la référence à Westbrook, 0,54 à Fordham,
+contre 0,99 et 0,94) et l'est reste au plafond, parce que le transporteur refuse de
+leur faire passer le col. Deux bassins économiques séparés par la montagne —
+exactement ce qu'on attendait du relief. Mais **la compagnie y perd** dans tous les
+cas, parce qu'elle refuse un fret que ses trains, qui passent le col de toute
+façon, auraient porté sans surcoût. Brancher le relief sur la décision sans rendre
+le coût marginal produit une géographie en détruisant de la valeur : c'est
+exactement le genre de correctif qui aurait l'air juste et serait faux.
+
+Il n'est pas retenu pour une seconde raison : il déplace les empreintes des trois
+cartes `terrain-*` (`2FCED02A…`, `B1B62C35…`, `EE7A71F2…`). C'est une décision de
+conception, pas un bug à corriger en passant.
+
+### Deux mesures du relief qui ne mesurent pas ce qu'on croit
+
+**La rugosité coûte presque autant que la montagne.** Le facteur de relief convertit
+la somme des dénivelés positifs du profil, et le profil suit chaque bosse que la
+rampe maximale n'oblige pas à raboter. Sur la sierra, 20 m de rugosité font
+gravir 58 à 86 m à chaque tronçon de plaine de 45 à 60 km : la rugosité seule
+coûte 4,3 %, la montagne seule 5,9 %. Sur les cartes d'essai, dont la rugosité est
+plus forte (25 m, 4 km), même décomposition — une variable à la fois, facteurs
+aller / retour :
+
+| carte (60 km) | tel qu'écrit | rugosité seule | formes seules | devis |
+|---|---|---|---|---|
+| plaine | 1,118 / 1,123 | 1,108 / 1,114 | 1,060 / 1,059 | 180 093 |
+| vallée | 1,159 / 1,172 | 1,089 / 1,103 | 1,100 / 1,100 | 219 402 |
+| col | 1,165 / 1,162 | 1,107 / 1,103 | 1,132 / 1,132 | 1 219 880 |
+| crête (tunnel de 19 km) | 1,212 / 1,222 | 1,078 / 1,088 | 1,185 / 1,185 | 2 689 446 |
+
+La rugosité seule coûte 8 à 11 % sur chacune, autant que le mamelon de la
+« plaine » et presque autant que la montagne du col (13 %). Et la crête percée
+d'un tunnel de 19 km — 1,5 million de plus que le col — coûte *plus* cher à
+exploiter que le col : le tunnel abaisse le point haut, mais les rampes d'accès
+gravissent davantage. Rien, à l'exploitation, ne récompense le choix de percer.
+
+**Le commentaire qui justifiait 0,03 justifie 0,2.** `TractionDef` le motivait par
+« une rampe de 1 % triple la résistance au roulement ». À 0,03, un kilomètre à 1 %
+(10 m gagnés) coûte 1,3 kilomètre de plat ; tripler la résistance correspondrait à
+environ 0,2. Le commentaire est corrigé pour dire ce que vaut la valeur, sans la
+changer : la choisir est une décision.
+
+### Observation : pourquoi les cartes d'essai perdent 75 000 à 78 000
+
+C'est la carte, pas le relief. À `climbEquivalentKm` = 0, les trois cartes perdent
+exactement 67 066 chacune — même ligne de 60 km, même train, même économie :
+
+| carte | résultat net | dont relief | à relief gratuit |
+|---|---|---|---|
+| plaine | −75 391 | −8 325 (12,0 %) | −67 066 |
+| vallée | −78 511 | −11 445 (16,6 %) | −67 066 |
+| col | −78 366 | −11 300 (16,3 %) | −67 066 |
+
+Un train parcourt 86 400 km en 720 ticks, soit 69 120 de coût kilométrique à plat,
+qu'il transporte quelque chose ou non. En face, la seule demande de la carte est
+de 0,6 chargement de blé par tick : même vendue en permanence au plafond (30),
+elle rapporterait au plus 12 960. Recettes réelles 2 803, achats 749. Aucun
+réglage de prix ne peut rendre ces cartes rentables : elles ont été conçues pour
+chiffrer un devis, et leur résultat n'a pas de sens économique. Le relief n'y
+ajoute que 12 à 17 % au coût d'exploitation, dont 8 à 11 points viendraient de
+la seule rugosité. Là encore, la trace des marchés est identique avec et
+sans coût de relief.
+
+### Le bloc `anticipating` ne se recopie pas
+
+Copié de heartland (4 ticks, poids 1, lissage 0,15), il fait tomber le résultat de
+la sierra de 219 411 à 100 693 : le charbon se met à tourner en rond, 29 558
+chargements livrés pour 723 produits après chauffe, contre 5 389 sous la
+référence. Une grille (horizon 0 à 8, poids 0,5 et 1, lissage 0,10 à 0,25) désigne
+2 ticks, poids 1, lissage 0,15 : +10 % de résultat, mobilité 0,548 contre 0,384,
+changement de tête 24,3 % contre 20,1 %, avec des voisins cohérents. Le paysage
+est bruité — un cran sur un réglage voisin déplace le résultat de 4 à 10 % —, et
+aucune saison ne tient sur plusieurs nombres de trains (le chauffage au charbon,
++15 % de mobilité à trois trains, coûte 3,5 à 6 % de résultat à 2, 4 et 5). Les
+chiffres complets sont dans les commentaires du scénario. La leçon rejoint celle
+du tableau des modules : les gains de l'anticipant sont ceux d'un scénario réglé,
+et un réglage d'emprunt peut diviser le résultat par deux.
+
+En passant, le banc a compté les livraisons : sous le solveur de référence, la
+nourriture est livrée 70 fois pour une fois produite, le charbon 8 fois. Le
+transporteur revend d'une ville à l'autre les excédents au-delà de la réserve de
+chaque ville. Ce n'est pas le lavage de fret — chaque revente paie sa marge sur un
+vrai écart de prix —, mais c'est ce qui maintient la nourriture « trop uniforme »,
+et cela mérite d'être regardé pour lui-même.
+
+### Décisions à trancher par l'équipe
+
+Aucune n'est tranchée ici. Chacune est chiffrée sur la sierra, trois trains, sauf
+mention contraire.
+
+1. **Le relief doit-il peser sur les décisions ?**
+   - *Statu quo* : un impôt fixe par train, aucune géographie ; +8,8 % de coût
+     d'exploitation à 0,03. Rien à coder.
+   - *Relief dans le coût imputé* (une ligne) : une géographie visible à forte
+     traction (écart des planches ×4,8 → ×9,7 à 0,2), mais −2 à −5 % de résultat
+     à 0,03 et une perte nette à 0,2 ; déplace les trois empreintes `terrain-*`.
+   - *Coût marginal réel* : ne facturer le relief qu'en proportion de la masse
+     remorquée (tare + chargement), et décider sur ce seul surcoût. C'est la seule
+     option où refuser un chargement économise vraiment ce qu'il coûte. Non
+     mesurée : elle demande un paramètre de tare dans les données et un
+     changement de `MoveTrain`, donc de toutes les traces sur relief.
+   - *Des trains qui ne roulent pas à vide* : relève du module `dispatch`. Tant que
+     les trains font la navette sans condition, aucun coût kilométrique n'est
+     marginal, relief ou pas.
+2. **Quelle valeur pour `climbEquivalentKm` ?** À 0,03 (actuel), la sierra paie
+   8,8 % de relief, 18 236 sur deux ans. À 0,2 (la lecture « une rampe de 1 %
+   triple la résistance »), 58,6 % : le résultat tombe de 219 411 à 116 075, et
+   deux trains font presque aussi bien que trois. Entre les deux, 0,09 : 26,4 % et
+   182 940.
+3. **La rugosité doit-elle compter comme une rampe ?** Aujourd'hui la rugosité seule
+   coûte 8 à 11 % sur 60 km, autant qu'un relief réel, et un tunnel ne fait rien
+   gagner à l'exploitation. Options :
+   ne compter que les dénivelés au-delà d'un seuil, ou lisser le profil avant de
+   sommer — deux façons de déplacer les empreintes `terrain-*`, à décider avant
+   d'écrire d'autres cartes.
+4. **Le devis doit-il coûter quelque chose ?** Il n'est débité nulle part : la
+   sierra coûte 1 524 566, quinze fois la mise de départ et près de quatorze ans
+   de son résultat, et ce chiffre n'entre dans aucun compte. Tant que c'est le cas,
+   « contourner, franchir ou percer » est un choix sans conséquence dans la
+   simulation. Options : débiter au premier tick (ce qui exige la finance pour
+   l'emprunter), amortir par tick, ou assumer que le réseau est donné par le
+   scénario.
+5. **Le rayon économique est-il une propriété voulue ?** S'il l'est, il doit venir
+   d'un coût réel (option « coût marginal » ci-dessus), pas de
+   `expectedLoadFactor` : passer ce réglage de 0,6 à 2 fait démarrer Ironhill et
+   Cedarton et rapporte 14 à 15 % de plus. Quel que soit ce choix, la règle de
+   vente au premier acheteur continuera de borner les planches à la distance du
+   prochain client.
+6. **Chaque scénario doit-il régler son anticipant ?** Le bloc de heartland divise
+   le résultat de la sierra par deux. C'est soit une contrainte à documenter pour
+   les auteurs de cartes, soit le signe d'un solveur trop sensible pour servir
+   sans réglage.
+
 ## Questions ouvertes pour l'équipe
 
 **Le rayon économique.** À 0,8 par kilomètre, une marchandise à bas prix ne peut
@@ -278,6 +581,14 @@ et le nord de la ligne n'a aucune source de planches viable. Ce n'est pas un bug
 c'est de la géographie économique, et c'est probablement *souhaitable* : elle
 pousse à implanter l'industrie près de la ressource. Mais il faut le décider,
 puis concevoir les cartes en conséquence.
+
+*Précisé par la campagne sur relief* (« Relief et économie ensemble »,
+ci-dessus) : ce rayon n'est pas fixé par les 0,8 par kilomètre, que les trains
+paient qu'ils transportent ou non, mais par le coût que le transporteur *impute* à
+un chargement (`expectedLoadFactor`) et, pour les planches, par sa règle de vente
+au premier acheteur. Passer `expectedLoadFactor` de 0,6 à 2 fait démarrer Ironhill
+à 20 %. Et le relief, tel qu'il est câblé, ne le raccourcit pas du tout. La
+décision à prendre est donc d'abord de savoir *d'où* doit venir le rayon.
 
 **La nourriture est trop uniforme** (écart moyen ×1,4 sur dix acheteurs). Avec
 trois trains et un transporteur omniscient, le réseau nourrit tout le monde au
