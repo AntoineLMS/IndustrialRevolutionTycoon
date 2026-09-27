@@ -94,6 +94,10 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
 
         double budget = train.SpeedKmPerTick;
         double kmThisTick = 0;
+        // Kilomètres facturés : les kilomètres parcourus, pondérés par ce que le
+        // réseau dit du relief du tronçon. Vaut kmThisTick sur une ligne plate ou
+        // sans relief déclaré.
+        double chargeableKm = 0;
 
         // Garde-fou : un train très rapide sur une ligne très courte pourrait
         // enchaîner un grand nombre d'arrêts dans un seul tick. On borne pour ne
@@ -118,6 +122,7 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
             train.DistanceToNextStop -= step;
             budget -= step;
             kmThisTick += step;
+            chargeableKm += step * train.Line.LegCostFactor(train.StopIndex, next);
 
             if (train.DistanceToNextStop <= 1e-9)
             {
@@ -140,7 +145,7 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
         }
 
         train.TotalKmTravelled += kmThisTick;
-        world.Company.PayOperating(kmThisTick * train.CostPerKm);
+        world.Company.PayOperating(chargeableKm * train.CostPerKm);
     }
 
     private void TradeAtStop(WorldState world, Train train)

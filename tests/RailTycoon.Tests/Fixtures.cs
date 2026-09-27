@@ -39,6 +39,36 @@ internal static class Fixtures
             Cargos = { Grain() },
         };
 
+    /// <summary>
+    /// Scénario doté d'un réseau minimal : un relief plat de dix kilomètres de côté,
+    /// deux gares et un tronçon droit entre elles. Les tests du module réseau le
+    /// complètent pour construire le cas qu'ils veulent refuser ou mesurer.
+    /// </summary>
+    public static ScenarioDef NetworkScenario()
+    {
+        var scenario = Bare("reseau");
+        scenario.Cities.Add(City("a-ville", production: 1.0, stock: 40));
+        scenario.Cities.Add(City("b-ville", demand: 0.4));
+        scenario.Network = new RailTycoon.Sim.Network.RailNetworkDef
+        {
+            Terrain = new RailTycoon.Sim.Network.TerrainDef
+            {
+                Columns = 11, Rows = 11, CellSizeKm = 1.0, BaseElevationM = 100,
+            },
+            Nodes =
+            {
+                new RailTycoon.Sim.Network.TrackNodeDef { Id = "a", City = "a-ville", XKm = 1, YKm = 5 },
+                new RailTycoon.Sim.Network.TrackNodeDef { Id = "b", City = "b-ville", XKm = 9, YKm = 5 },
+            },
+            Edges = { new RailTycoon.Sim.Network.TrackEdgeDef { Id = "a-b", From = "a", To = "b" } },
+            Routes =
+            {
+                new RailTycoon.Sim.Network.TrackRouteDef { Id = "main", Name = "main", Nodes = { "a", "b" } },
+            },
+        };
+        return scenario;
+    }
+
     public static CityDef City(string id, double demand = 0, double production = 0, double stock = 0)
     {
         var city = new CityDef { Id = id, Name = id };

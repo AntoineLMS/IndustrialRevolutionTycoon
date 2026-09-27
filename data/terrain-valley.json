@@ -1,0 +1,82 @@
+{
+  "id": "terrain-valley",
+  "name": "Carte d'essai — la vallée",
+  "seed": 7002,
+  "startingCash": 100000,
+  "initialCoverage": 1.0,
+
+  "//": "Carte de référence n° 2. Une chaîne de montagnes est-ouest, un col à l'est, et un sillon de basse altitude qui court parallèlement à la chaîne. Le tracé suit le sillon : soixante kilomètres, la même longueur que la plaine et que le col, mais dans un couloir naturel.",
+
+  "//terrain": "Le relief est rigoureusement identique à celui de terrain-pass.json, et c'est voulu : entre les deux cartes, seule change la façon dont on traverse. La différence de devis est donc entièrement imputable au tracé, pas au terrain.",
+
+  "priceModel": { "coverageHorizonTicks": 15, "shape": 0.5, "minMultiplier": 0.12, "maxMultiplier": 3.0 },
+
+  "cargos": [
+    { "id": "grain", "name": "Blé", "basePrice": 10, "elasticity": 0.4 }
+  ],
+
+  "cities": [
+    { "id": "lowfield", "name": "Lowfield", "population": 4000, "production": { "grain": 2.0 }, "initialStock": { "grain": 60 } },
+    { "id": "eastmouth", "name": "Eastmouth", "population": 9000, "demand": { "grain": 0.6 } }
+  ],
+
+  "network": {
+    "terrain": {
+      "columns": 81,
+      "rows": 81,
+      "cellSizeKm": 1.0,
+      "baseElevationM": 120,
+      "features": [
+        { "kind": "ridge", "x1Km": 0, "y1Km": 52, "x2Km": 80, "y2Km": 52, "halfWidthKm": 14, "amplitudeM": 520 },
+        { "kind": "bowl", "xKm": 56, "yKm": 52, "halfWidthKm": 11, "amplitudeM": -300 },
+        { "kind": "ridge", "x1Km": 0, "y1Km": 22, "x2Km": 80, "y2Km": 22, "halfWidthKm": 9, "amplitudeM": -45 },
+        { "kind": "bowl", "xKm": 28, "yKm": 22, "halfWidthKm": 7, "amplitudeM": 100 },
+        { "kind": "bowl", "xKm": 46, "yKm": 22, "halfWidthKm": 7, "amplitudeM": 100 }
+      ],
+      "noise": { "amplitudeM": 25, "wavelengthKm": 4, "octaves": 3, "seed": 12 }
+    },
+
+    "alignment": {
+      "maxGradePercent": 2.5,
+      "minCurveRadiusM": 600,
+      "sampleSpacingKm": 0.25,
+      "formationWidthM": 6.0,
+      "extraWidthPerTrackM": 4.5,
+      "sideSlopeRatio": 1.5,
+      "bridgeMinHeightM": 15,
+      "tunnelMinDepthM": 18,
+      "minStructureLengthKm": 0.3,
+      "profileMergeTolerancePercent": 0.1
+    },
+
+    "costs": {
+      "trackPerKmPerTrack": 3000,
+      "cutPerCubicMetre": 0.30,
+      "fillPerCubicMetre": 0.22,
+      "bridgePerKm": 40000,
+      "bridgePerKmPerMetre": 1800,
+      "tunnelPerKm": 120000,
+      "curvePerDegree": 400,
+      "extraTrackStructureFactor": 0.6
+    },
+
+    "traction": { "climbEquivalentKm": 0.03 },
+
+    "nodes": [
+      { "id": "west", "city": "lowfield", "xKm": 8, "yKm": 22, "passingTracks": 2 },
+      { "id": "east", "city": "eastmouth", "xKm": 68, "yKm": 22, "passingTracks": 2 }
+    ],
+
+    "edges": [
+      { "id": "valley", "from": "west", "to": "east", "trackCount": 1 }
+    ],
+
+    "routes": [
+      { "id": "main", "name": "Ligne de la vallée", "nodes": [ "west", "east" ] }
+    ]
+  },
+
+  "trains": [
+    { "id": "t1", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 0 }
+  ]
+}

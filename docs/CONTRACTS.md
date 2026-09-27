@@ -43,19 +43,34 @@ reste n'a plus rien à offrir au joueur.
 
 ### `network` — réseau ferré
 
-**Interface** : à créer. `Transport/Rail.cs` en tient lieu provisoirement.
-**État actuel** : suite d'arrêts et de distances, posée à la main dans le scénario.
+**Interface** : `IRailNetwork` (`src/RailTycoon.Sim/Network/RailNetwork.cs`), décrite
+dans [ARCHITECTURE.md](ARCHITECTURE.md), section « Le réseau ferré ».
+**État actuel** : tranche verticale en place — relief chargé depuis les données,
+tracé sous contrainte de pente et de rayon, terrassement, ponts, tunnels, graphe de
+voies et calcul d'itinéraire. Trois cartes d'essai avec devis de référence dans la
+suite de tests. `heartland` reste en mode de compatibilité, sur ses distances
+kilométriques.
 
 **Périmètre** : graphe de voies sur relief, contraintes de pente et de rayon de
 courbe, coût de déblai et de remblai calculé sur le terrain, ponts, tunnels,
 aiguillages.
+
+**Ce qui manque** : les aiguillages comme objets (une bifurcation est pour l'instant
+un nœud sans contrainte de géométrie), la recherche automatique d'un tracé — le
+géomètre chiffre celui qu'on lui donne —, le terrassement à flanc de coteau, la
+construction en cours de partie (tout est calculé au chargement), et le passage de
+`heartland` sur un relief.
 
 **Critère de réussite** : le coût de construction d'un tracé donné doit être
 reproductible et correspondre aux valeurs de référence sur les cartes de test.
 
 ### `dispatch` — circulation et signalisation
 
-**Interface** : à créer.
+**Interface** : à créer, **au-dessus de `IRailNetwork`**. Le graphe de voies, le
+grain de réservation (l'arête), la capacité de croisement d'un nœud et la forme d'un
+itinéraire sont déjà définis par le module `network` : voir les garanties énumérées
+dans [ARCHITECTURE.md](ARCHITECTURE.md), section « Le réseau ferré ». C'est la
+raison pour laquelle ce module n'a pas été écrit en parallèle du réseau.
 **État actuel** : inexistant — les trains se croisent sans se voir.
 
 **Périmètre** : blocs, signaux, réservation d'itinéraire, évitement

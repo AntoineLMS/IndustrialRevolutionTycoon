@@ -129,6 +129,12 @@ internal static class WorldBuilder
             });
         }
 
+        // Le module réseau construit son graphe de voies sur le relief et en dérive
+        // ses propres lignes. Sans relief dans le scénario, il ne fait rien et les
+        // lignes ci-dessus font foi : c'est la voie de compatibilité.
+        world.Network = RailTycoon.Sim.Network.NetworkBuilder.Attach(
+            scenario, world.Lines, cityId => world.Cities.Any(c => c.Id == cityId));
+
         foreach (var trainDef in scenario.Trains)
         {
             var line = world.Lines.FirstOrDefault(l => l.Id == trainDef.Line)

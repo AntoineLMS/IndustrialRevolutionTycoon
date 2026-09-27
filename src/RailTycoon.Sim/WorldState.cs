@@ -33,6 +33,12 @@ public sealed class WorldState
     public List<RailLine> Lines { get; } = new();
     public List<Train> Trains { get; } = new();
 
+    /// <summary>
+    /// Le réseau ferré, ou <c>null</c> si le scénario n'en déclare pas et s'en tient
+    /// à des lignes aux distances saisies à la main.
+    /// </summary>
+    public RailTycoon.Sim.Network.IRailNetwork? Network { get; internal set; }
+
     private readonly Dictionary<string, City> _citiesById = new();
     private readonly Dictionary<string, CargoDef> _cargosById = new();
     private readonly Dictionary<string, RecipeDef> _recipesById = new();

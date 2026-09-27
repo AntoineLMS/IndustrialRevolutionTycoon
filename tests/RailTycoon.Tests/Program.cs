@@ -1,6 +1,7 @@
 using RailTycoon.Sim;
 using RailTycoon.Sim.Core;
 using RailTycoon.Sim.Economy;
+using RailTycoon.Sim.Network;
 using RailTycoon.Sim.Telemetry;
 
 namespace RailTycoon.Tests;
@@ -664,6 +665,265 @@ internal static class Program
             Check.True(scenario.Cargos.Count == 6, $"6 marchandises attendues, {scenario.Cargos.Count} trouvées");
             Check.True(scenario.Cities.Count == 10, $"10 villes attendues, {scenario.Cities.Count} trouvées");
             Check.True(scenario.Recipes.Count == 3, $"3 recettes attendues, {scenario.Recipes.Count} trouvées");
+        });
+
+        // ---------------------------------------------------------------- réseau
+        // Les valeurs de référence de cette section sont le contrat du module
+        // réseau. Elles ne décrivent pas un comportement « correct » dans l'absolu :
+        // elles figent ce que l'algorithme actuel produit sur trois cartes connues,
+        // pour qu'une retouche future doive s'expliquer au lieu de passer inaperçue.
+        // Les mettre à jour est légitime ; les mettre à jour sans savoir pourquoi
+        // elles ont bougé ne l'est pas.
+
+        string TerrainScenario(string name) => Path.Combine(Fixtures.RepoRoot(), "data", name);
+
+        IRailNetwork Network(string name)
+        {
+            var world = new Simulation(ScenarioLoader.Load(TerrainScenario(name))).World;
+            return world.Network ?? throw new AssertionException($"{name} devrait déclarer un réseau");
+        }
+
+        runner.Add("réseau — le relief est reproductible à graine identique", () =>
+        {
+            // Sans cela, aucun devis n'est une valeur de référence : le coût d'un
+            // tracé dépendrait du relief, et le relief du hasard.
+            string First() => Network("terrain-pass.json").Terrain.Fingerprint();
+            Check.Equal(First(), First(), "empreinte du relief");
+
+            // Les cartes « vallée » et « col » déclarent le même relief : c'est ce qui
+            // rend leurs devis comparables. Si l'une dérive, la comparaison ne veut
+            // plus rien dire et il faut le savoir tout de suite.
+            Check.Equal(
+                Network("terrain-valley.json").Terrain.Fingerprint(),
+                Network("terrain-pass.json").Terrain.Fingerprint(),
+                "vallée et col doivent partager exactement le même relief");
+
+            var def = new TerrainDef
+            {
+                Columns = 40, Rows = 40, CellSizeKm = 1, BaseElevationM = 100,
+                Noise = new TerrainNoiseDef { AmplitudeM = 30, WavelengthKm = 5, Octaves = 3, Seed = 1 },
+            };
+            Check.Equal(
+                TerrainFactory.Build(def, 99).Fingerprint(),
+                TerrainFactory.Build(def, 99).Fingerprint(),
+                "relief procédural à graine identique");
+
+            def.Noise!.Seed = 2;
+            Check.True(
+                TerrainFactory.Build(def, 99).Fingerprint() != TerrainFactory.Build(def, 1).Fingerprint(),
+                "deux graines différentes doivent donner deux reliefs différents");
+        });
+
+        runner.Add("réseau — devis de référence des trois cartes d'essai", () =>
+        {
+            // LE test du module. Trois tracés de soixante kilomètres exactement :
+            // une plaine, un couloir de vallée, et le franchissement d'un col. Le
+            // relief des deux derniers est identique ; seul change le tracé.
+            var expected = new (string Scenario, string Edge, double Cost)[]
+            {
+                // plaine : 180 093, dont 180 009 de pose de voie. Une plaine coûte le
+                // prix des rails, et c'est le plancher.
+                ("terrain-plain.json", "plain", 180_092.65),
+                // vallée : 219 402, soit 1,2 × la plaine. Le couloir naturel se paie
+                // 39 000 de terrassement pour traverser deux contreforts, rien de plus.
+                ("terrain-valley.json", "valley", 219_402.33),
+                // col : 1 219 880, soit 6,8 × la plaine. 326 000 de terrassement et
+                // 713 000 de viaducs sur les deux rampes d'accès.
+                ("terrain-pass.json", "col", 1_219_880.03),
+                // crête : 2 689 446, soit 14,9 × la plaine. Le même relief attaqué de
+                // front à 36 km du col : un tunnel de 19 km, et la réponse est « non ».
+                ("terrain-pass.json", "crest", 2_689_445.91),
+            };
+
+            foreach (var (scenario, edgeId, cost) in expected)
+            {
+                var edge = Network(scenario).Graph.Edge(edgeId);
+                Check.Near(cost, edge.Construction.TotalCost, 0.5, $"devis du tronçon « {edgeId} »");
+                Check.Near(60.0, edge.Construction.HorizontalLengthKm, 0.05,
+                    $"le tronçon « {edgeId} » doit mesurer 60 km en plan");
+            }
+        });
+
+        runner.Add("réseau — la vallée coûte une fraction du franchissement", () =>
+        {
+            // La propriété de conception, indépendamment des valeurs exactes : à
+            // longueur égale et sur le même relief, suivre le couloir naturel doit
+            // coûter une fraction du franchissement, et franchir au col une fraction
+            // du franchissement de la crête. Si cet ordre s'inverse un jour, le choix
+            // du tracé n'est plus un choix.
+            var plain = Network("terrain-plain.json").Graph.Edge("plain").Construction;
+            var pass = Network("terrain-pass.json");
+            var valley = Network("terrain-valley.json").Graph.Edge("valley").Construction;
+            var col = pass.Graph.Edge("col").Construction;
+            var crest = pass.Graph.Edge("crest").Construction;
+
+            Check.Less(valley.TotalCost, col.TotalCost / 4.0,
+                "la vallée doit coûter moins du quart du col");
+            Check.Less(col.TotalCost, crest.TotalCost,
+                "franchir au col doit coûter moins que franchir la crête");
+            Check.Less(plain.EarthworkCost, 1_000,
+                "une plaine ne doit presque rien coûter en terrassement");
+            Check.True(valley.Structures.Count == 0,
+                $"la vallée ne doit exiger aucun ouvrage d'art, elle en compte {valley.Structures.Count}");
+        });
+
+        runner.Add("réseau — ponts et tunnels là où le relief les impose", () =>
+        {
+            // Le principe de l'arbitrage : le même relief se paie en remblais et
+            // viaducs quand on le franchit par son point bas, et en tunnel quand on
+            // l'attaque de front. Ce n'est pas le tracé qui change de nature, c'est
+            // le devis qui désigne la stratégie la moins chère.
+            var pass = Network("terrain-pass.json");
+            var col = pass.Graph.Edge("col").Construction;
+            var crest = pass.Graph.Edge("crest").Construction;
+
+            Check.True(col.BridgeCost > 0, "le franchissement du col doit exiger des viaducs");
+            Check.True(crest.TunnelCost > 0, "le franchissement de la crête doit exiger un tunnel");
+            Check.Less(crest.ProfileBias, 0.01,
+                "attaquer la crête de front doit conduire à un profil tout en déblai");
+
+            foreach (var structure in col.Structures)
+                Check.True(structure.LengthKm >= 0.3 - 1e-9,
+                    $"ouvrage de {structure.LengthKm:0.###} km : en dessous du seuil, c'est du terrassement");
+        });
+
+        runner.Add("réseau — la pente maximale déclarée est respectée partout", () =>
+        {
+            // La contrainte de pente n'est pas indicative : c'est elle qui crée le
+            // coût. Un tracé qui la dépasserait serait un tracé gratuit.
+            foreach (string name in new[] { "terrain-plain.json", "terrain-valley.json", "terrain-pass.json" })
+            {
+                var scenario = ScenarioLoader.Load(TerrainScenario(name));
+                double limit = scenario.Network.Alignment.MaxGradePercent;
+                foreach (var edge in Network(name).Graph.Edges)
+                {
+                    Check.True(edge.Construction.MaxGradePercent <= limit + 1e-6,
+                        $"{name} / {edge.Id} : {edge.Construction.MaxGradePercent:0.###} % > {limit:0.###} %");
+
+                    double sections = 0;
+                    foreach (var section in edge.Profile.Sections) sections += section.LengthKm;
+                    Check.Near(edge.Construction.HorizontalLengthKm, sections, 1e-6,
+                        $"{name} / {edge.Id} : les sections du profil doivent couvrir tout le tronçon");
+
+                    Check.True(edge.Construction.LengthKm > edge.Construction.HorizontalLengthKm,
+                        $"{name} / {edge.Id} : la longueur réelle doit dépasser la longueur en plan");
+                }
+            }
+        });
+
+        runner.Add("réseau — un virage plus serré que le rayon minimal est refusé", () =>
+        {
+            // Corriger un tracé impossible en silence donnerait au joueur une ligne
+            // qu'il croit avoir posée et qui n'est pas la sienne.
+            var scenario = Fixtures.NetworkScenario();
+            scenario.Network.Nodes.Add(new TrackNodeDef { Id = "c", XKm = 1.5, YKm = 6.2 });
+            scenario.Network.Edges.Add(new TrackEdgeDef
+            {
+                Id = "epingle", From = "a", To = "c",
+                Via = { new MapPointDef { XKm = 9, YKm = 5 } },
+            });
+
+            Check.Throws<InvalidDataException>(() => new Simulation(scenario),
+                "un virage en épingle doit être refusé au chargement");
+        });
+
+        runner.Add("réseau — un dénivelé inatteignable à la pente maximale est refusé", () =>
+        {
+            // Mille mètres en deux kilomètres, ce n'est pas cher : c'est impossible.
+            // Le dire au chargement vaut mieux que produire une voie à 50 %.
+            var scenario = Fixtures.NetworkScenario();
+            scenario.Network.Terrain = new TerrainDef
+            {
+                CellSizeKm = 1,
+                Heights = { "0 0 0", "500 500 500", "1000 1000 1000" },
+            };
+            scenario.Network.Nodes.Clear();
+            scenario.Network.Edges.Clear();
+            scenario.Network.Routes.Clear();
+            scenario.Network.Nodes.Add(new TrackNodeDef { Id = "bas", City = "a-ville", XKm = 1, YKm = 0 });
+            scenario.Network.Nodes.Add(new TrackNodeDef { Id = "haut", City = "b-ville", XKm = 1, YKm = 2 });
+            scenario.Network.Edges.Add(new TrackEdgeDef { Id = "mur", From = "bas", To = "haut" });
+
+            Check.Throws<InvalidDataException>(() => new Simulation(scenario),
+                "un mur de mille mètres doit être refusé");
+        });
+
+        runner.Add("réseau — un nœud qui dessert une ville inconnue est refusé", () =>
+        {
+            var scenario = Fixtures.NetworkScenario();
+            scenario.Network.Nodes.Add(new TrackNodeDef { Id = "z", City = "nulle-part", XKm = 5, YKm = 9 });
+
+            Check.Throws<InvalidDataException>(() => new Simulation(scenario),
+                "un nœud desservant une ville inconnue doit être refusé");
+        });
+
+        runner.Add("réseau — l'itinéraire le plus court est choisi, et il est stable", () =>
+        {
+            // Deux détours de longueur rigoureusement identique existent dès qu'une
+            // carte est un peu régulière. Départager par l'indice d'arête, et jamais
+            // par l'ordre d'un dictionnaire, est ce qui rend une partie rejouable.
+            var scenario = Fixtures.NetworkScenario();
+            scenario.Cities.Add(Fixtures.City("nord-ville"));
+            scenario.Cities.Add(Fixtures.City("sud-ville"));
+            scenario.Network.Nodes.Add(new TrackNodeDef { Id = "nord", City = "nord-ville", XKm = 5, YKm = 9 });
+            scenario.Network.Nodes.Add(new TrackNodeDef { Id = "sud", City = "sud-ville", XKm = 5, YKm = 1 });
+            scenario.Network.Edges.Add(new TrackEdgeDef { Id = "a-nord", From = "a", To = "nord" });
+            scenario.Network.Edges.Add(new TrackEdgeDef { Id = "nord-b", From = "nord", To = "b" });
+            scenario.Network.Edges.Add(new TrackEdgeDef { Id = "a-sud", From = "a", To = "sud" });
+            scenario.Network.Edges.Add(new TrackEdgeDef { Id = "sud-b", From = "sud", To = "b" });
+
+            string Chosen()
+            {
+                var network = new Simulation(scenario).World.Network!;
+                Check.True(network.TryConnect("a", "b", out var route), "a et b doivent être reliés");
+                return string.Join(",", route.Legs.Select(l => l.Edge.Id));
+            }
+
+            // Le tronçon direct « a-b » existe déjà dans le scénario de base : c'est
+            // le plus court, les deux détours sont plus longs et de même longueur.
+            Check.Equal("a-b", Chosen(), "itinéraire retenu");
+            Check.Equal(Chosen(), Chosen(), "itinéraire retenu deux fois de suite");
+
+            var graph = new Simulation(scenario).World.Network!.Graph;
+            Check.True(graph.Node("nord").EdgeIndices.Count == 2,
+                "le nœud nord doit connaître ses deux tronçons incidents");
+            Check.True(graph.Node("a").PassingTracks >= 1,
+                "un nœud doit déclarer sa capacité de croisement pour la signalisation");
+        });
+
+        runner.Add("réseau — le relief atteint le coût kilométrique du transport", () =>
+        {
+            // Le seul canal par lequel le relief touche l'économie. Sans lui, le
+            // module réseau serait un décor : un col coûterait à construire et rien
+            // à exploiter, et le rayon économique des marchandises à bas prix
+            // (docs/FINDINGS.md) serait le même partout.
+            var pass = new Simulation(ScenarioLoader.Load(TerrainScenario("terrain-pass.json")));
+            var col = pass.World.Lines.First(l => l.Id == "main");
+            Check.True(col.LegCostFactor(0, 1) > 1.05,
+                $"franchir un col doit coûter plus cher au kilomètre, facteur = {col.LegCostFactor(0, 1):0.000}");
+            Check.True(col.Segments.Count == 1 && col.Segments[0].Legs.Count == 1,
+                "la ligne du col doit exposer son unique tronçon pour la signalisation");
+
+            var plain = new Simulation(ScenarioLoader.Load(TerrainScenario("terrain-plain.json")));
+            var flat = plain.World.Lines.First(l => l.Id == "main");
+            Check.Less(flat.LegCostFactor(0, 1), col.LegCostFactor(0, 1),
+                "la plaine doit coûter moins cher au kilomètre que le col");
+        });
+
+        runner.Add("compatibilité — le scénario de référence ignore le module réseau", () =>
+        {
+            // heartland reste sur ses distances saisies à la main. C'est la voie de
+            // compatibilité, et c'est ce qui permet au module réseau d'arriver sans
+            // invalider les traces de régression de la campagne de mesure.
+            var sim = new Simulation(ScenarioLoader.Load(Fixtures.HeartlandPath()));
+            Check.True(sim.World.Network is null,
+                "heartland ne déclare pas de relief : son réseau doit rester nul");
+
+            var line = sim.World.Lines[0];
+            Check.Near(500, line.LengthKm, 1e-9, "longueur de la ligne principale");
+            Check.Near(1.0, line.LegCostFactor(0, 1), 1e-9,
+                "sans relief, le relief ne doit rien coûter");
+            Check.Near(45, line.DistanceBetween(0, 1), 1e-9, "distance entre les deux premiers arrêts");
         });
 
         Console.WriteLine("RailTycoon — invariants de simulation");
