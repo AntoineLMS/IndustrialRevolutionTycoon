@@ -79,6 +79,7 @@ franchissant au col, et 2 690 000 en l'attaquant de front.
 | Une marchandise au plafond > 50 % du temps | Son prix n'est plus une information, c'est une constante |
 | Une usine bloquée à 0 % | Mal approvisionnée, ou non rentable par construction |
 | Une marge kilométrique anormalement élevée | **Suspecter une faille d'arbitrage**, pas un succès |
+| Une rotation du fret très au-dessus de 1 | Le transporteur revend de ville en ville ce qu'il vient de livrer : légitime si chaque revente paie un vrai écart, suspect sinon |
 | Trésorerie en croissance monotone et lisse | L'arbitrage ne se referme pas : trop facile |
 | Un écart de bilan non nul, même d'un centime | **Fuite comptable**, jamais un résidu de calcul : la finance est tenue en `decimal` |
 | Une compagnie sous administration | Le découvert a dépassé ce que ses capitaux propres gagent ; les trains sont à l'arrêt |
