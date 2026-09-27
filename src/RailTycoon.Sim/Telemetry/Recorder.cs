@@ -83,6 +83,50 @@ public sealed class CsvRecorder
     }
 
     /// <summary>
+    /// Le journal des événements en CSV, une ligne par (événement, ville,
+    /// marchandise, levier) : début, fin, origine, multiplicateur au plus fort.
+    /// <para>
+    /// Écrit à part des trois traces : il ne s'accumule pas tick par tick, il se lit
+    /// en fin de partie. Il n'entre pas dans <see cref="Fingerprint"/> ; les traces de
+    /// référence, elles, ajoutent à leur empreinte le résumé du journal
+    /// (<c>EventsState.Summary</c>), vide quand le module est inactif. Toujours
+    /// écrit, même vide — un
+    /// dossier de sortie réutilisé ne doit pas garder le journal d'une partie
+    /// précédente à côté des traces de celle-ci.
+    /// </para>
+    /// </summary>
+    public static string EventsCsv(WorldState world)
+    {
+        var ci = CultureInfo.InvariantCulture;
+        var sb = new StringBuilder("instance,event,name,origin,start_tick,end_tick,ramp_ticks,city,cargo,on,peak_factor\n");
+        foreach (var e in world.Events.Journal)
+            foreach (var t in e.Targets)
+                sb.Append(e.InstanceId).Append(',')
+                  .Append(e.DefinitionId).Append(',')
+                  .Append('"').Append(e.Name.Replace("\"", "\"\"")).Append('"').Append(',')
+                  .Append(e.Origin switch
+                  {
+                      Events.EventOrigin.Historical => "historical",
+                      Events.EventOrigin.Inspired => "inspired",
+                      _ => "random",
+                  }).Append(',')
+                  .Append(e.StartTick.ToString(ci)).Append(',')
+                  .Append(e.EndTick.ToString(ci)).Append(',')
+                  .Append(e.RampTicks.ToString(ci)).Append(',')
+                  .Append(t.CityId).Append(',')
+                  .Append(t.Cargo).Append(',')
+                  .Append(t.On).Append(',')
+                  .Append(F(t.PeakFactor)).Append('\n');
+        return sb.ToString();
+    }
+
+    public static void WriteEvents(WorldState world, string directory)
+    {
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, "events.csv"), EventsCsv(world));
+    }
+
+    /// <summary>
     /// Empreinte de la trace des marchés. Deux exécutions de la même version sur
     /// la même graine doivent produire la même empreinte : c'est le test de
     /// déterminisme le moins cher qui existe.

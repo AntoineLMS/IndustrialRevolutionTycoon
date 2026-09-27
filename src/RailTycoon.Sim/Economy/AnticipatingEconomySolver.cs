@@ -31,7 +31,8 @@ namespace RailTycoon.Sim.Economy;
 /// marchandise autrement que par <see cref="Market.Produce"/> et
 /// <see cref="Market.Consume"/>, toucher à la trésorerie, tirer un nombre au
 /// hasard. La saison et la croissance sont entièrement déterminées par le tick et
-/// par l'état des marchés.
+/// par l'état des marchés. L'aléa des événements est tiré par le module events,
+/// sur sa propre séquence, et n'arrive ici que sous forme d'un multiplicateur.
 /// </para>
 /// </summary>
 public sealed class AnticipatingEconomySolver : IEconomySolver
@@ -325,7 +326,12 @@ public sealed class AnticipatingEconomySolver : IEconomySolver
 
     /// <summary>
     /// Recompose les taux du tick : la demande des habitants subit la taille de la
-    /// ville et sa saison, la production primaire sa propre saison.
+    /// ville et sa saison, la production primaire sa propre saison, et toutes deux
+    /// le multiplicateur que le module events a publié sur le marché (phase 0b).
+    /// Ce multiplicateur vaut 1 exactement sans événement, ce qui laisse le produit
+    /// identique au bit près : la trace de ce solveur n'a pas bougé à l'arrivée du
+    /// module. La montée d'un événement, sa cible, son tirage ne sont pas l'affaire
+    /// de ce solveur ; il en lit le résultat, comme la référence.
     /// <para>
     /// La production n'est pas affectée par la taille de la ville : une mine ne
     /// creuse pas plus vite parce que le bourg a grandi. Cette asymétrie est
@@ -341,9 +347,11 @@ public sealed class AnticipatingEconomySolver : IEconomySolver
             foreach (var ms in city.Markets)
             {
                 ms.Market.BaseDemandRate = ms.NominalDemand * city.Size
-                    * Seasonal(ms.DemandAmplitude, ms.DemandPeak, phase);
+                    * Seasonal(ms.DemandAmplitude, ms.DemandPeak, phase)
+                    * ms.Market.EventDemandFactor;
                 ms.Market.BaseProductionRate = ms.NominalProduction
-                    * Seasonal(ms.ProductionAmplitude, ms.ProductionPeak, phase);
+                    * Seasonal(ms.ProductionAmplitude, ms.ProductionPeak, phase)
+                    * ms.Market.EventProductionFactor;
             }
     }
 

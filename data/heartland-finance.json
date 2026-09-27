@@ -56,6 +56,8 @@
 
   "//finance": "Ce scénario existe pour éprouver le module finance, et lui seul. L'économie est identique à heartland.json, qui reste la trace de régression de l'économie et n'active pas la finance : un scénario doit éprouver une chose à la fois. Ici les trois mécanismes se déclenchent réellement en 720 ticks — la société emprunte, distribue, monte au capital d'un pair et l'absorbe ; le magnat joue ses titres à crédit et prend un appel de marge quand l'acquisition surpayée casse le cours. Tous les montants sont en decimal, arrondis au centime. Les taux sont annuels parce que c'est ainsi qu'un emprunt se lit ; l'année de jeu fait 360 ticks.",
 
+  "//events": "Pas d'événements : ce scénario éprouve la finance, et un scénario éprouve une chose à la fois. Des événements déplaceraient le résultat d'exploitation, donc la trésorerie, les dividendes et la date de l'OPA, et un écart de bilan ne se lirait plus comme une fuite comptable. Les événements s'éprouvent sur data/heartland-events.json, la finance sur celui-ci ; les croiser sera un troisième scénario, pas une mutation de l'un des deux.",
+
   "finance": {
     "enabled": true,
     "companyId": "player",

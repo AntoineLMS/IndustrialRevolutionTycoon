@@ -995,6 +995,10 @@ internal static class Program
         // conflit sur cette liste.
         FinanceTests.Register(runner);
 
+        // Même principe pour le module events : historiques, aléatoires,
+        // neutralité, flux aléatoire propre.
+        EventTests.Register(runner);
+
         // ------------------------------------------------ traces de référence
         // En dernier : elles figent le comportement de tous les modules à la fois,
         // et un échec ici se lit mieux une fois les invariants de chacun passés.

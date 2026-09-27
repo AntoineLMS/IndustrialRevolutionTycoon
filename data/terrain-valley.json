@@ -13,6 +13,8 @@
 
   "//finance": "Pas de finance : une carte d'essai du réseau éprouve le devis de construction et rien d'autre.",
 
+  "//events": "Pas d'événements : une carte d'essai du réseau éprouve le devis de construction, qui ne dépend d'aucun marché. Un événement n'y changerait pas un centime et déplacerait la trace de référence pour rien.",
+
   "priceModel": { "coverageHorizonTicks": 15, "shape": 0.5, "minMultiplier": 0.12, "maxMultiplier": 3.0 },
 
   "cargos": [

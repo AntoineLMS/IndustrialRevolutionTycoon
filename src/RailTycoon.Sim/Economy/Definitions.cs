@@ -246,6 +246,12 @@ public sealed class ScenarioDef
 
     /// <summary>Configuration du module finance. Voir <c>Finance/FinanceDefinitions.cs</c> ; inactive par défaut.</summary>
     public RailTycoon.Sim.Finance.FinanceDef Finance { get; set; } = new();
+
+    /// <summary>
+    /// Événements historiques et aléatoires. Voir <c>Events/EventDefinitions.cs</c> ;
+    /// inactif par défaut, et neutre au bit près tant qu'il l'est.
+    /// </summary>
+    public RailTycoon.Sim.Events.EventsDef Events { get; set; } = new();
     public List<CargoDef> Cargos { get; set; } = new();
     public List<RecipeDef> Recipes { get; set; } = new();
     public List<CityDef> Cities { get; set; } = new();
