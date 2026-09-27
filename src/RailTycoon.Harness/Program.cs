@@ -48,6 +48,7 @@ internal static class Program
         // donc un écart d'un centime est un bug et non un résidu de calcul.
         decimal worstResidual = 0m;
         int worstResidualTick = 0;
+        double worstFrontierGap = 0;
 
         recorder.Record(sim.World);
         for (int i = 0; i < opts.Ticks; i++)
@@ -64,6 +65,18 @@ internal static class Program
                 worstResidualTick = sim.World.Tick.Index;
             }
 
+            // Écart à la frontière entre le monde en double et la comptabilité. Il
+            // ne s'accumule pas — on reflète le cumul arrondi, pas la somme des
+            // flux arrondis — donc il doit rester sous le demi-centime pour
+            // toujours, et non croître d'un demi-centime par tick.
+            if (sim.World.Finance.Enabled)
+            {
+                double gap = Math.Abs(
+                    (double)sim.World.Finance.ReflectedOperatingCash -
+                    (sim.World.Def.StartingCash + sim.World.Company.NetProfit));
+                if (gap > worstFrontierGap) worstFrontierGap = gap;
+            }
+
             // On s'arrête au premier tick fautif : les violations en cascade
             // masquent la cause initiale, qui est la seule intéressante.
             if (violations.Count == 0)
@@ -76,7 +89,7 @@ internal static class Program
         recorder.WriteTo(opts.OutDir);
         Report.PrintBalance(scenario);
         Report.PrintRun(sim, opts, recorder, stats, cashHistory);
-        Report.PrintFinance(sim, worstResidual, worstResidualTick);
+        Report.PrintFinance(sim, worstResidual, worstResidualTick, worstFrontierGap);
 
         if (violations.Count > 0)
         {
@@ -315,7 +328,8 @@ internal static class Report
         return worst;
     }
 
-    public static void PrintFinance(Simulation sim, decimal worstResidual, int worstResidualTick)
+    public static void PrintFinance(Simulation sim, decimal worstResidual, int worstResidualTick,
+        double worstFrontierGap)
     {
         var finance = sim.World.Finance;
         if (!finance.Enabled || finance.Player is null || finance.Magnate is null)
@@ -398,5 +412,10 @@ internal static class Report
                           (worstResidual == 0m
                               ? "   (tous les bilans équilibrés au centime, à chaque tick)"
                               : $"   ← FUITE, tick {worstResidualTick}"));
+        Console.WriteLine($"Écart à la frontière double/decimal  : " +
+                          $"{worstFrontierGap.ToString("0.00######", Ci)}" +
+                          (worstFrontierGap <= 0.005 + 1e-9
+                              ? "   (sous le demi-centime, et il ne s'accumule pas)"
+                              : "   ← DÉRIVE de l'arrondi"));
     }
 }
