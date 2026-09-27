@@ -137,6 +137,32 @@ marchandise est au prix plancher par construction. En comptant ces marchés
 fictifs, les mesures annonçaient « blé au plancher 71 % du temps » alors que le
 blé s'écoulait normalement.
 
+## Un test qui ne prouvait pas ce qu'il annonçait
+
+*Trouvé par le module `economy`, dans le code de base — c'est-à-dire dans le mien.*
+
+Le test « déterminisme — deux exécutions donnent la même trace » est **trivialement
+satisfait** : `DeterministicRandom` est construit dans `Simulation` et stocké sur
+`WorldState`, mais il n'est **jamais tiré**. Zéro appel à `NextDouble`,
+`NextUInt` ou `NextRange` dans tout le dépôt hors du fichier qui les définit. Il
+n'y a aucun aléa dans la simulation, donc deux exécutions identiques ne peuvent
+pas différer.
+
+L'infrastructure est correcte et la règle « aucun aléa hors de
+`DeterministicRandom` » reste la bonne. Mais le test ne teste rien aujourd'hui, et
+il donne l'illusion inverse : il *ressemble* à une garantie de reproductibilité.
+
+Le vrai risque qu'il était censé couvrir est l'instabilité de l'ordre de parcours
+des dictionnaires, qui ne se manifeste pas forcément entre deux exécutions du même
+processus. Ce qu'il faut à la place est une **trace de référence** : figer
+l'empreinte attendue et la comparer. Tout changement de comportement de la
+simulation devient alors visible et doit être justifié, au lieu de passer
+inaperçu. À faire une fois les quatre modules fusionnés — poser une empreinte de
+référence maintenant la ferait échouer à chaque fusion légitime.
+
+Leçon générale, qui prolonge celle des quatre bugs : un test vert ne dit pas qu'il
+couvre quelque chose. Celui-ci était vert depuis le premier jour.
+
 ## Questions ouvertes pour l'équipe
 
 **Le rayon économique.** À 0,8 par kilomètre, une marchandise à bas prix ne peut

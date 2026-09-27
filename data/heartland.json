@@ -29,7 +29,7 @@
     "minTradeQty": 0.25
   },
 
-  "//anticipating": "Réglages du solveur anticipating. Ignorés par le solveur de référence, qui reste le témoin de comparaison. L'anticipation fait tout le travail : elle porte la mobilité de la dispersion de 0,411 à 0,649 et le taux de changement de la ville la plus chère de 20,0 % à 26,2 % sur 720 ticks, sans dégrader le résultat du transport. Au-delà de 6 ticks d'horizon ou de 0,25 de lissage, le prix devient du bruit : le transporteur rate ses créneaux et le résultat net chute d'un cinquième pour deux points de mobilité.",
+  "//anticipating": "Réglages du solveur anticipating. Ignorés par le solveur de référence, qui reste le témoin de comparaison. L'anticipation fait tout le travail : elle porte la mobilité de la dispersion de 0,411 à 0,615 et le taux de changement de la ville la plus chère de 20,0 % à 26,2 % sur 720 ticks, sans dégrader le résultat du transport. Au-delà de 6 ticks d'horizon ou de 0,25 de lissage, le prix devient du bruit : le transporteur rate ses créneaux et le résultat net chute d'un cinquième pour deux points de mobilité.",
 
   "//croissance": "growthRatePerTick est à 0, et c'est un résultat de mesure, pas un oubli. Le mécanisme est implémenté et testé, mais sur cette carte il ne fait pas ce qu'on espérait : le signal qui fait grandir une ville est qu'elle soit moins chère que les autres, donc la croissance déplace la demande des villes chères vers les villes bon marché et COMPRIME la dispersion au lieu de la déplacer. Mesuré à 0,31-0,43 de mobilité contre 0,411 pour la référence, quel que soit le rythme (0,003 à 0,2) et quelle que soit la mémoire démographique (1 à 180 ticks). L'activer se décide avec une autre boucle de croissance, pas avec un autre réglage de celle-ci.",
 
