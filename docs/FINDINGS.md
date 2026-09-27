@@ -459,18 +459,21 @@ la somme des dénivelés positifs du profil, et le profil suit chaque bosse que 
 rampe maximale n'oblige pas à raboter. Sur la sierra, 20 m de rugosité font
 gravir 58 à 86 m à chaque tronçon de plaine de 45 à 60 km : la rugosité seule
 coûte 4,3 %, la montagne seule 5,9 %. Sur les cartes d'essai, dont la rugosité est
-plus forte (25 m, 4 km), c'est pire :
+plus forte (25 m, 4 km), même décomposition — une variable à la fois, facteurs
+aller / retour :
 
-| carte (60 km) | facteur aller / retour | devis |
-|---|---|---|
-| plaine | 1,118 / 1,123 | 180 093 |
-| vallée | 1,159 / 1,172 | 219 402 |
-| col | 1,165 / 1,162 | 1 219 880 |
-| crête (tunnel de 19 km) | 1,212 / 1,222 | 2 689 446 |
+| carte (60 km) | tel qu'écrit | rugosité seule | formes seules | devis |
+|---|---|---|---|---|
+| plaine | 1,118 / 1,123 | 1,108 / 1,114 | 1,060 / 1,059 | 180 093 |
+| vallée | 1,159 / 1,172 | 1,089 / 1,103 | 1,100 / 1,100 | 219 402 |
+| col | 1,165 / 1,162 | 1,107 / 1,103 | 1,132 / 1,132 | 1 219 880 |
+| crête (tunnel de 19 km) | 1,212 / 1,222 | 1,078 / 1,088 | 1,185 / 1,185 | 2 689 446 |
 
-La « plaine » coûte 12 % de plus que le plat, le col 16 %, et la crête percée d'un
-tunnel de 19 km — 1,5 million de plus que le col — coûte *plus* cher à exploiter
-que le col. À l'exploitation, ces cartes mesurent leur rugosité, pas leur relief.
+La rugosité seule coûte 8 à 11 % sur chacune, autant que le mamelon de la
+« plaine » et presque autant que la montagne du col (13 %). Et la crête percée
+d'un tunnel de 19 km — 1,5 million de plus que le col — coûte *plus* cher à
+exploiter que le col : le tunnel abaisse le point haut, mais les rampes d'accès
+gravissent davantage. Rien, à l'exploitation, ne récompense le choix de percer.
 
 **Le commentaire qui justifiait 0,03 justifie 0,2.** `TractionDef` le motivait par
 « une rampe de 1 % triple la résistance au roulement ». À 0,03, un kilomètre à 1 %
@@ -495,8 +498,8 @@ de 0,6 chargement de blé par tick : même vendue en permanence au plafond (30),
 elle rapporterait au plus 12 960. Recettes réelles 2 803, achats 749. Aucun
 réglage de prix ne peut rendre ces cartes rentables : elles ont été conçues pour
 chiffrer un devis, et leur résultat n'a pas de sens économique. Le relief n'y
-ajoute que 12 à 17 % au coût d'exploitation — dont l'essentiel, on vient de le
-voir, est de la rugosité. Là encore, la trace des marchés est identique avec et
+ajoute que 12 à 17 % au coût d'exploitation, dont 8 à 11 points viendraient de
+la seule rugosité. Là encore, la trace des marchés est identique avec et
 sans coût de relief.
 
 ### Le bloc `anticipating` ne se recopie pas
@@ -545,8 +548,9 @@ mention contraire.
    triple la résistance »), 58,6 % : le résultat tombe de 219 411 à 116 075, et
    deux trains font presque aussi bien que trois. Entre les deux, 0,09 : 26,4 % et
    182 940.
-3. **La rugosité doit-elle compter comme une rampe ?** Aujourd'hui une plaine de
-   60 km paie 12 %, et un tunnel ne fait rien gagner à l'exploitation. Options :
+3. **La rugosité doit-elle compter comme une rampe ?** Aujourd'hui la rugosité seule
+   coûte 8 à 11 % sur 60 km, autant qu'un relief réel, et un tunnel ne fait rien
+   gagner à l'exploitation. Options :
    ne compter que les dénivelés au-delà d'un seuil, ou lisser le profil avant de
    sommer — deux façons de déplacer les empreintes `terrain-*`, à décider avant
    d'écrire d'autres cartes.
