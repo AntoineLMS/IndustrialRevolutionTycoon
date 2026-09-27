@@ -219,6 +219,13 @@ public sealed class ScenarioDef
     public PriceModelDef PriceModel { get; set; } = new();
     public EconomyDef Economy { get; set; } = new();
     public HaulageDef Haulage { get; set; } = new();
+
+    /// <summary>
+    /// Le réseau ferré : relief, graphe de voies, coûts de construction. Sans nœud
+    /// déclaré, le scénario reste sur ses <see cref="Lines"/> aux distances saisies
+    /// à la main. Voir RailTycoon.Sim.Network.RailNetworkDef.
+    /// </summary>
+    public RailTycoon.Sim.Network.RailNetworkDef Network { get; set; } = new();
     public List<CargoDef> Cargos { get; set; } = new();
     public List<RecipeDef> Recipes { get; set; } = new();
     public List<CityDef> Cities { get; set; } = new();

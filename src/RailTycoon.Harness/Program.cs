@@ -34,6 +34,12 @@ internal static class Program
             return 0;
         }
 
+        if (opts.SurveyOnly)
+        {
+            Report.PrintSurvey(scenario);
+            return 0;
+        }
+
         var sim = new Simulation(scenario);
         double initialStock = Invariants.InitialStockTotal(sim.World);
         var recorder = new CsvRecorder { Every = opts.RecordEvery };
@@ -86,6 +92,7 @@ internal sealed class Options
     public int RecordEvery = 1;
     public int WarmupTicks = 90;
     public bool BalanceOnly;
+    public bool SurveyOnly;
     public bool ShowHelp;
 
     public static Options Parse(string[] args)
@@ -102,6 +109,7 @@ internal sealed class Options
                 case "--every": o.RecordEvery = int.Parse(Next(args, ref i), CultureInfo.InvariantCulture); break;
                 case "--warmup": o.WarmupTicks = int.Parse(Next(args, ref i), CultureInfo.InvariantCulture); break;
                 case "--balance": o.BalanceOnly = true; break;
+                case "--survey": o.SurveyOnly = true; break;
                 default:
                     Console.Error.WriteLine($"Argument inconnu : {args[i]}");
                     o.ShowHelp = true;
@@ -128,6 +136,7 @@ internal sealed class Options
                   --every <n>            n'enregistrer qu'un tick sur n
                   --warmup <n>           ticks exclus des statistiques (défaut : 90)
                   --balance              bilan offre/demande du scénario, sans simuler
+                  --survey               devis de construction du réseau, sans simuler
               -h, --help                 cette aide
             """);
     }
@@ -160,6 +169,83 @@ internal static class Report
                 $"{ratio,8}  {b.Verdict}");
         }
         Console.WriteLine();
+    }
+
+    /// <summary>
+    /// Devis du réseau, tronçon par tronçon, sans rien simuler.
+    /// <para>
+    /// C'est le pendant de <c>--balance</c> pour la géographie : il dit où part
+    /// l'argent d'une ligne. Un total ne suffit pas à décider — c'est la ventilation
+    /// entre voie, terrassement, ponts et tunnels qui indique s'il faut chercher un
+    /// tracé plus bas, plus long, ou percer.
+    /// </para>
+    /// </summary>
+    public static void PrintSurvey(RailTycoon.Sim.Economy.ScenarioDef scenario)
+    {
+        var world = new Simulation(scenario).World;
+        if (world.Network is null)
+        {
+            Console.WriteLine($"{scenario.Name} ne déclare pas de réseau : ses lignes sont posées à la main.");
+            return;
+        }
+
+        var network = world.Network;
+        Console.WriteLine($"Devis de construction — {scenario.Name}");
+        Console.WriteLine($"  relief {network.Terrain.Columns}×{network.Terrain.Rows} mailles de " +
+                          $"{network.Terrain.CellSizeKm.ToString("0.##", Ci)} km, empreinte {network.Terrain.Fingerprint()}");
+        Console.WriteLine();
+        Console.WriteLine($"  {"Tronçon",-14}{"km",7}{"pente",8}{"stratégie",11}" +
+                          $"{"voie",11}{"terrass.",11}{"ponts",11}{"tunnels",11}{"courbes",9}{"total",12}");
+
+        foreach (var edge in network.Graph.Edges)
+        {
+            var c = edge.Construction;
+            Console.WriteLine(
+                $"  {edge.Id,-14}{c.LengthKm.ToString("0.0", Ci),7}" +
+                $"{(c.MaxGradePercent.ToString("0.00", Ci) + "%"),8}" +
+                $"{Strategy(c.ProfileBias),11}" +
+                $"{c.TrackCost.ToString("N0", Ci),11}{c.EarthworkCost.ToString("N0", Ci),11}" +
+                $"{c.BridgeCost.ToString("N0", Ci),11}{c.TunnelCost.ToString("N0", Ci),11}" +
+                $"{c.CurveCost.ToString("N0", Ci),9}{c.TotalCost.ToString("N0", Ci),12}");
+
+            foreach (var structure in c.Structures)
+                Console.WriteLine(
+                    $"      {structure.Kind,-10} du km {structure.StartKm.ToString("0.0", Ci)} " +
+                    $"sur {structure.LengthKm.ToString("0.0", Ci)} km, " +
+                    $"{structure.MaxHeightM.ToString("0", Ci)} m, {structure.Cost.ToString("N0", Ci)}");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"  Total réseau {network.BuiltCost.ToString("N0", Ci),12}");
+        Console.WriteLine();
+
+        foreach (var route in network.Routes)
+        {
+            Console.WriteLine(
+                $"  Itinéraire {route.Id,-10} {route.LengthKm.ToString("0.0", Ci),7} km, " +
+                $"{route.Stations().Count} gares, rampe déterminante " +
+                $"{RulingGrade(route, true).ToString("0.00", Ci)} % à l'aller / " +
+                $"{RulingGrade(route, false).ToString("0.00", Ci)} % au retour");
+        }
+        Console.WriteLine();
+    }
+
+    private static string Strategy(double bias) => bias switch
+    {
+        <= 0.01 => "déblai",
+        >= 0.99 => "remblai",
+        _ => "mixte " + bias.ToString("0.00", Ci),
+    };
+
+    private static double RulingGrade(RailTycoon.Sim.Network.TrackRoute route, bool forward)
+    {
+        double worst = 0;
+        foreach (var leg in route.Legs)
+        {
+            double grade = leg.Edge.Profile.RulingGradePercent(forward == leg.Forward);
+            if (grade > worst) worst = grade;
+        }
+        return worst;
     }
 
     public static void PrintRun(

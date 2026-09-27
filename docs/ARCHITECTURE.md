@@ -137,13 +137,118 @@ derniers chargements se vendent moins cher que les premiers.
 *Pourquoi* : sans ce mécanisme, saturer une même ville serait indéfiniment
 rentable, et la stratégie optimale se réduirait à une seule route.
 
+## Le réseau ferré
+
+Le module `network` (`src/RailTycoon.Sim/Network/`) remplace la suite d'arrêts et de
+distances par un **graphe de voies posé sur un relief**. Sa façade est
+`IRailNetwork`, et elle ne répond qu'à trois questions :
+
+| Question | Méthode | Qui la pose |
+|---|---|---|
+| Combien coûterait *ce* tracé ? | `Survey(points, voies)` | le constructeur, l'interface |
+| Par où passe-t-on de A à B ? | `TryConnect`, `Routes` | le transport, la circulation |
+| Que coûte le relief à l'exploitation ? | `CostFactor(arête, sens)` | le transport |
+
+Tout le reste — carte de hauteurs, enveloppe de profils, terrassement, ponts,
+tunnels — est derrière. Le transport ne connaît que `RailLine`, qui reste une suite
+plate d'arrêts et de distances : il demande `DistanceBetween` et reçoit la longueur
+réelle de la voie, il demande `LegCostFactor` et reçoit un nombre. **Aucun type du
+relief ne traverse cette frontière.**
+
+### Comment un tracé est chiffré
+
+1. **En plan** — les points de passage sont reliés par des alignements droits
+   raccordés par des arcs de cercle au rayon minimal. Un virage qui exigerait plus
+   serré est *refusé au chargement*, pas corrigé en silence.
+2. **En long** — une plateforme dont la pente ne dépasse jamais `pente_max` est
+   exactement une fonction lipschitzienne de la distance. Cet ensemble est encadré
+   par le profil tout en déblai et le profil tout en remblai ; toute combinaison
+   convexe des deux est admissible. Le géomètre chiffre quelques stratégies le long
+   de cette famille et **garde la moins chère**.
+3. **Ouvrages** — au-delà d'un seuil de hauteur de remblai on construit un pont, au
+   delà d'un seuil de profondeur de déblai on perce un tunnel, à condition que
+   l'ouvrage soit assez long pour en être un.
+
+*Pourquoi cette forme* : sur un terrain plus doux que la pente maximale, les deux
+bornes se confondent avec le sol, la voie le suit et ne coûte que sa pose. Là où le
+sol est plus raide, l'écart s'ouvre, et c'est là — et seulement là — qu'on paie. Le
+coût n'est donc pas une fonction de la distance : c'est une fonction du relief
+traversé. Et parce que le volume de terrassement croît comme le *carré* de la
+hauteur, un grand remblai finit toujours par donner raison au pont, puis au tunnel.
+
+Sur les trois cartes d'essai, à soixante kilomètres exactement chacune, et avec un
+relief rigoureusement identique entre la deuxième et la troisième :
+
+| Carte | Devis | dont | × plaine |
+|---|---|---|---|
+| plaine | 180 093 | 180 009 de voie | 1,0 |
+| vallée | 219 402 | 39 000 de terrassement | 1,2 |
+| col | 1 219 880 | 326 000 de terrassement, 713 000 de viaducs | 6,8 |
+| crête | 2 689 446 | un tunnel de 19 km | 14,9 |
+
+Les deux dernières lignes traversent la *même* chaîne, à trente-six kilomètres
+l'une de l'autre. C'est tout l'arbitrage du module : contourner par la vallée,
+franchir au col, ou percer la crête.
+
+### Ce que la façade garantit au module `dispatch`
+
+Le module réseau définit le type graphe de voies, et `dispatch` sera écrit contre
+lui. Ces garanties sont donc des engagements, pas des détails d'implémentation :
+
+- **Des indices entiers contigus.** `TrackGraph.Nodes` et `TrackGraph.Edges` sont
+  indexés de 0 à n-1 dans l'ordre de déclaration du scénario. `dispatch` peut
+  allouer ses tableaux parallèles — occupation, réservations, cantons — sans
+  dictionnaire ni indirection.
+- **Un ordre de parcours stable.** `TrackNode.EdgeIndices` est dans l'ordre de
+  déclaration des arêtes. Aucun parcours du graphe ne passe par l'énumération d'un
+  dictionnaire, et le calcul d'itinéraire départage les égalités de longueur par
+  l'indice d'arête. Deux exécutions donnent le même itinéraire.
+- **Le grain de réservation est l'arête.** `TrackEdge.TrackCount` dit combien de
+  trains peuvent l'occuper à la fois : 1 est une voie unique, donc un conflit
+  possible. `TrackNode.PassingTracks` dit combien peuvent s'y croiser ou y
+  stationner. Ces deux nombres sont la matière première d'un interblocage.
+- **Un itinéraire est une suite de franchissements orientés.** `TrackRoute.Legs` est
+  une liste de `RouteLeg`, chacun désignant une arête, un sens de parcours et ses
+  deux nœuds ; `TrackRoute.Nodes` compte toujours un élément de plus. Rien d'autre
+  n'est nécessaire pour poser des cantons dessus.
+- **La correspondance arrêt → réseau est explicite.** `RailStop.NodeIndex` donne le
+  nœud d'un arrêt, et `RailLine.Segments[i].Legs` les tronçons exacts qu'un train
+  franchit entre deux arrêts consécutifs. `dispatch` n'a pas à redécouvrir
+  l'itinéraire d'une ligne.
+- **Le profil est déjà réduit.** `TrackProfile.RulingGradePercent(sens)` donne la
+  rampe déterminante dans un sens de marche — celle qui borne le tonnage
+  remorquable — et les sections portent leur rayon de courbe, qui bornera la
+  vitesse. Les sections sont fusionnées : un profil se lit, il ne s'échantillonne
+  pas.
+- **Rien ne bouge en cours de partie.** Le relief et les devis sont calculés une
+  fois, au chargement. Un profil, une longueur, un coût sont des constantes pour la
+  durée d'une partie.
+
+Ce que la façade **ne** promet **pas** : aucune notion de temps, d'occupation, de
+signal ni de réservation. Le réseau décrit une géographie ; qui a le droit de rouler
+où appartient entièrement à `dispatch`.
+
+### Deux limites connues
+
+**Le géomètre chiffre le tracé qu'on lui donne, il ne le cherche pas.** Il ne sait
+pas allonger une ligne pour adoucir une rampe, ni inventer le lacet ou le
+développement en boucle qu'un ingénieur de 1870 aurait tracés. D'où le tunnel de
+dix-neuf kilomètres du franchissement de la crête : c'est le prix honnête d'un
+mauvais tracé, pas la meilleure façon de passer là.
+
+**Le terrassement suppose une plateforme en terrain horizontal.** La section est un
+trapèze symétrique, ce qui surestime le déblai à flanc de coteau — précisément la
+technique qui rendrait praticable le franchissement de la crête. Corriger cela
+demande la pente transversale du terrain, donc un échantillonnage latéral du relief.
+
 ## Ce qui n'est pas encore modélisé
 
 Volontairement absents de ce prototype, chacun derrière une façade déjà en place
-ou à créer : le réseau réel (relief, terrassement, ponts, tunnels,
-signalisation), le dispatching, la finance (bourse, obligations, OPA), l'IA
-concurrente, les scénarios scriptés, et toute l'interface.
+ou à créer : la signalisation et le dispatching, la finance (bourse, obligations,
+OPA), l'IA concurrente, les scénarios scriptés, et toute l'interface.
 
-`Transport/Rail.cs` est une abstraction délibérément pauvre : une suite d'arrêts
-et de distances, juste assez pour donner au transport une latence et un coût
-kilométrique. Le vrai module réseau viendra derrière cette même façade.
+`Transport/Rail.cs` reste une abstraction pauvre — une suite d'arrêts et de
+distances — et c'est désormais un choix et non une dette : c'est la projection du
+graphe de voies que le transport consomme, et la seule chose qu'il ait besoin de
+savoir. Le scénario de référence `heartland` y pose encore ses distances à la main,
+en mode de compatibilité ; les cartes à relief sont `data/terrain-*.json`.

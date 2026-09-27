@@ -45,6 +45,18 @@ Ce bilan statique ne simule rien et détecte les pénuries structurelles — le 
 où tout tourne correctement et où les marchés concernés restent pourtant collés au
 plafond de prix à jamais.
 
+Pour un scénario posé sur un relief, le devis de construction se lit de la même
+façon, sans rien simuler :
+
+```bash
+dotnet run --project src/RailTycoon.Harness -- --scenario data/terrain-pass.json --survey
+```
+
+Il ventile chaque tronçon entre pose de voie, terrassement, ponts et tunnels. C'est
+là que se décide s'il faut contourner, franchir ou percer : sur la carte du col, le
+même relief coûte 220 000 en le contournant par la vallée, 1 220 000 en le
+franchissant au col, et 2 690 000 en l'attaquant de front.
+
 ## Ce qu'il faut regarder dans la sortie
 
 | Symptôme | Diagnostic |
@@ -67,11 +79,12 @@ conclusions tirées de l'instantané final se sont toutes révélées fausses.
 src/RailTycoon.Sim/        bibliothèque de simulation, sans dépendance moteur
   Core/                    déterminisme, horloge, maths
   Economy/                 marchandises, marchés, prix, production
+  Network/                 relief, tracé, terrassement, graphe de voies
   Transport/               lignes, trains, échanges
   Telemetry/               traces CSV et invariants
 src/RailTycoon.Harness/    exécutable en ligne de commande
 tests/RailTycoon.Tests/    invariants, sans dépendance externe
-data/                      scénarios (données de conception, modifiables sans recompiler)
+data/                      scénarios et cartes (données de conception, modifiables sans recompiler)
 docs/                      architecture et contrats entre modules
 ```
 

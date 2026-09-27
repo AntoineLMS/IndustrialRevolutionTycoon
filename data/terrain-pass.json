@@ -1,0 +1,88 @@
+{
+  "id": "terrain-pass",
+  "name": "Carte d'essai — le col",
+  "seed": 7002,
+  "startingCash": 100000,
+  "initialCoverage": 1.0,
+
+  "//": "Carte de référence n° 3. Même relief et même graine que terrain-valley.json : la chaîne est-ouest, le col à x = 56, le sillon au sud. Ici la ligne traverse la chaîne du sud au nord, toujours sur soixante kilomètres.",
+
+  "//routes": "Deux itinéraires sur la même carte, et c'est le cœur de l'arbitrage : « main » franchit la chaîne au col, « crest » la franchit quatorze kilomètres plus à l'ouest, là où rien ne l'abaisse. Même longueur, même relief, deux devis qui n'ont rien à voir. Un troisième choix — contourner par la vallée — coûte le devis de terrain-valley.json plus le raccordement.",
+
+  "priceModel": { "coverageHorizonTicks": 15, "shape": 0.5, "minMultiplier": 0.12, "maxMultiplier": 3.0 },
+
+  "cargos": [
+    { "id": "grain", "name": "Blé", "basePrice": 10, "elasticity": 0.4 }
+  ],
+
+  "cities": [
+    { "id": "southport", "name": "Southport", "population": 4000, "production": { "grain": 2.0 }, "initialStock": { "grain": 60 } },
+    { "id": "northreach", "name": "Northreach", "population": 9000, "demand": { "grain": 0.6 } },
+    { "id": "westport", "name": "Westport", "population": 3000, "production": { "grain": 1.0 }, "initialStock": { "grain": 40 } },
+    { "id": "westreach", "name": "Westreach", "population": 6000, "demand": { "grain": 0.4 } }
+  ],
+
+  "network": {
+    "terrain": {
+      "columns": 81,
+      "rows": 81,
+      "cellSizeKm": 1.0,
+      "baseElevationM": 120,
+      "features": [
+        { "kind": "ridge", "x1Km": 0, "y1Km": 52, "x2Km": 80, "y2Km": 52, "halfWidthKm": 14, "amplitudeM": 520 },
+        { "kind": "bowl", "xKm": 56, "yKm": 52, "halfWidthKm": 11, "amplitudeM": -300 },
+        { "kind": "ridge", "x1Km": 0, "y1Km": 22, "x2Km": 80, "y2Km": 22, "halfWidthKm": 9, "amplitudeM": -45 },
+        { "kind": "bowl", "xKm": 28, "yKm": 22, "halfWidthKm": 7, "amplitudeM": 100 },
+        { "kind": "bowl", "xKm": 46, "yKm": 22, "halfWidthKm": 7, "amplitudeM": 100 }
+      ],
+      "noise": { "amplitudeM": 25, "wavelengthKm": 4, "octaves": 3, "seed": 12 }
+    },
+
+    "alignment": {
+      "maxGradePercent": 2.5,
+      "minCurveRadiusM": 600,
+      "sampleSpacingKm": 0.25,
+      "formationWidthM": 6.0,
+      "extraWidthPerTrackM": 4.5,
+      "sideSlopeRatio": 1.5,
+      "bridgeMinHeightM": 15,
+      "tunnelMinDepthM": 18,
+      "minStructureLengthKm": 0.3,
+      "profileMergeTolerancePercent": 0.1
+    },
+
+    "costs": {
+      "trackPerKmPerTrack": 3000,
+      "cutPerCubicMetre": 0.30,
+      "fillPerCubicMetre": 0.22,
+      "bridgePerKm": 40000,
+      "bridgePerKmPerMetre": 1800,
+      "tunnelPerKm": 120000,
+      "curvePerDegree": 400,
+      "extraTrackStructureFactor": 0.6
+    },
+
+    "traction": { "climbEquivalentKm": 0.03 },
+
+    "nodes": [
+      { "id": "south", "city": "southport", "xKm": 56, "yKm": 12, "passingTracks": 2 },
+      { "id": "north", "city": "northreach", "xKm": 56, "yKm": 72, "passingTracks": 2 },
+      { "id": "south-west", "city": "westport", "xKm": 20, "yKm": 12, "passingTracks": 2 },
+      { "id": "north-west", "city": "westreach", "xKm": 20, "yKm": 72, "passingTracks": 2 }
+    ],
+
+    "edges": [
+      { "id": "col", "from": "south", "to": "north", "trackCount": 1 },
+      { "id": "crest", "from": "south-west", "to": "north-west", "trackCount": 1 }
+    ],
+
+    "routes": [
+      { "id": "main", "name": "Ligne du col", "nodes": [ "south", "north" ] },
+      { "id": "crest", "name": "Franchissement de la crête", "nodes": [ "south-west", "north-west" ] }
+    ]
+  },
+
+  "trains": [
+    { "id": "t1", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 0 }
+  ]
+}
