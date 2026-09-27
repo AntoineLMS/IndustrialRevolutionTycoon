@@ -397,14 +397,11 @@ Trois règles, toutes réglables dans les données :
 
 ## Ce qui n'est pas encore modélisé
 
-Volontairement absents de ce prototype, chacun derrière une façade déjà en place
-ou à créer : la signalisation et le dispatching, la finance (bourse, obligations,
-OPA), l'IA concurrente, les scénarios scriptés, et toute l'interface.
-
-ou à créer : le réseau réel (relief, terrassement, ponts, tunnels,
-signalisation), le dispatching, l'IA concurrente, les scénarios scriptés, et toute
-l'interface. La finance est désormais derrière `IFinanceSolver` (phase 6) ; ce
-qu'il lui manque encore est listé dans [CONTRACTS.md](CONTRACTS.md).
+Volontairement absents de ce prototype, chacun derrière une façade à créer : la
+signalisation et le dispatching, l'IA concurrente, les scénarios scriptés au-delà
+des événements datés, et toute l'interface. Le réseau sur relief est derrière
+`IRailNetwork`, la finance derrière `IFinanceSolver` (phase 6) ; ce qu'il leur
+manque encore est listé dans [CONTRACTS.md](CONTRACTS.md).
 
 Les événements historiques et aléatoires sont derrière `IEventSolver` (phase 0b) ;
 ils ne touchent que la production primaire et la demande des habitants, et ce
