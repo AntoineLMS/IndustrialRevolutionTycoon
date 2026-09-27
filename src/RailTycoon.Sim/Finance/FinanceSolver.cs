@@ -15,10 +15,15 @@ namespace RailTycoon.Sim.Finance;
 ///   <item>Tout montant est un <see cref="decimal"/> entier de centimes. La seule
 ///   conversion depuis le monde en <c>double</c> est
 ///   <see cref="FinanceState.PostOperatingResult"/>.</item>
-///   <item>Ne jamais toucher à <see cref="Economy.Company.Cash"/> : la trésorerie
-///   d'exploitation appartient au module transport, et l'invariant
-///   <c>bilan-tresorerie</c> en dépend. La finance la reflète, elle ne l'écrit
-///   pas.</item>
+///   <item>N'écrire <see cref="Economy.Company.Cash"/> que par
+///   <see cref="Economy.Company.ApplyFinanceFlow"/>, et depuis un seul endroit :
+///   <c>ReconcileOperatingCash</c>, qui déduit la position du grand livre en fin de
+///   tick. <see cref="Economy.Company.Cash"/> est la seule vérité sur l'argent
+///   disponible à l'exploitation — la finance ne tient pas de caisse parallèle.
+///   Une première version en tenait une, et un dividende sortait alors du bilan de
+///   la société sans sortir de la trésorerie du transporteur, qui dépensait le même
+///   argent : les deux bilans s'équilibraient au centime et la fuite était réelle.
+///   </item>
 ///   <item>Être déterministe : aucun parcours de dictionnaire, aucun aléa hors de
 ///   <see cref="DeterministicRandom"/>.</item>
 /// </list>
@@ -154,6 +159,7 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
 
         // Le découvert autorisé existe dès l'ouverture : sans cela le transporteur
         // passerait son premier tick sans la facilité que son bilan lui donne.
+        ReconcileOperatingCash(state, world, player);
         AssessSolvency(def, world, player);
     }
 
@@ -200,10 +206,11 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
                 RunOperations(state, company, absorbed);
         }
 
-        // 4 — le découvert. Avant les intérêts, parce que le découvert du tick en
-        // porte dès le tick où il naît : un jour de crédit gratuit, répété 720
-        // fois, est exactement le genre de cadeau qui ne se voit jamais.
-        SyncOverdraft(def, state, player);
+        // 4 — intérêts du découvert, calculés sur le solde ouvert en début de tick.
+        // Avant le reste, parce qu'on paie des intérêts sur ce qu'on devait, pas
+        // sur ce qu'on devra le soir. Un jour de crédit gratuit, répété 720 fois,
+        // est exactement le genre de cadeau qui ne se voit jamais.
+        AccrueOverdraftInterest(def, player);
 
         // 5 — intérêts et échéances, pour tout le monde.
         foreach (var company in state.Companies)
@@ -235,44 +242,88 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
         // administration n'achète pas de concurrent.
         if (!player.InReceivership) RunAcquisition(state, def, player, tick);
 
-        // 11 — le verdict de solvabilité, en dernier : il doit porter sur le bilan
-        // tel qu'il est à la fin du tick, une fois toutes les décisions prises.
+        // 11 — clôture. Dans cet ordre, et il compte : on arrête d'abord le solde
+        // de caisse en portant sa part négative au découvert, on rapproche ensuite
+        // la trésorerie d'exploitation, on prononce enfin le verdict de
+        // solvabilité. Chacune des trois lit le résultat de la précédente.
+        SweepOverdraft(player);
+        ReconcileOperatingCash(state, world, player);
         AssessSolvency(def, world, player);
     }
 
     // ------------------------------------------------------------ insolvabilité
 
+    private static void AccrueOverdraftInterest(FinanceDef def, FinanceCompany player)
+    {
+        decimal interest = Money.InterestForTick(
+            player.OverdraftBalance, def.Overdraft.AnnualRatePercent);
+        if (interest <= 0m) return;
+
+        AccrueExpense(player.Book, Accounts.RetainedEarnings, Accounts.InterestPayable,
+            "intérêts de découvert", interest);
+        player.InterestAccruedTotal += interest;
+        player.OverdraftInterestTotal += interest;
+        player.InterestThisTick += interest;
+    }
+
     /// <summary>
-    /// Porte au bilan, exactement, ce que la trésorerie d'exploitation doit. Le
-    /// découvert vaut toujours la part négative de cette trésorerie, au centime :
-    /// ni une approximation, ni un cumul de mouvements qu'il faudrait recoller.
+    /// Arrête le solde de caisse : sa part négative devient un découvert au passif,
+    /// et un retour à l'excédent le résorbe d'autant.
     /// <para>
-    /// La contrepartie est la caisse, et c'est correct : un découvert est un prêt,
-    /// et l'argent prêté est exactement celui que le service du trafic a déjà
-    /// dépensé. Le bilan cesse ainsi de présenter un actif négatif — une caisse
-    /// négative silencieuse était le vrai défaut, puisque rien ne la distinguait
-    /// d'une compagnie simplement pauvre.
+    /// Le bilan cesse ainsi de présenter un actif négatif, et c'était le vrai
+    /// défaut : rien ne distinguait une caisse négative d'une compagnie simplement
+    /// pauvre. Un découvert est un prêt, l'argent prêté est celui qui a déjà été
+    /// dépensé, et cela se dit au passif.
+    /// </para>
+    /// <para>
+    /// C'est un reclassement, pas un mouvement : la position nette
+    /// <c>caisse − découvert</c> ne change pas, donc rien n'est à répercuter sur la
+    /// trésorerie d'exploitation.
     /// </para>
     /// </summary>
-    private static void SyncOverdraft(FinanceDef def, FinanceState state, FinanceCompany player)
+    private static void SweepOverdraft(FinanceCompany player)
     {
-        decimal shortfall = state.ReflectedOperatingCash < 0m ? -state.ReflectedOperatingCash : 0m;
-        decimal delta = shortfall - player.OverdraftBalance;
+        decimal cash = player.Book[Accounts.Cash];
 
-        if (delta > 0m)
-            player.Book.Post("découvert bancaire", Accounts.Cash, Accounts.Overdraft, delta);
-        else if (delta < 0m)
-            player.Book.Post("résorption du découvert", Accounts.Overdraft, Accounts.Cash, -delta);
-
-        decimal interest = Money.InterestForTick(shortfall, def.Overdraft.AnnualRatePercent);
-        if (interest > 0m)
+        if (cash < 0m)
+            player.Book.Post("découvert bancaire", Accounts.Cash, Accounts.Overdraft, -cash);
+        else if (player.OverdraftBalance > 0m)
         {
-            AccrueExpense(player.Book, Accounts.RetainedEarnings, Accounts.InterestPayable,
-                "intérêts de découvert", interest);
-            player.InterestAccruedTotal += interest;
-            player.OverdraftInterestTotal += interest;
-            player.InterestThisTick += interest;
+            decimal cure = Math.Min(cash, player.OverdraftBalance);
+            if (cure > 0m)
+                player.Book.Post("résorption du découvert", Accounts.Overdraft, Accounts.Cash, cure);
         }
+    }
+
+    /// <summary>
+    /// Rapproche la trésorerie d'exploitation du bilan. <b>Seul endroit où le
+    /// module finance écrit <see cref="Economy.Company.Cash"/>.</b>
+    /// <para>
+    /// La position est <em>déduite</em> du grand livre et non reportée mouvement par
+    /// mouvement, et c'est délibéré : dix sites d'écriture touchent la caisse de la
+    /// société, et il suffirait d'en oublier un pour recréer la fuite qu'on vient
+    /// de fermer. Ici la partie double sert de source de vérité unique — ce qui
+    /// n'est pas au bilan n'existe pas, et ce qui y est se retrouve forcément dans
+    /// la caisse du transporteur.
+    /// </para>
+    /// <para>
+    /// Conséquence assumée : le transporteur voit une décision financière au tick
+    /// suivant, puisque la finance clôture après lui. C'est le pendant de « les
+    /// trains voient les prix d'après-production » — la comptabilité arrête ses
+    /// comptes le soir, le service du trafic en prend connaissance le matin.
+    /// </para>
+    /// </summary>
+    private static void ReconcileOperatingCash(FinanceState state, WorldState world, FinanceCompany player)
+    {
+        // Position nette au bilan, découvert déduit.
+        decimal balanceSheet = player.Book[Accounts.Cash] - player.OverdraftBalance;
+
+        // L'exploitation est la seule part que la finance ne décide pas : tout
+        // l'écart avec elle est, par construction, d'origine financière.
+        decimal financeNet = balanceSheet - state.ReflectedOperatingCash;
+
+        world.Company.ApplyFinanceFlow(
+            Money.ToDouble(financeNet) - world.Company.TotalFinanceFlow);
     }
 
     /// <summary>
@@ -501,15 +552,23 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
             company.Book, Accounts.InterestPayable, "paiement d'intérêts");
     }
 
-    /// <summary>Mobilise le premier emprunt disponible non encore souscrit, si la trésorerie passe sous le seuil.</summary>
+    /// <summary>
+    /// Mobilise le premier emprunt disponible non encore souscrit, si la trésorerie
+    /// passe sous le seuil. L'emprunt fléché sur l'acquisition est mis de côté :
+    /// une ligne levée pour une OPA et dépensée en besoin de roulement laisse
+    /// l'opération bloquée entre le contrôle et la fusion pour le reste de la
+    /// partie — c'est le pire des deux mondes, on a payé la montée au capital sans
+    /// jamais toucher le bénéfice du contrôle.
+    /// </summary>
     private static bool RaiseCashIfNeeded(FinanceDef def, FinanceCompany company, SimTick tick, decimal cashFloor)
     {
         if (company.Cash >= cashFloor) return false;
-        var offer = NextOffer(def, company, tick, "");
+        var offer = NextOffer(def, company, tick, "", def.Acquisition.FundingBondId);
         return offer is not null && IssueBond(company, offer, tick);
     }
 
-    private static BondOfferDef? NextOffer(FinanceDef def, FinanceCompany company, SimTick tick, string preferredId)
+    private static BondOfferDef? NextOffer(FinanceDef def, FinanceCompany company, SimTick tick,
+        string preferredId, string reservedId = "")
     {
         BondOfferDef? fallback = null;
         foreach (var offer in def.BondOffers)
@@ -517,6 +576,7 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
             if (tick.Index < offer.AvailableFromTick) continue;
             if (AlreadyIssued(company, offer.Id)) continue;
             if (preferredId.Length > 0 && offer.Id == preferredId) return offer;
+            if (reservedId.Length > 0 && offer.Id == reservedId) continue;
             fallback ??= offer;
         }
         return preferredId.Length > 0 ? null : fallback;

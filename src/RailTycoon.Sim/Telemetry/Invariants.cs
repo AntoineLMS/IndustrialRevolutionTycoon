@@ -77,9 +77,18 @@ public static class Invariants
                 $"produit {producedTotal:0.##}, consommé {consumedTotal:0.##})"));
 
         // Bilan comptable : la trésorerie doit s'expliquer entièrement par les
-        // trois flux enregistrés. Tout écart est de l'argent créé ou perdu.
+        // flux enregistrés. Tout écart est de l'argent créé ou perdu.
+        //
+        // Le quatrième flux — les mouvements financiers — a été ajouté à cette
+        // formule, et c'est une correction, pas un assouplissement. Tant que la
+        // finance tenait sa propre caisse, cet invariant ne vérifiait qu'une moitié
+        // de la vérité : un dividende de 88 000 sortait du bilan de la société sans
+        // sortir de la trésorerie du transporteur, qui pouvait donc dépenser le
+        // même argent. Les deux bilans s'équilibraient au centime et la fuite était
+        // pourtant réelle — la signature exacte du lavage de fret. Avec ce terme,
+        // il n'existe plus de mouvement d'argent que personne ne compte.
         var co = world.Company;
-        double expectedCash = world.Def.StartingCash + co.NetProfit;
+        double expectedCash = world.Def.StartingCash + co.NetProfit + co.TotalFinanceFlow;
         if (Math.Abs(co.Cash - expectedCash) > Math.Max(1e-4, Math.Abs(expectedCash) * 1e-9))
             violations.Add(new("bilan-tresorerie",
                 $"caisse {co.Cash:0.##}, attendu {expectedCash:0.##}"));
@@ -172,14 +181,15 @@ public static class Invariants
         var playerCompany = finance.Player;
         if (playerCompany is not null)
         {
-            decimal shortfall = finance.ReflectedOperatingCash < 0m
-                ? -finance.ReflectedOperatingCash
-                : 0m;
+            decimal shortfall = playerCompany.OverdraftBalance;
 
-            if (playerCompany.OverdraftBalance != shortfall)
+            // On ne détient pas de la caisse et un découvert en même temps : le
+            // solde est arrêté à chaque clôture, dans un sens ou dans l'autre.
+            // Deux lignes simultanées voudraient dire qu'un mouvement n'a pas été
+            // reclassé, donc qu'une part du déficit est redevenue tacite.
+            if (shortfall > 0m && playerCompany.Cash != 0m)
                 violations.Add(new("decouvert-explicite",
-                    $"découvert au bilan {playerCompany.OverdraftBalance} ≠ " +
-                    $"déficit d'exploitation {shortfall}"));
+                    $"découvert de {shortfall} et caisse de {playerCompany.Cash} en même temps"));
 
             // Un découvert au-delà de ce que la banque accorde doit avoir une
             // conséquence, pas seulement une ligne au bilan.
@@ -240,15 +250,33 @@ public static class Invariants
             }
         }
 
-        // La frontière entre le monde en double et la comptabilité : ce qui a été
-        // reflété au bilan doit valoir la trésorerie d'exploitation au centime
-        // près, et pas davantage. Cet écart ne s'accumule pas — on reflète le
-        // cumul arrondi, pas la somme des flux arrondis — donc un demi-centime est
-        // le maximum tolérable à tout tick, quelle que soit la durée de la partie.
+        // La frontière entre le monde en double et la comptabilité, et du même coup
+        // la sentinelle de la double représentation de la caisse.
+        //
+        // La position nette du bilan — caisse moins découvert — doit valoir la
+        // trésorerie du transporteur, au demi-centime près et pas davantage. Un
+        // prélèvement financier passé au bilan mais pas répercuté sur la trésorerie
+        // fait immédiatement apparaître son montant ici : c'est ce qui rend
+        // impossible de reconstituer la faille où la société et le transporteur
+        // dépensaient deux fois le même argent.
+        //
+        // Le seuil est un demi-centime et il ne s'accumule pas : on reflète le
+        // cumul arrondi, jamais la somme des flux arrondis. Mesuré sur le scénario
+        // de finance, l'écart plafonne sous 0,005 de 720 à 6 000 ticks.
+        if (playerCompany is not null)
+        {
+            double position = Money.ToDouble(playerCompany.Cash - playerCompany.OverdraftBalance);
+            if (Math.Abs(position - world.Company.Cash) > 0.005 + 1e-6)
+                violations.Add(new("frontiere-tresorerie",
+                    $"position nette au bilan {position:0.####}, " +
+                    $"trésorerie d'exploitation {world.Company.Cash:0.####}"));
+        }
+
         double reflected = Money.ToDouble(finance.ReflectedOperatingCash);
-        if (Math.Abs(reflected - expectedOperatingCash) > 0.005 + 1e-9)
+        double operatingOnly = expectedOperatingCash - world.Company.TotalFinanceFlow;
+        if (Math.Abs(reflected - operatingOnly) > 0.005 + 1e-9)
             violations.Add(new("frontiere-tresorerie",
-                $"exploitation reflétée {reflected:0.####}, trésorerie {expectedOperatingCash:0.####}"));
+                $"exploitation reflétée {reflected:0.####}, résultat d'exploitation {operatingOnly:0.####}"));
     }
 
     /// <summary>

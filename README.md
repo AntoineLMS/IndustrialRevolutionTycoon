@@ -21,6 +21,16 @@ dotnet run --project src/RailTycoon.Harness -- --ticks 720
 ```
 
 Options : `--scenario <fichier>`, `--ticks <n>`, `--out <dossier>`, `--every <n>`.
+
+Pour le volet financier — société, emprunts, bourse, OPA :
+
+```bash
+dotnet run --project src/RailTycoon.Harness -- --scenario data/heartland-finance.json --ticks 720
+```
+
+Même économie, au caractère près. `heartland.json` reste la trace de régression de
+l'économie et n'active pas la finance : un scénario éprouve une chose à la fois.
+
 Le harnais écrit trois CSV dans `out/` (`markets.csv`, `company.csv`,
 `industries.csv`), affiche la matrice des prix finaux, la dispersion des prix par
 marchandise, l'utilisation des usines et le compte d'exploitation.
@@ -89,6 +99,11 @@ src/RailTycoon.Sim/        bibliothèque de simulation, sans dépendance moteur
 src/RailTycoon.Harness/    exécutable en ligne de commande
 tests/RailTycoon.Tests/    invariants, sans dépendance externe
 data/                      scénarios et cartes (données de conception, modifiables sans recompiler)
+  heartland.json           référence de l'économie, sans finance ni relief
+  heartland-finance.json   même économie, volet financier activé
+  ironpeak.json            chaîne minerai → fonte → acier
+  terrain-*.json           cartes d'essai du réseau : plaine, vallée, col
+  locomotives.json         catalogue historique, sources dans docs/SOURCES.md
 docs/                      architecture et contrats entre modules
 ```
 
