@@ -34,7 +34,7 @@ internal static class Program
             return 0;
         }
 
-        var sim = new Simulation(scenario);
+        var sim = new Simulation(scenario, SelectEconomy(opts.Solver));
         double initialStock = Invariants.InitialStockTotal(sim.World);
         var recorder = new CsvRecorder { Every = opts.RecordEvery };
         var stats = new RunStatistics { WarmupTicks = opts.WarmupTicks };
@@ -76,6 +76,18 @@ internal static class Program
         Console.WriteLine("Invariants : tous respectés.");
         return 0;
     }
+
+    /// <summary>
+    /// Choix du solveur économique. La référence reste le défaut : elle est le
+    /// témoin auquel on compare, et une mesure publiée sans dire quel solveur l'a
+    /// produite ne veut rien dire.
+    /// </summary>
+    private static RailTycoon.Sim.Economy.IEconomySolver SelectEconomy(string name) => name switch
+    {
+        "reference" => new RailTycoon.Sim.Economy.ReferenceEconomySolver(),
+        "anticipating" => new RailTycoon.Sim.Economy.AnticipatingEconomySolver(),
+        _ => throw new ArgumentException($"Solveur économique inconnu : '{name}' (reference, anticipating)"),
+    };
 }
 
 internal sealed class Options
@@ -87,6 +99,7 @@ internal sealed class Options
     public int WarmupTicks = 90;
     public bool BalanceOnly;
     public bool ShowHelp;
+    public string Solver = "reference";
 
     public static Options Parse(string[] args)
     {
@@ -102,6 +115,7 @@ internal sealed class Options
                 case "--every": o.RecordEvery = int.Parse(Next(args, ref i), CultureInfo.InvariantCulture); break;
                 case "--warmup": o.WarmupTicks = int.Parse(Next(args, ref i), CultureInfo.InvariantCulture); break;
                 case "--balance": o.BalanceOnly = true; break;
+                case "--solver": o.Solver = Next(args, ref i); break;
                 default:
                     Console.Error.WriteLine($"Argument inconnu : {args[i]}");
                     o.ShowHelp = true;
@@ -128,6 +142,7 @@ internal sealed class Options
                   --every <n>            n'enregistrer qu'un tick sur n
                   --warmup <n>           ticks exclus des statistiques (défaut : 90)
                   --balance              bilan offre/demande du scénario, sans simuler
+                  --solver <nom>         économie : reference | anticipating
               -h, --help                 cette aide
             """);
     }
@@ -221,6 +236,34 @@ internal static class Report
                 $"{(ceiling * 100).ToString("0", Ci) + " %",12}" +
                 $"{(floor * 100).ToString("0", Ci) + " %",13}  {diagnosis}");
         }
+        Console.WriteLine();
+
+        // --- Le tableau qui décide si l'économie est encore vivante APRÈS s'être
+        // installée. Le précédent dit s'il y a quelque chose à transporter ; celui-ci
+        // dit si ce quelque chose change. Un écart de ×5 parfaitement immobile donne
+        // une seule route à entretenir, et c'est une économie morte qui a l'air saine.
+        Console.WriteLine("Mobilité de la dispersion (ce que le joueur doit rouvrir sa carte pour suivre)");
+        Console.WriteLine($"  {"Marchandise",-13}{"écart moyen",13}{"volatilité",12}{"mobilité",11}{"tête change",13}{"tête dominante",16}");
+        foreach (string cargoId in w.CargoOrder)
+        {
+            if (stats.MobilitySamples(cargoId) < 2)
+            {
+                Console.WriteLine($"  {w.Cargo(cargoId).Name,-13}{"—",13}   (moins de deux acheteurs)");
+                continue;
+            }
+
+            Console.WriteLine(
+                $"  {w.Cargo(cargoId).Name,-13}" +
+                $"{("×" + stats.MeanSpread(cargoId).ToString("0.00", Ci)),13}" +
+                $"{stats.SpreadVolatility(cargoId).ToString("0.000", Ci),12}" +
+                $"{stats.SpreadMobility(cargoId).ToString("0.000", Ci),11}" +
+                $"{(stats.LeaderChurn(cargoId) * 100).ToString("0.0", Ci) + " %",13}" +
+                $"{(stats.LeaderDominance(w, cargoId) * 100).ToString("0", Ci) + " %",16}");
+        }
+        Console.WriteLine(
+            $"  {"MOYENNE",-13}{"",13}{"",12}" +
+            $"{stats.MeanSpreadMobility(w).ToString("0.000", Ci),11}" +
+            $"{(stats.MeanLeaderChurn(w) * 100).ToString("0.0", Ci) + " %",13}");
         Console.WriteLine();
 
         Console.WriteLine("Utilisation moyenne des usines");

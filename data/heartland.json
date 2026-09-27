@@ -29,6 +29,31 @@
     "minTradeQty": 0.25
   },
 
+  "//anticipating": "Réglages du solveur anticipating. Ignorés par le solveur de référence, qui reste le témoin de comparaison. L'anticipation fait tout le travail : elle porte la mobilité de la dispersion de 0,411 à 0,649 et le taux de changement de la ville la plus chère de 20,0 % à 26,2 % sur 720 ticks, sans dégrader le résultat du transport. Au-delà de 6 ticks d'horizon ou de 0,25 de lissage, le prix devient du bruit : le transporteur rate ses créneaux et le résultat net chute d'un cinquième pour deux points de mobilité.",
+
+  "//croissance": "growthRatePerTick est à 0, et c'est un résultat de mesure, pas un oubli. Le mécanisme est implémenté et testé, mais sur cette carte il ne fait pas ce qu'on espérait : le signal qui fait grandir une ville est qu'elle soit moins chère que les autres, donc la croissance déplace la demande des villes chères vers les villes bon marché et COMPRIME la dispersion au lieu de la déplacer. Mesuré à 0,31-0,43 de mobilité contre 0,411 pour la référence, quel que soit le rythme (0,003 à 0,2) et quelle que soit la mémoire démographique (1 à 180 ticks). L'activer se décide avec une autre boucle de croissance, pas avec un autre réglage de celle-ci.",
+
+  "anticipating": {
+    "anticipationTicks": 4,
+    "anticipationWeight": 1.0,
+    "driftSmoothing": 0.15,
+
+    "growthRatePerTick": 0,
+    "growthMemoryTicks": 90,
+    "growthDeadband": 0.04,
+    "minCitySize": 0.7,
+    "maxCitySize": 1.3,
+
+    "//saisons": "Amplitudes volontairement modestes. Elles n'apportent que 6 % de mobilité et rien du tout au changement de ville la plus chère — la saison fait respirer tout le monde en même temps, donc le meilleur débouché ne bouge pas. Au-delà de 0,5 d'amplitude sur le blé, la récolte dépasse ce que la ligne peut évacuer et le résultat du transport tombe d'un tiers. Le pic est donné en fraction d'année, 0 = premier jour.",
+    "seasons": [
+      { "cargo": "grain",  "productionAmplitude": 0.18, "productionPeak": 0.70 },
+      { "cargo": "logs",   "productionAmplitude": 0.10, "productionPeak": 0.05 },
+      { "cargo": "coal",   "demandAmplitude": 0.12, "demandPeak": 0.02 },
+      { "cargo": "food",   "demandAmplitude": 0.04, "demandPeak": 0.08 },
+      { "cargo": "boards", "demandAmplitude": 0.09, "demandPeak": 0.45 }
+    ]
+  },
+
   "//prix": "Chaque maillon ajoute environ 70 % de valeur au prix de référence. Cette marge n'est pas décorative : elle est la réserve dans laquelle l'usine peut absorber un intrant devenu cher avant de s'arrêter. Trop mince (le moulin à 10 % du premier jet), l'usine ne démarre jamais ; trop large (la scierie à 350 %), elle tourne quoi qu'il arrive et le prix de ses intrants cesse de compter.",
 
   "cargos": [
