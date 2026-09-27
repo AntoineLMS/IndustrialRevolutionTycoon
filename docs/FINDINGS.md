@@ -19,10 +19,16 @@ Le profit, à économie constante, en fonction du nombre de trains :
 | trains | usines desservies | résultat net | marge / km |
 |---|---|---|---|
 | 1 | 73 % | 89 356 | 1,03 |
-| 2 | 76 % | 206 533 | **1,20** |
-| 3 | 77 % | **248 807** | 0,96 |
-| 4 | 80 % | 238 136 | 0,69 |
-| 6 | 81 % | 93 052 | 0,18 |
+| 2 | 76 % | 188 661 | **1,09** |
+| 3 | 78 % | **240 374** | 0,93 |
+| 4 | 80 % | 231 972 | 0,67 |
+| 6 | 81 % | 98 556 | 0,19 |
+
+*Méthode : chaque ligne reprend `data/heartland.json` en ne changeant que le
+nombre de trains. Jusqu'à trois, ce sont les trains déclarés par le scénario,
+si bien que la ligne « 3 » **est** heartland et se reproduit avec
+`--ticks 720` sans autre option. Au-delà, les trains supplémentaires démarrent
+aux arrêts 7, 2 puis 6. La position de départ compte : voir plus bas.*
 
 Deux propriétés en sortent, et ce sont les bonnes :
 
@@ -162,6 +168,38 @@ référence maintenant la ferait échouer à chaque fusion légitime.
 
 Leçon générale, qui prolonge celle des quatre bugs : un test vert ne dit pas qu'il
 couvre quelque chose. Celui-ci était vert depuis le premier jour.
+
+## Une mesure qui ne mesurait pas la bonne chose
+
+*Relevé par le module `network`, sur le tableau ci-dessus — donc sur mon propre
+travail.*
+
+La première version de ce tableau annonçait 248 807 de résultat net à trois
+trains. Le scénario de référence en produit 240 374. L'écart n'était pas une
+erreur de copie : le script qui a produit le balayage **fabriquait ses propres
+scénarios** et attribuait les positions de départ des trains dans l'ordre 0, 9, 4,
+là où `heartland.json` déclare 0, 4, 9. Vérifié en isolant la seule variable :
+
+| positions de départ | résultat net |
+|---|---|
+| 0 / 9 / 4 (le balayage) | 248 807 |
+| 0 / 4 / 9 (heartland) | 240 374 |
+
+Trois trains sur la même carte, la même économie et la même durée : **3,5 %
+d'écart pour la seule répartition des départs.** C'est un enseignement en soi sur
+la sensibilité du modèle à l'ordonnancement, et cela mérite d'être exploré pour
+lui-même.
+
+Mais comme mesure, le tableau était fautif. Toutes ses lignes venaient du même
+générateur, donc la conclusion qualitative tenait — l'optimum et l'effondrement
+sont au même endroit après correction. Le défaut est ailleurs : la ligne « 3
+trains » ne décrivait pas le scénario de référence, alors que tout lecteur la
+comparerait au chiffre que produit `heartland`. Le tableau a été refait en ne
+changeant qu'une variable à la fois.
+
+Leçon, et c'est la même que pour le test de déterminisme creux : un banc de mesure
+mérite la même méfiance que le code qu'il mesure. Celui-ci reconstruisait son
+sujet d'étude au lieu de le prendre tel quel.
 
 ## Questions ouvertes pour l'équipe
 
