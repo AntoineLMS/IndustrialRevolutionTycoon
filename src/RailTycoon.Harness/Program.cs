@@ -1,6 +1,7 @@
 using System.Globalization;
 using RailTycoon.Sim;
 using RailTycoon.Sim.Telemetry;
+using RailTycoon.Sim.Finance;
 
 namespace RailTycoon.Harness;
 
@@ -48,6 +49,13 @@ internal static class Program
         var cashHistory = new List<double>();
         var violations = new List<(int Tick, Invariants.Violation V)>();
 
+        // Pire écart de bilan observé sur toute la course. Il doit valoir zéro
+        // exactement : la comptabilité est tenue en decimal et en partie double,
+        // donc un écart d'un centime est un bug et non un résidu de calcul.
+        decimal worstResidual = 0m;
+        int worstResidualTick = 0;
+        double worstFrontierGap = 0;
+
         recorder.Record(sim.World);
         for (int i = 0; i < opts.Ticks; i++)
         {
@@ -55,6 +63,25 @@ internal static class Program
             recorder.Record(sim.World);
             stats.Sample(sim.World);
             cashHistory.Add(sim.World.Company.Cash);
+
+            decimal residual = Report.WorstResidual(sim.World);
+            if (residual > worstResidual)
+            {
+                worstResidual = residual;
+                worstResidualTick = sim.World.Tick.Index;
+            }
+
+            // Écart à la frontière entre le monde en double et la comptabilité. Il
+            // ne s'accumule pas — on reflète le cumul arrondi, pas la somme des
+            // flux arrondis — donc il doit rester sous le demi-centime pour
+            // toujours, et non croître d'un demi-centime par tick.
+            if (sim.World.Finance.Enabled)
+            {
+                double gap = Math.Abs(
+                    (double)sim.World.Finance.ReflectedOperatingCash -
+                    (sim.World.Def.StartingCash + sim.World.Company.NetProfit));
+                if (gap > worstFrontierGap) worstFrontierGap = gap;
+            }
 
             // On s'arrête au premier tick fautif : les violations en cascade
             // masquent la cause initiale, qui est la seule intéressante.
@@ -68,6 +95,7 @@ internal static class Program
         recorder.WriteTo(opts.OutDir);
         Report.PrintBalance(scenario);
         Report.PrintRun(sim, opts, recorder, stats, cashHistory);
+        Report.PrintFinance(sim, worstResidual, worstResidualTick, worstFrontierGap);
 
         if (violations.Count > 0)
         {
@@ -405,5 +433,118 @@ internal static class Report
             chars[i] = Blocks[Math.Clamp(level, 0, Blocks.Length - 1)];
         }
         return new string(chars) + $"  {min.ToString("N0", Ci)} → {max.ToString("N0", Ci)}";
+    }
+
+    /// <summary>
+    /// Plus grand écart de bilan, tous grands livres confondus. C'est le chiffre
+    /// qui dit si la comptabilité tient : il doit valoir zéro, pas « très peu ».
+    /// </summary>
+    public static decimal WorstResidual(WorldState world)
+    {
+        if (!world.Finance.Enabled) return 0m;
+
+        decimal worst = 0m;
+        foreach (var company in world.Finance.Companies)
+        {
+            decimal residual = Math.Abs(company.Book.Residual);
+            if (residual > worst) worst = residual;
+        }
+        if (world.Finance.Magnate is not null)
+        {
+            decimal residual = Math.Abs(world.Finance.Magnate.Book.Residual);
+            if (residual > worst) worst = residual;
+        }
+        return worst;
+    }
+
+    public static void PrintFinance(Simulation sim, decimal worstResidual, int worstResidualTick,
+        double worstFrontierGap)
+    {
+        var finance = sim.World.Finance;
+        if (!finance.Enabled || finance.Player is null || finance.Magnate is null)
+        {
+            Console.WriteLine("Finance     module inactif (aucun bloc « finance » dans le scénario)");
+            return;
+        }
+
+        var player = finance.Player;
+        var tycoon = finance.Magnate;
+
+        Console.WriteLine();
+        Console.WriteLine($"Société — {player.Name}  (module {sim.Finance.Name})");
+        Console.WriteLine($"  Caisse société       {player.Cash.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Matériel (net)       {player.Book[Accounts.FixedAssets].ToString("N2", Ci),14}");
+        Console.WriteLine($"  Participations       {player.Book[Accounts.Investments].ToString("N2", Ci),14}");
+        Console.WriteLine($"  Dette obligataire   -{player.Debt.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Découvert bancaire  -{player.OverdraftBalance.ToString("N2", Ci),14}" +
+                          $"   (autorisé : {player.CreditFacility.ToString("N2", Ci)})");
+        Console.WriteLine($"  Intérêts à payer    -{player.UnpaidInterest.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Capitaux propres     {player.BookEquity.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Cours de l'action    {player.SharePrice.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Capitalisation       {player.MarketCap.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Valeur d'entreprise  {player.EnterpriseValue.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Emprunté / remboursé {player.PrincipalIssuedTotal.ToString("N2", Ci),14}" +
+                          $" / {player.PrincipalRepaidTotal.ToString("N2", Ci)}");
+        Console.WriteLine($"  Intérêts payés       {player.InterestPaidTotal.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Intérêts de découvert{player.OverdraftInterestTotal.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Dividendes versés    {player.DividendsPaidTotal.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Capital appelé       {player.CapitalRaisedTotal.ToString("N2", Ci),14}" +
+                          $"   ({player.SharesIssuedInRescues} actions nouvelles)");
+
+        // Ligne à lire en premier quand une trésorerie part au rouge : elle dit si
+        // la compagnie est encore financée, ou si le module a coupé les trains.
+        string solvency = player.InReceivership
+            ? $"sous administration depuis le tick {player.ReceivershipTick} — trains à l'arrêt"
+            : player.OverdraftBalance > 0m
+                ? "à découvert, dans la limite accordée"
+                : "solvable";
+        Console.WriteLine($"  Solvabilité          {solvency,14}" +
+                          (player.ReceivershipCount > 0
+                              ? $"   ({player.ReceivershipCount} mise(s) sous administration)"
+                              : ""));
+
+        Console.WriteLine();
+        Console.WriteLine("Magnat");
+        Console.WriteLine($"  Caisse personnelle   {tycoon.Cash.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Portefeuille (coût)  {tycoon.PortfolioCost.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Portefeuille (cours) {tycoon.PortfolioMarketValue(finance).ToString("N2", Ci),14}");
+        Console.WriteLine($"  Dette de marge      -{tycoon.MarginLoan.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Fortune personnelle  {tycoon.NetWorth(finance).ToString("N2", Ci),14}");
+        Console.WriteLine($"  Dividendes reçus     {tycoon.DividendsReceivedTotal.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Plus-values réalisées{tycoon.RealizedResultTotal.ToString("N2", Ci),14}");
+        Console.WriteLine($"  Titres achetés/vendus{tycoon.SharesBoughtTotal,14} / {tycoon.SharesSoldTotal}" +
+                          $"   appels de marge : {tycoon.MarginCalls}");
+        Console.WriteLine($"  Part du capital      {(player.Register.HeldBy(Holders.Tycoon) * 100.0
+            / Math.Max(1, player.Register.SharesIssued)).ToString("0.0", Ci),13} %");
+
+        Console.WriteLine();
+        Console.WriteLine("Concurrents");
+        foreach (var rival in finance.Companies)
+        {
+            if (rival.Rival is null) continue;
+            long stake = rival.Register.SharesIssued > 0
+                ? rival.Register.HeldBy(player.Id)
+                : 0;
+            string state = rival.Merged ? "absorbée" :
+                $"participation {stake} / {rival.Register.SharesIssued}";
+            Console.WriteLine($"  {rival.Name,-24} cours {rival.SharePrice.ToString("N2", Ci),8}   " +
+                              $"capitaux propres {rival.BookEquity.ToString("N2", Ci),12}   {state}");
+        }
+
+        foreach (var merger in finance.Mergers)
+            Console.WriteLine($"  Fusion au tick {merger.Tick} : {merger.TargetId} absorbée, " +
+                              $"actif net {merger.NetAssetsAbsorbed.ToString("N2", Ci)}, " +
+                              $"résultat de fusion {merger.MergerResult.ToString("N2", Ci)}");
+
+        Console.WriteLine();
+        Console.WriteLine($"Écart de bilan maximal sur la course : {worstResidual.ToString("0.00######", Ci)}" +
+                          (worstResidual == 0m
+                              ? "   (tous les bilans équilibrés au centime, à chaque tick)"
+                              : $"   ← FUITE, tick {worstResidualTick}"));
+        Console.WriteLine($"Écart à la frontière double/decimal  : " +
+                          $"{worstFrontierGap.ToString("0.00######", Ci)}" +
+                          (worstFrontierGap <= 0.005 + 1e-9
+                              ? "   (sous le demi-centime, et il ne s'accumule pas)"
+                              : "   ← DÉRIVE de l'arrondi"));
     }
 }

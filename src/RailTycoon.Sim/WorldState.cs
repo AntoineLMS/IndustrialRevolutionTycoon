@@ -1,5 +1,6 @@
 using RailTycoon.Sim.Core;
 using RailTycoon.Sim.Economy;
+using RailTycoon.Sim.Finance;
 using RailTycoon.Sim.Transport;
 
 namespace RailTycoon.Sim;
@@ -38,6 +39,13 @@ public sealed class WorldState
     /// à des lignes aux distances saisies à la main.
     /// </summary>
     public RailTycoon.Sim.Network.IRailNetwork? Network { get; internal set; }
+
+    /// <summary>
+    /// L'état financier : société, emprunts, actionnaires, concurrents. Vide tant
+    /// qu'un scénario n'active pas le module, ce qui laisse les scénarios
+    /// existants inchangés. Rempli par <see cref="IFinanceSolver.Initialize"/>.
+    /// </summary>
+    public FinanceState Finance { get; } = new();
 
     private readonly Dictionary<string, City> _citiesById = new();
     private readonly Dictionary<string, CargoDef> _cargosById = new();

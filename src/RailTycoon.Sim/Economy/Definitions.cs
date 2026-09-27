@@ -232,6 +232,9 @@ public sealed class ScenarioDef
     /// à la main. Voir RailTycoon.Sim.Network.RailNetworkDef.
     /// </summary>
     public RailTycoon.Sim.Network.RailNetworkDef Network { get; set; } = new();
+
+    /// <summary>Configuration du module finance. Voir <c>Finance/FinanceDefinitions.cs</c> ; inactive par défaut.</summary>
+    public RailTycoon.Sim.Finance.FinanceDef Finance { get; set; } = new();
     public List<CargoDef> Cargos { get; set; } = new();
     public List<RecipeDef> Recipes { get; set; } = new();
     public List<CityDef> Cities { get; set; } = new();

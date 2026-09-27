@@ -926,6 +926,12 @@ internal static class Program
             Check.Near(45, line.DistanceBetween(0, 1), 1e-9, "distance entre les deux premiers arrêts");
         });
 
+        // Les invariants du module finance vivent dans leur propre fichier :
+        // société, emprunts, bourse, insolvabilité. Un seul point d'entrée ici,
+        // pour que trois modules qui avancent en parallèle n'entrent pas en
+        // conflit sur cette liste.
+        FinanceTests.Register(runner);
+
         Console.WriteLine("RailTycoon — invariants de simulation");
         Console.WriteLine();
         return runner.Run();
