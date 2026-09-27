@@ -1,0 +1,318 @@
+{
+  "id": "heartland-events",
+  "name": "La Plaine centrale — 1870, événements historiques et aléatoires",
+  "seed": 20260927,
+  "startingCash": 100000,
+  "initialCoverage": 1.0,
+
+  "//horizon": "15 jours, pas 30. L'horizon fixe l'échelle du stock qui compte, donc ce qu'un seul train peut changer en arrivant. À 30 jours, amener le blé de Millbrook sous le seuil de rentabilité de son moulin demandait 31 chargements pour une capacité de 24 : aucune livraison ne pouvait démarrer l'usine, et le moulin restait à 7 %. À 15 jours il en faut 16, et un train suffit à débloquer un site — ce qui est la décision que le joueur doit pouvoir prendre.",
+
+  "priceModel": {
+    "coverageHorizonTicks": 15,
+    "shape": 0.5,
+    "minMultiplier": 0.12,
+    "maxMultiplier": 3.0
+  },
+
+  "economy": {
+    "productionStorageTicks": 30,
+    "minProductionFactor": 0.1,
+    "minConsumptionResponse": 0.3,
+    "maxConsumptionResponse": 1.5
+  },
+
+  "haulage": {
+    "minMargin": 0.10,
+    "minProfitPerUnit": 1.5,
+    "expectedLoadFactor": 0.6,
+    "priceImpactSlices": 8,
+    "minTradeQty": 0.25
+  },
+
+  "//anticipating": "Réglages du solveur anticipating. Ignorés par le solveur de référence, qui reste le témoin de comparaison. L'anticipation fait tout le travail : elle porte la mobilité de la dispersion de 0,411 à 0,615 et le taux de changement de la ville la plus chère de 20,0 % à 26,2 % sur 720 ticks, sans dégrader le résultat du transport. Au-delà de 6 ticks d'horizon ou de 0,25 de lissage, le prix devient du bruit : le transporteur rate ses créneaux et le résultat net chute d'un cinquième pour deux points de mobilité.",
+
+  "//croissance": "growthRatePerTick est à 0, et c'est un résultat de mesure, pas un oubli. Le mécanisme est implémenté et testé, mais sur cette carte il ne fait pas ce qu'on espérait : le signal qui fait grandir une ville est qu'elle soit moins chère que les autres, donc la croissance déplace la demande des villes chères vers les villes bon marché et COMPRIME la dispersion au lieu de la déplacer. Mesuré à 0,31-0,43 de mobilité contre 0,411 pour la référence, quel que soit le rythme (0,003 à 0,2) et quelle que soit la mémoire démographique (1 à 180 ticks). L'activer se décide avec une autre boucle de croissance, pas avec un autre réglage de celle-ci.",
+
+  "anticipating": {
+    "anticipationTicks": 4,
+    "anticipationWeight": 1.0,
+    "driftSmoothing": 0.15,
+
+    "growthRatePerTick": 0,
+    "growthMemoryTicks": 90,
+    "growthDeadband": 0.04,
+    "minCitySize": 0.7,
+    "maxCitySize": 1.3,
+
+    "//saisons": "Amplitudes volontairement modestes. Elles n'apportent que 6 % de mobilité et rien du tout au changement de ville la plus chère — la saison fait respirer tout le monde en même temps, donc le meilleur débouché ne bouge pas. Au-delà de 0,5 d'amplitude sur le blé, la récolte dépasse ce que la ligne peut évacuer et le résultat du transport tombe d'un tiers. Le pic est donné en fraction d'année, 0 = premier jour.",
+    "seasons": [
+      { "cargo": "grain",  "productionAmplitude": 0.18, "productionPeak": 0.70 },
+      { "cargo": "logs",   "productionAmplitude": 0.10, "productionPeak": 0.05 },
+      { "cargo": "coal",   "demandAmplitude": 0.12, "demandPeak": 0.02 },
+      { "cargo": "food",   "demandAmplitude": 0.04, "demandPeak": 0.08 },
+      { "cargo": "boards", "demandAmplitude": 0.09, "demandPeak": 0.45 }
+    ]
+  },
+
+  "//prix": "Chaque maillon ajoute environ 70 % de valeur au prix de référence. Cette marge n'est pas décorative : elle est la réserve dans laquelle l'usine peut absorber un intrant devenu cher avant de s'arrêter. Trop mince (le moulin à 10 % du premier jet), l'usine ne démarre jamais ; trop large (la scierie à 350 %), elle tourne quoi qu'il arrive et le prix de ses intrants cesse de compter.",
+
+  "cargos": [
+    { "id": "grain",  "name": "Blé",         "basePrice": 10, "elasticity": 0.4 },
+    { "id": "flour",  "name": "Farine",      "basePrice": 34, "elasticity": 0.5 },
+    { "id": "food",   "name": "Nourriture",  "basePrice": 58, "elasticity": 0.3 },
+    { "id": "logs",   "name": "Grumes",      "basePrice": 8,  "elasticity": 0.7 },
+    { "id": "boards", "name": "Planches",    "basePrice": 14, "elasticity": 0.8 },
+    { "id": "coal",   "name": "Charbon",     "basePrice": 14, "elasticity": 0.2 }
+  ],
+
+  "recipes": [
+    {
+      "id": "mill", "name": "Moulin",
+      "//": "2 × 10 → 34 : marge 1,70",
+      "inputs":  [ { "cargo": "grain", "qty": 2.0 } ],
+      "outputs": [ { "cargo": "flour", "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    },
+    {
+      "id": "bakery", "name": "Boulangerie",
+      "//": "34 → 58 : marge 1,71",
+      "inputs":  [ { "cargo": "flour", "qty": 1.0 } ],
+      "outputs": [ { "cargo": "food",  "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    },
+    {
+      "id": "sawmill", "name": "Scierie",
+      "//": "8 → 14 : marge 1,75",
+      "inputs":  [ { "cargo": "logs",   "qty": 1.0 } ],
+      "outputs": [ { "cargo": "boards", "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    }
+  ],
+
+  "cities": [
+    {
+      "id": "fairview", "name": "Fairview", "population": 4000,
+      "production": { "grain": 2.0 },
+      "demand": { "food": 0.05, "coal": 0.04, "boards": 0.02 },
+      "initialStock": { "grain": 30 }
+    },
+    {
+      "id": "millbrook", "name": "Millbrook", "population": 9000,
+      "demand": { "food": 0.07, "coal": 0.06, "boards": 0.04 },
+      "industries": [ { "recipe": "mill", "capacity": 2.0 } ]
+    },
+    {
+      "id": "pinegrove", "name": "Pinegrove", "population": 6000,
+      "production": { "logs": 0.8 },
+      "demand": { "food": 0.05, "coal": 0.04 },
+      "industries": [ { "recipe": "sawmill", "capacity": 0.7 } ],
+      "initialStock": { "logs": 20 }
+    },
+    {
+      "id": "coalburg", "name": "Coalburg", "population": 11000,
+      "production": { "coal": 1.15 },
+      "demand": { "food": 0.10, "boards": 0.04, "grain": 0.05 },
+      "initialStock": { "coal": 30 }
+    },
+    {
+      "id": "rivertown", "name": "Rivertown", "population": 18000,
+      "demand": { "food": 0.11, "coal": 0.08, "boards": 0.05 },
+      "industries": [ { "recipe": "bakery", "capacity": 1.1 } ]
+    },
+    {
+      "id": "ashford", "name": "Ashford", "population": 26000,
+      "demand": { "food": 0.16, "coal": 0.14, "boards": 0.09 },
+      "industries": [ { "recipe": "mill", "capacity": 1.1 } ]
+    },
+    {
+      "id": "kingsport", "name": "Kingsport", "population": 62000,
+      "demand": { "food": 0.28, "coal": 0.22, "boards": 0.15 },
+      "industries": [ { "recipe": "bakery", "capacity": 1.7 } ]
+    },
+    {
+      "id": "weston", "name": "Weston", "population": 5000,
+      "production": { "grain": 1.5 },
+      "demand": { "food": 0.07, "coal": 0.05 },
+      "initialStock": { "grain": 25 }
+    },
+    {
+      "id": "ironhill", "name": "Ironhill", "population": 21000,
+      "demand": { "coal": 0.20, "boards": 0.11, "food": 0.13 },
+      "industries": [ { "recipe": "sawmill", "capacity": 0.7 } ]
+    },
+    {
+      "id": "northgate", "name": "Northgate", "population": 48000,
+      "demand": { "food": 0.25, "coal": 0.20, "boards": 0.13 }
+    }
+  ],
+
+  "//finance": "Pas de finance : ce scénario éprouve les événements, et un scénario éprouve une chose à la fois. Des dividendes et une OPA déplaceraient la trésorerie du transporteur, donc ses achats, et on ne saurait plus attribuer un écart de résultat aux événements plutôt qu'à la finance. Le volet financier s'éprouve sur data/heartland-finance.json.",
+
+  "//events": "Ce scénario existe pour éprouver le module events, et lui seul. L'économie est celle de heartland.json au caractère près (même bloc anticipating) — un test le vérifie — et seul le bloc events s'ajoute : heartland reste la trace de régression de l'économie, sans effets extérieurs. Toutes les mesures citées ici sont dans docs/FINDINGS.md, section « Événements historiques et aléatoires » : 40 réalisations du tirage aléatoire (events.randomSequence de 11 à 50), statistiques après 90 ticks de chauffe et chez les acheteurs seulement, comparées à un TÉMOIN — le même calendrier d'aléas à 0,1 % d'intensité — et non à heartland seul. La raison : un choc de 0,1 % suffit à déplacer le résultat net de heartland de ±4 %, donc une partie unique ne se compare à rien.",
+
+  "events": {
+    "enabled": true,
+    "startYear": 1870,
+
+    "//randomSequence": "Séquence PCG propre au module. 1 est celle du monde, 7 celle de la finance : activer les événements ne décale aucun autre tirage, et un test le vérifie.",
+    "randomSequence": 11,
+
+    "//bornes": "Bornes du multiplicateur composé d'un marché quand des événements se superposent. Le plancher reste strictement positif : une demande annulée ferait sortir la ville du panel des acheteurs au lieu de la déprimer.",
+    "minFactor": 0.1,
+    "maxFactor": 4.0,
+
+    "//historiques": "Dates et natures documentées dans docs/SOURCES.md ; intensités et durées sont des paramètres de jeu, jamais des mesures, et la cible est une transposition — la carte est fictive, Kingsport n'est pas Chicago. Les quatre premiers tombent dans les 720 ticks mesurés. Effet local mesuré sur leur fenêtre, solveur de référence : la grève fait monter le charbon de 32 % chez les acheteurs et baisser de 22 % ce que le train enlève à Coalburg ; l'incendie de Chicago fait passer les planches de Kingsport à ×1,88 ; Peshtigo fait monter les grumes de Pinegrove de 20 %. La sécheresse, elle, ne se voit pas — même à ×0,35 — parce que le blé de Fairview est bridé par ce que le train peut emporter, pas par la récolte : elle vide le carreau sans changer ce qui part. Elle est gardée telle quelle, et c'est une découverte, pas un réglage raté. La panique de 1873 tombe au tick 1337 : hors des 720 ticks mesurés, elle agit dans une partie longue.",
+    "historical": [
+      {
+        "id": "greve-anthracite-1871",
+        "name": "Grève de l'anthracite",
+        "basis": "historical",
+        "source": "docs/SOURCES.md#greve-anthracite-1871",
+        "year": 1871, "month": 1, "day": 10,
+        "durationTicks": 162, "rampTicks": 20,
+        "cities": [ "coalburg" ],
+        "effects": [ { "cargo": "coal", "on": "production", "factor": 0.4 } ]
+      },
+      {
+        "id": "secheresse-1871",
+        "name": "Sécheresse du Middle West",
+        "basis": "inspired",
+        "source": "docs/SOURCES.md#secheresse-1871",
+        "year": 1871, "month": 6, "day": 1,
+        "durationTicks": 120, "rampTicks": 30,
+        "cities": [ "fairview", "weston" ],
+        "effects": [ { "cargo": "grain", "on": "production", "factor": 0.75 } ]
+      },
+      {
+        "id": "grand-incendie-1871",
+        "name": "Grand incendie de Chicago",
+        "basis": "historical",
+        "source": "docs/SOURCES.md#grand-incendie-1871",
+        "year": 1871, "month": 10, "day": 8,
+        "durationTicks": 300, "rampTicks": 30,
+        "cities": [ "kingsport" ],
+        "effects": [ { "cargo": "boards", "on": "demand", "factor": 2.5 } ]
+      },
+      {
+        "id": "incendie-peshtigo-1871",
+        "name": "Incendie de Peshtigo",
+        "basis": "historical",
+        "source": "docs/SOURCES.md#incendie-peshtigo-1871",
+        "year": 1871, "month": 10, "day": 8,
+        "durationTicks": 360, "rampTicks": 5,
+        "cities": [ "pinegrove" ],
+        "effects": [ { "cargo": "logs", "on": "production", "factor": 0.5 } ]
+      },
+      {
+        "id": "panique-1873",
+        "name": "Panique de 1873",
+        "basis": "historical",
+        "source": "docs/SOURCES.md#panique-1873",
+        "year": 1873, "month": 9, "day": 18,
+        "durationTicks": 1800, "rampTicks": 60,
+        "cities": [],
+        "effects": [
+          { "cargo": "boards", "on": "demand", "factor": 0.6 },
+          { "cargo": "coal",   "on": "demand", "factor": 0.85 }
+        ]
+      }
+    ],
+
+    "//aleatoires": "Le catalogue est ÉQUILIBRÉ : pour chaque marchandise et chaque levier, les hausses et les baisses se compensent en espérance (fréquence × durée utile × écart moyen à 1), comme la saison dont la moyenne annuelle vaut exactement le taux nominal. Ce n'est pas une élégance, c'est la première leçon de la mesure : le premier jet n'avait que des chocs dans un seul sens par marchandise — afflux d'ouvriers sans épidémie, grèves sans filon — et coûtait 52 000 de résultat net (249 000 → 197 000, médiane 250 000 → 200 000) sans rien faire bouger : la mobilité baissait (0,401 → 0,374). Un afflux seul coûte 44 000 (251 000 → 207 000) ; une épidémie seule en rapporte 28 000 (250 000 → 278 000) : le résultat suit le surplus de nourriture, pas la dispersion — l'afflux seul ajoute 2 % à la demande de nourriture de la carte, soit le cinquième du surplus de 10 % que le bilan laisse au transporteur. Un choc à sens unique est un déséquilibre structurel déguisé en dynamique ; `--balance` affiche désormais ce biais, et un test exige qu'il soit nul. Équilibré, le catalogue est neutre en médiane sur le résultat et fait changer la ville la plus chère d'un mois sur l'autre un peu plus souvent (voir « //intensite »). Portée « one » partout : « all » fait bouger davantage la tête (+3 points d'un mois sur l'autre, dominance −6 points, mobilité +0,06) mais comme une saison, tout le monde à la fois, et le transporteur y perd 57 000 en moyenne pour 96 000 d'écart-type, en ne livrant plus aux villes touchées que 64 % de ce qu'il y livrait. La montée, de 0 à 20 ticks, ne change aucune statistique agrégée : c'est un choix de lisibilité pour le joueur, pas un réglage d'équilibre.",
+    "//intensite": "Intensité retenue : les bornes ci-dessous telles quelles (k = 1 dans le balayage qui multiplie l'écart à 1 par k, fréquence fixe). Tête du mois qui change, référence : 33,0 % au témoin, 34,9 à k=0,5, 35,3 à k=1, 36,9 à k=1,5, 36,6 à k=2 ; anticipant : 37,9 / 39,7 / 39,8 / 40,8 / 42,7. Le résultat médian ne bouge pas jusqu'à k=1 (253 000 / 251 000 / 257 000) mais son écart-type passe de 4 000 à 28 000 puis 43 000 à k=1,5 et 58 000 à k=2, et la moyenne perd 9 000 puis 13 000. Au-delà de k=1 on achète du hasard, pas du jeu. La mobilité de l'amplitude ne bouge dans aucun cas au-delà du bruit (0,39 à 0,41).",
+    "//frequence": "Fréquence retenue : celle des données (m = 1 dans le balayage qui multiplie occurrencesPerYear par m, intensité fixe), soit une cinquantaine d'événements en deux ans. Tête du mois qui change, référence : 35,0 % à m=0,25, 34,7 à 0,5, 35,6 à 1, 36,6 à 2, 37,4 à 4 ; résultat médian 253 000 / 255 000 / 257 000 / 254 000 / 245 000, écart-type 16 000 / 21 000 / 28 000 / 41 000 / 44 000. À m=4, près de 170 événements en deux ans : la gazette devient illisible pour un gain de deux points.",
+    "random": [
+      {
+        "id": "vague-de-froid", "name": "Vague de froid",
+        "occurrencesPerYear": 2.0, "months": [ 12, 1, 2 ], "scope": "one",
+        "durationMinTicks": 8, "durationMaxTicks": 20, "rampTicks": 2,
+        "effects": [ { "cargo": "coal", "on": "demand", "factorMin": 1.5, "factorMax": 2.5 } ]
+      },
+      {
+        "id": "redoux", "name": "Redoux",
+        "//": "Contrepartie de la vague de froid : 6,7 × 12 ticks utiles × −0,3 = −24, contre 2 × 12 × +1,0 = +24.",
+        "occurrencesPerYear": 6.7, "months": [ 12, 1, 2 ], "scope": "one",
+        "durationMinTicks": 8, "durationMaxTicks": 20, "rampTicks": 2,
+        "effects": [ { "cargo": "coal", "on": "demand", "factorMin": 0.6, "factorMax": 0.8 } ]
+      },
+      {
+        "id": "mauvaise-recolte", "name": "Mauvaise récolte",
+        "occurrencesPerYear": 0.6, "months": [ 7, 8, 9 ], "scope": "one",
+        "durationMinTicks": 60, "durationMaxTicks": 150, "rampTicks": 15,
+        "effects": [ { "cargo": "grain", "on": "production", "factorMin": 0.4, "factorMax": 0.8 } ]
+      },
+      {
+        "id": "recolte-abondante", "name": "Récolte abondante",
+        "//": "0,69 × 90 × +0,35 = +21,7, contre 0,6 × 90 × −0,4 = −21,6.",
+        "occurrencesPerYear": 0.69, "months": [ 7, 8, 9 ], "scope": "one",
+        "durationMinTicks": 60, "durationMaxTicks": 150, "rampTicks": 15,
+        "effects": [ { "cargo": "grain", "on": "production", "factorMin": 1.2, "factorMax": 1.5 } ]
+      },
+      {
+        "id": "afflux-ouvriers", "name": "Afflux d'ouvriers",
+        "occurrencesPerYear": 3.0, "scope": "one",
+        "durationMinTicks": 20, "durationMaxTicks": 60, "rampTicks": 5,
+        "effects": [ { "cargo": "food", "on": "demand", "factorMin": 1.4, "factorMax": 2.0 } ]
+      },
+      {
+        "id": "epidemie", "name": "Épidémie",
+        "//": "7 × 35 × −0,3 = −73,5, contre 3 × 35 × +0,7 = +73,5.",
+        "occurrencesPerYear": 7.0, "scope": "one",
+        "durationMinTicks": 20, "durationMaxTicks": 60, "rampTicks": 5,
+        "effects": [ { "cargo": "food", "on": "demand", "factorMin": 0.55, "factorMax": 0.85 } ]
+      },
+      {
+        "id": "fievre-construction", "name": "Fièvre de construction",
+        "occurrencesPerYear": 1.5, "scope": "one",
+        "durationMinTicks": 30, "durationMaxTicks": 90, "rampTicks": 10,
+        "effects": [ { "cargo": "boards", "on": "demand", "factorMin": 1.5, "factorMax": 2.5 } ]
+      },
+      {
+        "id": "marasme-batiment", "name": "Marasme du bâtiment",
+        "//": "4,3 × 50 × −0,35 = −75,3, contre 1,5 × 50 × +1,0 = +75.",
+        "occurrencesPerYear": 4.3, "scope": "one",
+        "durationMinTicks": 30, "durationMaxTicks": 90, "rampTicks": 10,
+        "effects": [ { "cargo": "boards", "on": "demand", "factorMin": 0.5, "factorMax": 0.8 } ]
+      },
+      {
+        "id": "eboulement", "name": "Éboulement au puits",
+        "occurrencesPerYear": 1.0, "scope": "one",
+        "durationMinTicks": 7, "durationMaxTicks": 30, "rampTicks": 2,
+        "effects": [ { "cargo": "coal", "on": "production", "factorMin": 0.3, "factorMax": 0.7 } ]
+      },
+      {
+        "id": "nouveau-filon", "name": "Nouveau filon",
+        "//": "0,79 × 35 × +0,3 = +8,3, contre 1 × 16,5 × −0,5 = −8,25.",
+        "occurrencesPerYear": 0.79, "scope": "one",
+        "durationMinTicks": 20, "durationMaxTicks": 60, "rampTicks": 5,
+        "effects": [ { "cargo": "coal", "on": "production", "factorMin": 1.2, "factorMax": 1.4 } ]
+      }
+    ]
+  },
+
+  "//network": "Ce scénario n'a pas de relief, et c'est un choix : ses distances kilométriques ci-dessous sont celles de la campagne de mesure de docs/FINDINGS.md, et les traces de régression en dépendent. Le module réseau reste donc inactif ici (mode de compatibilité : sans bloc « network », les lignes posées à la main font foi et le relief ne coûte rien à l'exploitation). Les cartes à relief sont data/terrain-*.json. Poser heartland sur un relief est un chantier de conception à part entière — il déplacera tous les chiffres de FINDINGS.md, ce qui doit être une décision, pas un effet de bord.",
+
+  "lines": [
+    {
+      "id": "main", "name": "Ligne principale",
+      "stops": [
+        { "city": "fairview",  "distanceKm": 0 },
+        { "city": "millbrook", "distanceKm": 45 },
+        { "city": "pinegrove", "distanceKm": 95 },
+        { "city": "coalburg",  "distanceKm": 150 },
+        { "city": "rivertown", "distanceKm": 210 },
+        { "city": "ashford",   "distanceKm": 265 },
+        { "city": "kingsport", "distanceKm": 330 },
+        { "city": "weston",    "distanceKm": 385 },
+        { "city": "ironhill",  "distanceKm": 440 },
+        { "city": "northgate", "distanceKm": 500 }
+      ]
+    }
+  ],
+
+  "trains": [
+    { "id": "t1", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 0 },
+    { "id": "t2", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 4 },
+    { "id": "t3", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 9 }
+  ]
+}

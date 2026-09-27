@@ -101,8 +101,10 @@ internal static class Program
         }
 
         recorder.WriteTo(opts.OutDir);
+        CsvRecorder.WriteEvents(sim.World, opts.OutDir);
         Report.PrintBalance(scenario);
         Report.PrintRun(sim, opts, recorder, stats, cashHistory, rotation);
+        Report.PrintEvents(sim);
         Report.PrintFinance(sim, worstResidual, worstResidualTick, worstFrontierGap);
 
         if (violations.Count > 0)
@@ -220,7 +222,27 @@ internal static class Report
                 $"{ratio,8}  {b.Verdict}");
         }
         Console.WriteLine();
+
+        // Le même bilan pour le catalogue d'événements aléatoires : un catalogue qui
+        // ne frappe que dans un sens déplace l'équilibre du scénario sans rien
+        // animer. Voir EventCatalogBalance.
+        if (scenario.Events.Enabled && scenario.Events.Random.Count > 0)
+        {
+            Console.WriteLine("Biais du catalogue aléatoire (espérance annuelle, à l'échelle de la carte)");
+            Console.WriteLine($"  {"Marchandise",-13}{"levier",-12}{"hausses",10}{"baisses",10}{"biais",9}  verdict");
+            foreach (var b in RailTycoon.Sim.Events.EventCatalogBalance.Compute(scenario))
+            {
+                string name = scenario.Cargos.FirstOrDefault(c => c.Id == b.Cargo)?.Name ?? b.Cargo;
+                string verdict = Math.Abs(b.Bias) <= 0.01 ? "équilibré" :
+                    b.Bias > 0 ? "À LA HAUSSE — déplace l'équilibre du scénario" : "À LA BAISSE — déplace l'équilibre du scénario";
+                Console.WriteLine($"  {name,-13}{(b.On == "production" ? "production" : "demande"),-12}" +
+                                  $"{Pct(b.Up),10}{Pct(b.Down),10}{Pct(b.Bias),9}  {verdict}");
+            }
+            Console.WriteLine();
+        }
     }
+
+    private static string Pct(double x) => (x * 100).ToString("+0.0;-0.0;0.0", Ci) + " %";
 
     /// <summary>
     /// Devis du réseau, tronçon par tronçon, sans rien simuler.
@@ -306,7 +328,8 @@ internal static class Report
         var w = sim.World;
 
         Console.WriteLine($"Scénario   : {w.Def.Name}  ({w.Def.Id}, graine {w.Def.Seed})");
-        Console.WriteLine($"Modules    : économie={sim.Economy.Name}, transport={sim.Haulage.Name}, prix={w.PriceModel.Name}");
+        Console.WriteLine($"Modules    : économie={sim.Economy.Name}, transport={sim.Haulage.Name}, prix={w.PriceModel.Name}" +
+                          (w.Events.Enabled ? $", événements={sim.Events.Name}" : ""));
         Console.WriteLine($"Durée      : {opts.Ticks} ticks  →  {w.Tick}   (statistiques sur {stats.Samples} ticks, {opts.WarmupTicks} de chauffe exclus)");
         Console.WriteLine($"Empreinte  : {recorder.Fingerprint()}   (doit être stable à graine identique)");
         Console.WriteLine();
@@ -456,6 +479,74 @@ internal static class Report
         }
         return new string(chars) + $"  {min.ToString("N0", Ci)} → {max.ToString("N0", Ci)}";
     }
+
+    /// <summary>
+    /// Journal des événements déclenchés. Ce que le joueur verrait dans la gazette,
+    /// et tout ce qu'un concurrent a le droit de savoir : ce qui a commencé, jamais
+    /// ce qui va commencer.
+    /// </summary>
+    public static void PrintEvents(Simulation sim)
+    {
+        var w = sim.World;
+        var events = w.Events;
+        Console.WriteLine();
+        if (!events.Enabled)
+        {
+            Console.WriteLine("Événements  module inactif (aucun bloc « events » dans le scénario)");
+            return;
+        }
+
+        int active = events.Active.Count(e => e.IsActiveAt(w.Tick.Index));
+        Console.WriteLine($"Événements (journal public, module {sim.Events.Name}) : " +
+                          $"{events.Journal.Count} déclenché(s), {active} encore actif(s) au dernier tick");
+        if (events.Journal.Count == 0) return;
+
+        if (w.Def.Events.StartYear > 0)
+            Console.WriteLine("  (dates du calendrier de jeu : douze mois de trente jours)");
+        Console.WriteLine($"  {"début",-12}{"fin",-12}{"origine",-13}{"événement",-34}cibles (multiplicateur au plus fort)");
+
+        // Les historiques s'affichent toujours ; les aléatoires jusqu'à une limite,
+        // le reste est dans events.csv. Tronquer le journal dans l'ordre aurait
+        // caché l'incendie de Chicago derrière quarante redoux.
+        const int MaxRandomLines = 40;
+        int randomShown = 0, randomHidden = 0;
+        foreach (var e in events.Journal)
+        {
+            if (e.Origin == RailTycoon.Sim.Events.EventOrigin.Random && randomShown++ >= MaxRandomLines)
+            {
+                randomHidden++;
+                continue;
+            }
+            string origin = e.Origin switch
+            {
+                RailTycoon.Sim.Events.EventOrigin.Historical => "historique",
+                RailTycoon.Sim.Events.EventOrigin.Inspired => "inspiré de",
+                _ => "aléatoire",
+            };
+            string targets = string.Join(", ", e.Targets.Select(t =>
+                $"{w.CityById(t.CityId).Def.Name} {w.Cargo(t.Cargo).Name.ToLowerInvariant()} " +
+                $"{(t.On == "production" ? "prod." : "dem.")} ×{t.PeakFactor.ToString("0.00", Ci)}"));
+            if (targets.Length > 90) targets = targets[..87] + "...";
+            Console.WriteLine($"  {Date(w, e.StartTick),-12}{Date(w, e.EndTick),-12}{origin,-13}" +
+                              $"{Truncate(e.Name, 33),-34}{targets}");
+        }
+        if (randomHidden > 0)
+            Console.WriteLine($"  … et {randomHidden} événement(s) aléatoire(s) de plus : voir events.csv");
+        Console.WriteLine();
+    }
+
+    /// <summary>Date lisible d'un tick : calendrier de jeu (12 mois de 30 jours) si le scénario donne son année de départ.</summary>
+    private static string Date(WorldState w, int tick)
+    {
+        int startYear = w.Def.Events.StartYear;
+        var t = new RailTycoon.Sim.Core.SimTick(tick);
+        if (startYear <= 0) return t.ToString();
+        int month = t.DayOfYear / 30 + 1, day = t.DayOfYear % 30 + 1;
+        return $"{day:D2}/{month:D2}/{startYear + t.Year}";
+    }
+
+    private static string Truncate(string text, int width)
+        => text.Length <= width ? text : text[..(width - 1)] + "…";
 
     /// <summary>
     /// Plus grand écart de bilan, tous grands livres confondus. C'est le chiffre

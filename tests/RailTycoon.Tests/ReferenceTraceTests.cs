@@ -42,13 +42,19 @@ internal static class ReferenceTraceTests
     /// Une ligne par couple scénario × solveur qu'un document cite ou qu'un module
     /// revendique. heartland-finance n'est éprouvée que sous la référence : sous
     /// l'anticipant, sa trace des marchés est celle de heartland, et le test
-    /// « le module n'influence pas l'économie » le vérifie déjà.
+    /// « le module n'influence pas l'économie » le vérifie déjà. heartland-events,
+    /// au contraire, change l'économie : il est figé sous les deux solveurs.
     /// </summary>
     private static readonly Case[] Cases =
     [
         new("heartland.json", "reference", "B966B86D3F0AF83C"),
         new("heartland.json", "anticipating", "29EE085518F1B2B0"),
         new("heartland-finance.json", "reference", "227CB2EF4504BDBE"),
+        // Le scénario du module events, sous les deux solveurs : chacun compose les
+        // multiplicateurs du jour dans ses propres taux, et l'empreinte porte aussi
+        // le journal des événements déclenchés.
+        new("heartland-events.json", "reference", "58116D2D6C28310A"),
+        new("heartland-events.json", "anticipating", "E151A952D595E431"),
         new("ironpeak.json", "reference", "76B80943D1BEA4B7"),
         new("terrain-plain.json", "reference", "AD49052A42109540"),
         new("terrain-valley.json", "reference", "AB05B9D83446BD73"),
@@ -96,7 +102,7 @@ internal static class ReferenceTraceTests
         runner.Add("scénarios — un bloc absent sans explication est signalé", () =>
         {
             var undeclared = ScenarioLoader.UndeclaredModuleBlocks(
-                """{ "id": "nu", "Network": {}, "//finance": "pas de finance ici" }""");
+                """{ "id": "nu", "Network": {}, "//finance": "pas de finance ici", "//events": "ni d'événements" }""");
             Check.Equal("anticipating", string.Join(",", undeclared),
                 "seul le bloc ni déclaré ni écarté doit être signalé, casse ignorée");
         });
@@ -121,7 +127,10 @@ internal static class ReferenceTraceTests
             recorder.Record(sim.World);
         }
 
-        return (recorder.TraceFingerprint(FinanceSummary(sim.World)), sim.World.Company.NetProfit);
+        // Le résumé du journal des événements est vide quand le module est inactif :
+        // les empreintes des scénarios sans événements n'ont pas bougé à son arrivée.
+        return (recorder.TraceFingerprint(FinanceSummary(sim.World) + sim.World.Events.Summary()),
+            sim.World.Company.NetProfit);
     }
 
     /// <summary>

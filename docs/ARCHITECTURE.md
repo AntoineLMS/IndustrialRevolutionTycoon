@@ -48,6 +48,7 @@ changement au détour d'un correctif.
 | Phase | Effet | Détenteur |
 |---|---|---|
 | 0 | Remise à zéro de la télémétrie du tick | `Simulation` |
+| 0b | Événements : ouverture et extinction, tirage des aléatoires, multiplicateurs du jour publiés sur les marchés | `IEventSolver` |
 | 1 | Production primaire (fermes, mines, forêts) | `IEconomySolver` |
 | 2 | Usines : consommation des intrants, production | `IEconomySolver` |
 | 3 | Consommation des habitants, modulée par le prix | `IEconomySolver` |
@@ -62,6 +63,40 @@ décider d'un dividende sur le résultat de la veille, et changerait le résulta
 toutes les parties existantes. Ajoutée en queue, elle ne déplace aucune phase et
 n'a aucun effet sur les traces de régression de l'économie — c'est vérifié par un
 test qui compare l'empreinte de la trace des marchés avec et sans le module.
+
+La phase 0b a été **insérée** entre 0 et 1, et c'est la seconde décision de ce
+genre. Elle ne change l'ordre d'aucune phase existante, et sa place découle de ce
+qu'elle fait : elle décide quels événements agissent aujourd'hui et publie, sur
+chaque marché, deux nombres — `EventProductionFactor` et `EventDemandFactor` —
+que le solveur économique compose dans ses taux du jour avant la phase 1. Elle ne
+touche ni stock, ni prix, ni argent ; la marchandise continue de naître et de
+disparaître par `Market.Produce` et `Market.Consume`, en phases 1 à 3. Trois
+raisons à cette place plutôt qu'une autre :
+
+- **Avant la phase 1**, parce qu'un événement daté du tick *t* doit agir sur la
+  production du tick *t*. Le placer en fin de tick, après la finance, pour le
+  tick suivant, reviendrait au même calcul avec un décalage d'un jour dans le
+  journal — et une date qui glisse d'un jour est une date fausse.
+- **Hors du solveur économique**, parce qu'il y en a deux, et qu'un troisième
+  viendra. Toute la logique — dates, enveloppes, tirages, cibles, composition,
+  bornes — vit dans le module events ; un solveur ne lit qu'un nombre par marché
+  et par levier. La référence recompose ses taux du jour à partir du nominal
+  (`Market.NominalDemandRate`, fixé à la construction), l'anticipant les compose
+  avec sa saison et la taille de ses villes. Les deux dimensionnent l'entrepôt
+  d'un site sur son débit **nominal** : une grève ne rétrécit pas le carreau, et
+  un frein dimensionné sur le débit du jour ferait subir l'événement deux fois.
+- **Sans effet quand le module est inactif**, au bit près : les multiplicateurs
+  restent à 1, et `nominal × 1` vaut `nominal` jusqu'au dernier bit. Aucune
+  empreinte de `ReferenceTraceTests` n'a bougé à l'arrivée du module, ce qui est
+  la preuve demandée par la règle ci-dessus ; un test la renouvelle en jouant
+  heartland-events avec son bloc plein mais désactivé.
+
+L'aléa des événements est tiré sur **sa propre séquence** de
+`DeterministicRandom` (`events.randomSequence`, 11 par défaut), comme la finance
+sur la sienne (7) : activer les événements ne décale aucun autre tirage. Et chaque
+type aléatoire tire un nombre fixe de valeurs par jour, qu'il se déclenche ou non,
+si bien que le calendrier d'un type ne dépend ni de l'intensité des autres ni de
+leur fréquence.
 
 Conséquence voulue de l'ordre 4 puis 5 : les trains voient les prix
 d'après-production. Le joueur arrive sur un marché tel qu'il est au matin, pas
@@ -371,14 +406,15 @@ Trois règles, toutes réglables dans les données :
 
 ## Ce qui n'est pas encore modélisé
 
-Volontairement absents de ce prototype, chacun derrière une façade déjà en place
-ou à créer : la signalisation et le dispatching, la finance (bourse, obligations,
-OPA), l'IA concurrente, les scénarios scriptés, et toute l'interface.
+Volontairement absents de ce prototype, chacun derrière une façade à créer : la
+signalisation et le dispatching, l'IA concurrente, les scénarios scriptés au-delà
+des événements datés, et toute l'interface. Le réseau sur relief est derrière
+`IRailNetwork`, la finance derrière `IFinanceSolver` (phase 6) ; ce qu'il leur
+manque encore est listé dans [CONTRACTS.md](CONTRACTS.md).
 
-ou à créer : le réseau réel (relief, terrassement, ponts, tunnels,
-signalisation), le dispatching, l'IA concurrente, les scénarios scriptés, et toute
-l'interface. La finance est désormais derrière `IFinanceSolver` (phase 6) ; ce
-qu'il lui manque encore est listé dans [CONTRACTS.md](CONTRACTS.md).
+Les événements historiques et aléatoires sont derrière `IEventSolver` (phase 0b) ;
+ils ne touchent que la production primaire et la demande des habitants, et ce
+qu'il leur manque est listé dans [CONTRACTS.md](CONTRACTS.md).
 
 `Transport/Rail.cs` reste une abstraction pauvre — une suite d'arrêts et de
 distances — et c'est désormais un choix et non une dette : c'est la projection du

@@ -1,8 +1,11 @@
-# Sources — module `content`
+# Sources — modules `content` et `events`
 
 Ce document couvre les deux livrables du module `content` :
 [`data/locomotives.json`](../data/locomotives.json) (catalogue historique) et
-[`data/ironpeak.json`](../data/ironpeak.json) (second scénario, chaîne acier).
+[`data/ironpeak.json`](../data/ironpeak.json) (second scénario, chaîne acier) ;
+et les événements historiques du module `events`, déclarés dans
+[`data/heartland-events.json`](../data/heartland-events.json) — voir la
+[dernière section](#evenements).
 
 Principe suivi partout : une caractéristique **physique** (année, effort de
 traction, vitesse, masse) est documentée quand une source le permet, et
@@ -213,3 +216,147 @@ méritent néanmoins d'être notés :
 - La géographie (Ironpeak isolée à l'origine de la ligne) est une décision de
   conception documentée dans le commentaire `//geographie` du fichier, pas
   une carte réelle.
+
+<a id="evenements"></a>
+## Événements historiques — `data/heartland-events.json`
+
+Recherches effectuées via WebSearch le 27 septembre 2026. **Limite à connaître** :
+les pages elles-mêmes n'ont pas pu être ouvertes depuis l'environnement de
+travail (Wikipédia, les revues de Penn State et les sites d'histoire locale sont
+bloqués par le proxy sortant) ; ce qui est dit « documenté » ci-dessous l'est par
+les extraits et résumés que le moteur de recherche renvoie de ces pages, avec
+leurs adresses. C'est moins qu'une lecture complète, et une relecture humaine des
+pages citées est la prochaine étape avant de s'y fier pour un texte de jeu.
+
+Le principe est celui des locomotives, transposé. Ce qu'un événement a de
+**factuel** — sa date, sa nature, son ampleur physique — est documenté quand une
+source le permet. Ce qu'il a d'**économique dans le jeu** — son multiplicateur,
+sa durée d'effet, sa montée — n'est *jamais* une donnée historique : convertir la
+ruine d'une filière de 1871 en « ×0,4 sur la production de charbon » est un choix
+de conception, exactement comme convertir un prix de 1855 en unité de jeu. Et sa
+**cible** est une transposition : la carte de heartland est fictive, Kingsport
+n'est pas Chicago, Coalburg n'est pas la vallée de Schuylkill.
+
+D'où deux natures, que le chargeur fait respecter :
+
+- `"basis": "historical"` exige une `source` qui renvoie ici ; la date et la nature
+  de l'événement sont documentées.
+- `"basis": "inspired"` dit qu'on s'inspire d'un fait réel sans pouvoir en
+  documenter l'effet que le jeu lui prête. Le harnais l'affiche « inspiré de »,
+  jamais « historique ».
+
+Calendrier : l'année de jeu compte douze mois de trente jours, et le tick 0 est le
+1er janvier de `events.startYear` (1870 pour heartland). Le 8 octobre 1871 est donc
+le tick 360 + 9 × 30 + 7 = 637.
+
+<a id="greve-anthracite-1871"></a>
+### Grève de l'anthracite, janvier–juin 1871 — `historical`
+
+- **Documenté** : la *Workingmen's Benevolent Association* (WBA), premier syndicat
+  des mineurs d'anthracite de Pennsylvanie, a appelé à la grève en 1868, 1869 et
+  1871. En 1871, les syndicats de la région de Lehigh sont sortis **début
+  janvier** ; la grève a été tranchée par un arbitre, le juge William Elwell, dont
+  la décision est tombée le **14 mai 1871** ; le dernier syndicat a repris le
+  travail le **21 juin 1871**, avec une baisse de salaire de 10 %, chaque comté
+  ayant été autorisé à négocier ses propres conditions de reprise. Deux grévistes
+  ont été tués à Scranton par les gardes des compagnies.
+- **Estimé / choisi** : le jour de début (10 janvier — « début janvier » est tout
+  ce que les extraits donnent) ; la montée de 20 jours, qui traduit une grève qui
+  s'étend de comté en comté et une reprise échelonnée ; le multiplicateur ×0,4 sur
+  la production de charbon de Coalburg, choisi pour une grève réelle mais non
+  totale — aucune source trouvée ne chiffre le tonnage perdu.
+- Sources : Harold W. Aurand, « Early Mine Workers' Organizations in the
+  Anthracite Region », *Pennsylvania History*
+  ([journals.psu.edu](https://journals.psu.edu/phj/article/download/24915/24684)) ;
+  H. W. Aurand, *From the Molly Maguires to the United Mine Workers*, chap. 8
+  « The Collapse of the W.B.A. »
+  ([Temple University Press](https://temple.manifoldapp.org/read/from-the-molly-maguires-to-the-united-mine-workers-the-social-ecology-of-an-industrial-union-1869-1897/section/9a01e5d1-b85c-44f2-a9cd-ae7597fe6c69)) ;
+  [Wikipédia — Workingmen's Benevolent Association of Schuylkill County](https://en.wikipedia.org/wiki/Workingmen%27s_Benevolent_Association_of_Schuylkill_County).
+
+<a id="secheresse-1871"></a>
+### Sécheresse du Middle West, été 1871 — `inspired`
+
+- **Documenté** : l'été 1871 a été particulièrement sec dans le nord du Middle
+  West ; 1870 et 1871 ont toutes deux été des années très sèches, et de petits
+  feux brûlaient dans la région depuis la fin août. C'est la toile de fond des
+  incendies d'octobre (voir Peshtigo).
+- **Non documenté, d'où la nature « inspiré de »** : l'effet de cette sécheresse
+  sur les récoltes de blé. Aucune source trouvée ne chiffre une baisse de
+  rendement ; les dates (1er juin – 30 septembre), la montée de 30 jours et le
+  multiplicateur ×0,75 sur le blé de Fairview et de Weston sont des choix.
+- Sources : [NWS Green Bay — The Peshtigo Fire](https://www.weather.gov/grb/peshtigofire) ;
+  [Wikipédia — Peshtigo fire](https://en.wikipedia.org/wiki/Peshtigo_fire).
+
+<a id="grand-incendie-1871"></a>
+### Grand incendie de Chicago, 8–10 octobre 1871 — `historical`
+
+- **Documenté** : parti le soir du 8 octobre 1871 près de la grange des O'Leary,
+  l'incendie a tué environ 300 personnes, détruit quelque 17 000 bâtiments sur
+  environ 3,3 miles carrés et laissé plus de 100 000 habitants sans abri. Le bois
+  était partout — bâtiments, trottoirs, chaussées de pin. La reconstruction a
+  commencé dès les décombres dégagés (la « Great Rebuilding ») ; les parcs à bois
+  et les abattoirs, hors de la zone brûlée, ont continué de tourner.
+- **Estimé / choisi** : la traduction en demande de **planches** à Kingsport — la
+  plus grande ville de la carte, un port —, ×2,5 sur 300 jours avec 30 jours de
+  montée pour une reconstruction qui démarre après le déblaiement. Aucune source
+  trouvée ne chiffre la demande de bois de construction de la reconstruction.
+- Sources : [National Geographic Education — The Chicago Fire of 1871 and the
+  "Great Rebuilding"](https://education.nationalgeographic.org/resource/chicago-fire-1871-and-great-rebuilding/) ;
+  [Chicago Architecture Center — The Great Chicago Fire of 1871](https://www.architecture.org/online-resources/architecture-encyclopedia/the-great-chicago-fire-of-1871) ;
+  [Wikipédia — Great Chicago Fire](https://en.wikipedia.org/wiki/Great_Chicago_Fire).
+
+<a id="incendie-peshtigo-1871"></a>
+### Incendie de Peshtigo, 8 octobre 1871 — `historical`
+
+- **Documenté** : le même jour que Chicago, un incendie de forêt a ravagé le
+  nord-est du Wisconsin et une partie de la péninsule supérieure du Michigan :
+  environ 1,2 million d'acres (490 000 ha ; certaines sources disent 1,5 million),
+  entre 1 200 et 2 500 morts — l'incendie de forêt le plus meurtrier de l'histoire
+  des États-Unis. Peshtigo était une ville-scierie appartenant à William Ogden,
+  siège de l'une des plus grandes usines de produits du bois du pays.
+- **Estimé / choisi** : l'effet sur les **grumes** de Pinegrove, la seule forêt de
+  la carte, ×0,5 pendant un an, avec 5 jours de montée — un incendie est soudain.
+- Sources : [Wikipédia — Peshtigo fire](https://en.wikipedia.org/wiki/Peshtigo_fire) ;
+  [NWS Green Bay — The Peshtigo Fire](https://www.weather.gov/grb/peshtigofire) ;
+  [University of Illinois LibGuides — The Peshtigo Fire of 1871](https://guides.library.illinois.edu/historical_wildfires/peshtigo).
+
+<a id="panique-1873"></a>
+### Panique de 1873, à partir du 18 septembre 1873 — `historical`
+
+- **Documenté** : la panique commence le 18 septembre 1873 avec la suspension de
+  la banque Jay Cooke & Co., agent du gouvernement pour le financement des
+  chemins de fer et très exposée au Northern Pacific ; la Bourse de New York ferme
+  le 20 septembre pour dix jours, une première. En deux ans, 89 des 364 compagnies
+  ferroviaires font faillite et 18 000 entreprises disparaissent ; le chômage
+  atteint 14 % en 1876. La crise ouvre une dépression d'environ cinq ans, la
+  « Long Depression ».
+- **Estimé / choisi** : la traduction en baisse de la demande de **planches**
+  (×0,6 — le bâtiment et les chantiers ferroviaires s'arrêtent) et de **charbon**
+  (×0,85 — l'industrie ralentit) dans toutes les villes, pendant cinq ans, avec
+  60 jours de montée. Aucune source trouvée ne chiffre ces demandes.
+- Hors des 720 ticks mesurés : elle tombe au tick 1 337. Elle agit dans une partie
+  de plus de trois ans et demi.
+- Sources : [Library of Congress — The Panic of 1873](https://guides.loc.gov/this-month-in-business-history/september/panic-of-1873) ;
+  [PBS American Experience — The Panic of 1873](https://www.pbs.org/wgbh/americanexperience/features/grant-panic/) ;
+  [Yale Program on Financial Stability — Crisis Chronicles: The Long Depression and the Panic of 1873](https://elischolar.library.yale.edu/cgi/viewcontent.cgi?article=13743&context=ypfs-documents) ;
+  [Wikipédia — Panic of 1873](https://en.wikipedia.org/wiki/Panic_of_1873).
+
+### Ce qui manque
+
+- Aucun des multiplicateurs n'a de source : ni le tonnage perdu par la grève de
+  1871, ni la demande de bois de la reconstruction de Chicago, ni la chute de la
+  construction après 1873. Ce sont des choix de conception, au même titre que le
+  coût d'achat d'une locomotive.
+- Les pages citées n'ont été lues qu'à travers les extraits du moteur de recherche
+  (voir la limite en tête de section).
+- Le jour de début de la grève de 1871 n'est pas documenté au-delà de « début
+  janvier ».
+- `ironpeak.json` (1900) ne déclare pas d'événements. Un candidat pour un futur
+  scénario d'épreuve est une grève de l'anthracite à l'automne 1900 ; elle **n'a
+  pas été vérifiée** ici et ne doit pas être déclarée historique avant de l'être.
+
+Les événements **aléatoires** du catalogue (vague de froid, redoux, mauvaise
+récolte, récolte abondante, afflux d'ouvriers, épidémie, fièvre de construction,
+marasme du bâtiment, éboulement, nouveau filon) ne prétendent à aucune source :
+ce sont des types génériques, dont les fréquences et les intensités sont justifiées
+par la mesure — voir [FINDINGS.md](FINDINGS.md) et les clés `"//…"` du scénario.

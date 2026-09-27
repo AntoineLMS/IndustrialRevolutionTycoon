@@ -1,5 +1,6 @@
 using RailTycoon.Sim.Core;
 using RailTycoon.Sim.Economy;
+using RailTycoon.Sim.Events;
 using RailTycoon.Sim.Finance;
 using RailTycoon.Sim.Transport;
 
@@ -46,6 +47,13 @@ public sealed class WorldState
     /// existants inchangés. Rempli par <see cref="IFinanceSolver.Initialize"/>.
     /// </summary>
     public FinanceState Finance { get; } = new();
+
+    /// <summary>
+    /// Les événements : journal public de ceux qui ont été déclenchés, et ceux qui
+    /// agissent aujourd'hui. Vide et inactif tant qu'un scénario n'active pas le
+    /// module. Rempli par <see cref="IEventSolver"/>.
+    /// </summary>
+    public EventsState Events { get; } = new();
 
     private readonly Dictionary<string, City> _citiesById = new();
     private readonly Dictionary<string, CargoDef> _cargosById = new();

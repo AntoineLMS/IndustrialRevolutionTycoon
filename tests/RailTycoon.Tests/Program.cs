@@ -997,6 +997,10 @@ internal static class Program
         // conflit sur cette liste.
         FinanceTests.Register(runner);
 
+        // Même principe pour le module events : historiques, aléatoires,
+        // neutralité, flux aléatoire propre.
+        EventTests.Register(runner);
+
         // Relief et économie ensemble : data/sierra.json. Même raison que pour la
         // finance — un seul point d'entrée ici.
         SierraTests.Register(runner);

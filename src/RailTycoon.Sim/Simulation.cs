@@ -1,5 +1,6 @@
 using RailTycoon.Sim.Core;
 using RailTycoon.Sim.Economy;
+using RailTycoon.Sim.Events;
 using RailTycoon.Sim.Finance;
 using RailTycoon.Sim.Transport;
 
@@ -21,9 +22,10 @@ public sealed class Simulation
     public IEconomySolver Economy { get; }
     public IHaulageSolver Haulage { get; }
     public IFinanceSolver Finance { get; }
+    public IEventSolver Events { get; }
 
     public Simulation(ScenarioDef scenario, IEconomySolver? economy = null, IHaulageSolver? haulage = null,
-        IFinanceSolver? finance = null)
+        IFinanceSolver? finance = null, IEventSolver? events = null)
     {
         var priceModel = new HyperbolicPriceModel(scenario.PriceModel);
 
@@ -31,7 +33,13 @@ public sealed class Simulation
         Economy = economy ?? new ReferenceEconomySolver();
         Haulage = haulage ?? new OpportunisticHaulageSolver();
         Finance = finance ?? new ReferenceFinanceSolver();
+        Events = events ?? new ReferenceEventSolver();
 
+        // Les événements s'initialisent avant l'économie : ils valident leurs
+        // cibles et ouvrent leur flux aléatoire, mais ne publient rien avant le
+        // premier tick. Les multiplicateurs valent 1 à l'initialisation, donc les
+        // prix d'ouverture sont ceux du scénario nu, avec ou sans module.
+        Events.Initialize(World);
         Economy.Initialize(World);
         Haulage.Initialize(World);
         // La finance ouvre ses comptes en dernier : elle reflète la trésorerie
@@ -49,6 +57,13 @@ public sealed class Simulation
         foreach (var city in World.Cities)
             foreach (var market in World.MarketsOf(city))
                 market.BeginTick();
+
+        // Phase 0b — événements. Ouvre et éteint les événements du jour, tire les
+        // aléatoires sur la séquence propre du module, et publie sur chaque marché
+        // les multiplicateurs que le solveur économique va lire. Ne touche ni stock,
+        // ni prix, ni argent ; inactif, n'écrit rien. Voir docs/ARCHITECTURE.md,
+        // tableau des phases, pour la raison de cette place.
+        Events.Step(World, tick);
 
         // Phase 1 — production, consommation, formation des prix.
         Economy.Step(World, tick);
@@ -105,6 +120,8 @@ internal static class WorldBuilder
 
                 market.BaseDemandRate = demand;
                 market.BaseProductionRate = production;
+                market.NominalDemandRate = demand;
+                market.NominalProductionRate = production;
                 market.Stock = stock;
                 city.Markets[cargo.Id] = market;
             }

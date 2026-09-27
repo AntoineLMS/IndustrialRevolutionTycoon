@@ -279,6 +279,253 @@ le banc de mesure qui reconstruisait son sujet : ce qui échappe à la vérifica
 n'est pas ce que chaque module fait, c'est **l'espace entre eux**. Quatre modules
 verts ne font pas un jeu vert.
 
+## Événements historiques et aléatoires : ce qu'ils déplacent, et ce qu'ils ne déplacent pas
+
+*Campagne du module `events` — 27 septembre 2026, scénario `heartland-events`,
+720 ticks, sous les deux solveurs.*
+
+### La question
+
+Le module `events` fait varier, par des événements datés ou tirés au sort, le
+taux de production primaire et la demande des habitants. Trois questions :
+
+1. Les événements font-ils **déplacer** la dispersion des prix — le critère de
+   réussite du contrat `economy` — ou seulement la secouer ?
+2. Répondent-ils à « la nourriture est trop uniforme » ?
+3. Est-ce du jeu, ou du bruit que le transporteur ne peut pas exploiter ?
+
+### Méthode — et une découverte qui l'a imposée
+
+`heartland-events.json` reprend l'économie de `heartland.json` au caractère près
+(un test compare leur contenu sérialisé) et n'ajoute que le bloc `events` :
+cinq événements historiques (voir [SOURCES.md](SOURCES.md)) et un catalogue de
+dix types aléatoires. Les statistiques sont celles du harnais : 90 ticks de
+chauffe exclus, acheteurs seulement. Deux mesures s'y ajoutent, calculées par le
+banc de mesure :
+
+- **tête/mois** — la ville la plus chère en prix *moyen* sur des blocs de 30
+  ticks, et la fraction des mois où elle change. « tête change » compte le
+  changement d'un tick à l'autre, qui pour la nourriture tourne autour de 60 % :
+  c'est le bruit de dent de scie, pas une décision. Un train met quatre à huit
+  jours à traverser la ligne ; le mois est l'échelle où le joueur rouvre sa carte.
+- **réponse** — ce que le transporteur livre à un marché pendant un choc de
+  demande à la hausse, rapporté à ce qu'il y livrait sur la même fenêtre sans
+  événements. Au-dessus de 1, il a vu l'occasion et l'a servie.
+
+Chaque configuration aléatoire est jouée **40 fois**, `events.randomSequence`
+de 11 à 50 : l'économie n'a aucun aléa, c'est la seule source de variation.
+
+**Une partie unique ne se compare à rien.** Avant la première mesure, un contrôle :
+un seul choc de 0,1 % — la demande de nourriture de Rivertown à ×1,001 pendant 38
+jours — fait passer le résultat net de heartland de 240 374 à 249 090. Un choc de
+même taille sur le charbon de Northgate : 246 430 ; sur le blé de Fairview :
+250 368. Le modèle est sensible aux conditions initiales à ±4 % près, et comparer
+heartland-events à heartland revient à comparer deux tirages. Toutes les
+comparaisons ci-dessous se font donc contre un **témoin** : le même calendrier
+d'aléas, à 0,1 % d'intensité. Il a les mêmes dates, les mêmes cibles, et aucun
+effet économique notable.
+
+Et le témoin dit autre chose, qui dépasse ce module : **sous le solveur de
+référence, les 240 374 de heartland sont en dessous des 40 trajectoires
+voisines**, qui s'étalent de 243 600 à 260 500 (médiane 253 000). Le chiffre que
+trois documents citent est celui d'une trajectoire basse, pas celui du scénario.
+Sous l'anticipant, heartland (232 465) tombe au milieu de ses voisines (189 000 à
+256 000, 16 en dessous sur 40). La régression reste une régression — l'empreinte
+fige une trajectoire, et c'est ce qu'on lui demande — mais une conclusion
+d'équilibrage tirée d'une seule partie ne vaut que ce que vaut un tirage.
+
+### Premier résultat : un choc à sens unique est un déséquilibre déguisé
+
+Le premier catalogue ne frappait que dans un sens par marchandise : des afflux
+d'ouvriers sans épidémies, des vagues de froid sans redoux, des éboulements sans
+filons. Référence, 40 réalisations, résultat net en milliers ; chaque catalogue
+est comparé à son propre témoin, qui joue son calendrier :
+
+| catalogue | mobilité | tête/mois | résultat net | médiane | réponse |
+|---|---|---|---|---|---|
+| témoin (même calendrier, ×0,001) | 0,401 ± 0,042 | 35,4 % | 249 ± 5 | 250 | — |
+| premier jet, à sens unique | 0,374 ± 0,047 | 32,9 % | 197 ± 37 | 200 | 0,88 |
+| afflux d'ouvriers seuls (témoin 251) | 0,371 | 32,8 % | 207 ± 42 | 219 | 0,89 |
+| épidémies seules (témoin 250) | 0,423 | 33,6 % | 278 ± 13 | 276 | — |
+
+Les événements faisaient *moins* bouger la dispersion, et coûtaient un cinquième
+du résultat. La raison se lit dans les deux dernières lignes : le résultat suit le
+**surplus** de nourriture, pas sa dispersion. La carte ne produit que 10 % de
+nourriture de plus que ses habitants n'en mangent ; les afflux seuls ajoutent 2 %
+à la demande annuelle de la carte, soit le cinquième de ce surplus, et le
+transporteur perd 44 000. Les épidémies seules le rendent, et il gagne 28 000.
+C'est exactement ce que le solveur anticipant interdit à sa saison — « une
+saisonnalité qui déplacerait la moyenne serait un déséquilibre structurel déguisé
+en dynamique » — et le premier catalogue le faisait sans que rien ne le signale.
+
+*Traité.* `--balance` affiche désormais le biais attendu du catalogue, marchandise
+par marchandise et levier par levier (`EventCatalogBalance`), et un test exige
+qu'il soit nul sur heartland-events. Le catalogue livré apparie chaque hausse à une
+baisse : vague de froid et redoux, mauvaise récolte et récolte abondante, afflux et
+épidémie, fièvre de construction et marasme, éboulement et nouveau filon. Leçon,
+la même que celle de `--balance` : un déséquilibre structurel ne ressemble pas à
+un bug.
+
+### Ce que fait le catalogue livré
+
+40 réalisations, résultat net en milliers. « historiques + témoin » joue les cinq
+historiques avec le calendrier aléatoire à 0,1 % : c'est le témoin de la ligne
+« livré ».
+
+| solveur | configuration | mobilité | tête/mois | dominance | résultat net | médiane | usines | réponse |
+|---|---|---|---|---|---|---|---|---|
+| référence | heartland (une partie) | 0,411 | 34,2 % | 59,5 % | 240 | 240 | 78,3 % | — |
+| référence | témoin | 0,395 ± 0,038 | 33,0 % | 62,4 % | 252 ± 4 | 253 | 78,0 % | — |
+| référence | aléatoires seuls | 0,406 ± 0,045 | 35,6 % | 61,4 % | 250 ± 28 | 257 | 77,8 % | 1,00 |
+| référence | historiques + témoin | 0,401 ± 0,048 | 32,9 % | 62,1 % | 251 ± 5 | 251 | 77,9 % | 0,97 |
+| référence | **livré** (les deux) | 0,400 ± 0,039 | 33,4 % | 62,1 % | 250 ± 28 | 255 | 77,8 % | 1,00 |
+| anticipant | heartland (une partie) | 0,615 | 35,0 % | 52,4 % | 232 | 232 | 76,4 % | — |
+| anticipant | témoin | 0,600 ± 0,032 | 37,9 % | 52,8 % | 233 ± 14 | 236 | 77,3 % | — |
+| anticipant | aléatoires seuls | 0,598 ± 0,040 | 39,8 % | 52,6 % | 228 ± 25 | 230 | 77,2 % | 0,98 |
+| anticipant | historiques + témoin | 0,605 ± 0,043 | 35,4 % | 55,0 % | 235 ± 11 | 235 | 77,3 % | 1,08 |
+| anticipant | **livré** (les deux) | 0,596 ± 0,042 | 38,6 % | 54,1 % | 229 ± 28 | 232 | 77,2 % | 1,01 |
+
+*« usines » est le taux d'usines desservies du premier tableau de ce document :
+l'utilisation moyenne des six usines. Tête/mois : écart-type entre réalisations de
+4 à 5 points, soit une erreur type d'environ 0,7 point sur une moyenne de 40 ; une
+différence de deux points entre deux lignes est à peu près à trois erreurs types.*
+
+Santé du signal-prix des deux marchandises en question, moyenne des réalisations :
+
+| solveur | configuration | nourriture : écart | mobilité | charbon : écart | mobilité | charbon au plafond |
+|---|---|---|---|---|---|---|
+| référence | heartland | ×1,35 | 0,142 | ×11,4 | 0,485 | 5 % |
+| référence | témoin | ×1,39 | 0,280 | ×10,7 | 0,449 | 4 % |
+| référence | historiques seuls | ×1,36 | 0,133 | ×9,6 | 0,471 | 8 % |
+| référence | livré | ×1,38 | 0,216 | ×9,4 | 0,509 | 7 % |
+| anticipant | heartland | ×2,24 | 1,286 | ×16,1 | 0,439 | 7 % |
+| anticipant | témoin | ×2,15 | 1,161 | ×16,1 | 0,427 | 8 % |
+| anticipant | livré | ×1,96 | 0,978 | ×14,0 | 0,563 | 12 % |
+
+Effet local des historiques, chacun seul, sur sa propre fenêtre (rapport à la
+partie sans événements, même fenêtre ; entre parenthèses, l'anticipant) :
+
+| événement | fenêtre | prix de la cible | prix moyen chez les acheteurs | flux de la cible |
+|---|---|---|---|---|
+| grève de l'anthracite | ticks 369–530 | — (Coalburg n'achète pas de charbon) | ×1,32 (×1,39) | enlèvements ×0,78 (×0,68) |
+| sécheresse (inspirée) | 510–629 | — | ×1,00 | enlèvements ×1,00 |
+| grand incendie de Chicago | 637–720 | planches de Kingsport ×1,88 (×1,50) | ×1,09 | livraisons ×1,00 (×0,71) |
+| incendie de Peshtigo | 637–720 | grumes de Pinegrove ×1,20 | ×1,04 | — |
+| panique de 1873 | à partir du tick 1 337 | hors des 720 ticks mesurés | | |
+
+Balayages, **une variable à la fois**, sur les aléatoires seuls (référence ; les
+chiffres de l'anticipant suivent la même pente et sont dans les clés `"//…"` du
+scénario) :
+
+| intensité (écart à 1 × k) | tête/mois | dominance | résultat net | médiane |
+|---|---|---|---|---|
+| k = 0,001 (témoin) | 33,0 % | 62,4 % | 252 ± 4 | 253 |
+| k = 0,5 | 34,9 % | 61,5 % | 250 ± 16 | 251 |
+| **k = 1 (livré)** | 35,3 % | 61,4 % | 250 ± 28 | 257 |
+| k = 1,5 | 36,9 % | 60,3 % | 243 ± 43 | 252 |
+| k = 2 | 36,6 % | 59,7 % | 239 ± 58 | 250 |
+
+| fréquence (× m) | événements en 2 ans | tête/mois | résultat net | médiane |
+|---|---|---|---|---|
+| m = 0,25 | 13 | 35,0 % | 253 ± 16 | 253 |
+| m = 0,5 | 26 | 34,7 % | 252 ± 21 | 255 |
+| **m = 1 (livré)** | 49 | 35,6 % | 250 ± 28 | 257 |
+| m = 2 | 95 | 36,6 % | 247 ± 41 | 254 |
+| m = 4 | 171 | 37,4 % | 236 ± 44 | 245 |
+
+La mobilité de l'amplitude reste entre 0,39 et 0,42 sur toute l'étendue des deux
+balayages : dans le bruit. La montée des aléatoires, balayée de 0 à 20 ticks, ne
+change aucune statistique agrégée. Toucher toutes les villes à la fois
+(`scope: "all"`) au lieu d'une : tête/mois 38,6 %, dominance 55,8 %, mobilité
+0,462 — le seul réglage qui fasse vraiment respirer la dispersion —, mais résultat
+193 ± 96 et une réponse du transporteur qui tombe à 0,64.
+
+### Conclusions
+
+**1. Les événements déplacent un peu le point chaud, pas l'amplitude.** Équilibré,
+le catalogue fait changer la ville la plus chère d'un mois sur l'autre de deux à
+quatre points de plus que le témoin selon l'intensité, et fait baisser la part de
+la ville dominante d'autant. La mobilité de l'amplitude, elle, ne bouge dans aucun
+réglage. Au regard du critère du contrat `economy`, c'est un gain réel mais
+modeste, du même ordre que la saison (+6 % de mobilité) et bien en dessous de
+l'anticipation (+50 %). Sous le solveur de référence, une fois les historiques
+ajoutés, il ne se distingue plus de son témoin (33,4 % contre 32,9 %) ; sous
+l'anticipant il tient (38,6 % contre 35,4 %).
+
+**2. Ils ne répondent pas à « la nourriture est trop uniforme ».** Sous la
+référence, l'écart moyen de la nourriture reste entre ×1,38 et ×1,41 dans toutes
+les configurations équilibrées — ×1,46 au mieux à intensité double. Un choc local
+fait monter le prix d'une ville ; le réseau le referme avant qu'il pèse sur la
+moyenne. Ce que les chocs changent, c'est le *niveau* du surplus (voir le premier
+résultat), pas le *gradient* entre villes. L'uniformité de la nourriture est
+structurelle — deux boulangeries au milieu de la ligne, trois trains qui la
+parcourent en entier — et c'est l'anticipation qui la levait déjà (×2,2).
+
+**3. Le charbon non plus ne se distribue pas mieux, il se resserre.** Avec les
+historiques, dont la grève de 1871 qui fait monter le charbon de 32 % chez tous
+ses acheteurs, l'écart du charbon *baisse* de ×11,4 à ×9,6 : une pénurie pousse
+tous les prix vers le plafond, les villes proches de la mine rattrapent les
+lointaines, et le prix y informe moins.
+
+**4. Pour ce transporteur, c'est du bruit.** Sa réponse aux chocs de demande vaut
+1,00 : il ne livre ni plus ni moins aux villes touchées. Ce n'est pas qu'il ne voit
+pas le prix — il est omniscient —, c'est qu'il ne peut rien en faire : trois trains
+en navette sur une ligne unique, qui achètent ce qui paie le mieux *devant eux* et
+ne changent jamais de parcours. Un choc de 30 jours à une ville ne change ni son
+passage ni sa cargaison. Le résultat n'en souffre pas en médiane, mais son
+écart-type passe de 4 000 à 28 000 : les événements ajoutent du risque sans
+ajouter de prise. Ce qu'un joueur ferait du journal — réaffecter un train vers la
+ville en pénurie, parce qu'il sait que la vague de froid finit dans douze jours —
+ce banc ne sait pas le mesurer. C'est la limite de l'instrument, pas du module.
+
+**5. Le blé est bridé par le transport, pas par la récolte.** La sécheresse de
+1871 ne se voit pas, même poussée à ×0,35 sur Fairview : elle vide le carreau sans
+changer ce que le train emporte (137 chargements sur la fenêtre avec ou sans elle,
+129 à ×0,35). Un événement de production n'a de prise que sur un site que le
+transport ne sature pas.
+
+### Décisions laissées à l'équipe
+
+**Que doivent faire les aléatoires ?** Quatre réglages chiffrés, référence, contre
+le témoin (tête/mois 33,0 %, dominance 62,4 %, résultat 252 ± 4) :
+
+| option | tête/mois | dominance | résultat net | pour | contre |
+|---|---|---|---|---|---|
+| a. catalogue livré (k = 1, m = 1, une ville) | +2,6 pts | −1,0 pt | 250 ± 28, médiane neutre | de la variété sans coût médian | un gain modeste, qui disparaît sous la référence une fois les historiques ajoutés |
+| b. intensité ×1,5 | +3,9 pts | −2,1 pts | 243 ± 43 | la tête bouge davantage | −9 000 en moyenne, risque ×1,5 |
+| c. toutes les villes à la fois | +5,6 pts | −6,6 pts | 193 ± 96 | le seul réglage qui fasse respirer l'amplitude (+0,07) | c'est une saison ; le transporteur perd un quart |
+| d. historiques seuls, pas d'aléatoires | −0,1 pt | −0,3 pt | 251 ± 5 | aucune variance ajoutée, des épisodes lisibles | aucun gain de mobilité |
+
+L'option (a) est livrée parce qu'elle est la seule qui ne coûte rien. Elle ne se
+défend pas par la mesure de la dispersion ; elle se défendra, ou non, en jouant.
+
+**Faut-il annoncer la fin d'un événement ?** Le journal publie la date de fin dès
+le déclenchement : une décision de transport se prend sur un horizon, et c'est cet
+horizon qu'on rend jouable. Une grève dont personne ne connaît la fin serait plus
+réaliste. Le transporteur glouton n'utilisant pas l'information, la mesure ne peut
+pas trancher ; il faudra un concurrent qui lise le journal (contrat `ai`).
+
+**Équilibrer par les données ou par le mécanisme ?** Le catalogue est équilibré
+*en espérance*, par ses fréquences : sur une partie donnée, le hasard peut tirer
+trois afflux et aucune épidémie. L'alternative est un mécanisme à somme nulle —
+un afflux à une ville pris sur la demande des autres, une migration plutôt qu'une
+naissance — qui garantirait l'équilibre à chaque tick. Non implémenté : c'est la
+croissance des villes sans sa rétroaction sur le prix, et la croissance a montré
+qu'une redistribution peut comprimer la dispersion au lieu de la déplacer. À
+mesurer avant de choisir.
+
+**Que faire du chiffre de référence de heartland ?** Sous la référence, 240 374 est
+en dessous de ses 40 voisines. Le tableau « trains / résultat net » du début de ce
+document est construit sur des parties uniques ; sa conclusion qualitative —
+l'optimum à trois trains, l'effondrement à six — mérite d'être revérifiée sur des
+ensembles de trajectoires voisines avant qu'on s'en serve pour équilibrer. Coût :
+une quarantaine de parties par point, soit quelques secondes.
+
+**Ce que le module ne fait pas encore**, et qui changerait peut-être la réponse :
+des événements sur les usines (un moulin en grève) ou sur le transport (une voie
+coupée, qui toucherait enfin le transporteur plutôt que les marchés), et un
+scénario où le transport ne sature pas la production, pour que les événements de
+production aient prise.
 ## Relief et économie ensemble : le relief est un impôt, pas une géographie
 
 *Deuxième campagne — 27 septembre 2026, scénario `sierra`, 720 ticks, 90 de
@@ -595,11 +842,17 @@ trois trains et un transporteur omniscient, le réseau nourrit tout le monde au
 prix de référence. Il faut vérifier si un joueur humain, ou un concurrent,
 recrée de la dispersion — ou s'il faut rendre la demande plus volatile
 (saisonnalité, croissance des villes).
+*Mesuré avec les événements : non.* Des chocs de demande locaux, à toutes les
+doses essayées, laissent l'écart entre ×1,38 et ×1,46 sous la référence ; ils
+déplacent le surplus, pas le gradient. Voir la section sur les événements.
 
 **Le charbon ne se distribue jamais** (écart ×9 à ×13 quel que soit le nombre de
 trains). À creuser : marchandise à faible valeur, source unique, demande répartie
 sur neuf villes. C'est peut-être le problème logistique le plus intéressant de la
 carte, ou un défaut d'équilibrage.
+*Mesuré avec les événements :* une grève à la mine fait monter le charbon partout
+et *resserre* son écart (×11,4 → ×9,6) au lieu de le distribuer. Voir la section
+sur les événements.
 
 ## Verdict
 

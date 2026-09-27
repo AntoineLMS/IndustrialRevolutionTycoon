@@ -18,6 +18,12 @@ namespace RailTycoon.Sim.Economy;
 ///   Aucun parcours de dictionnaire non trié, aucun appel à l'horloge système.</item>
 ///   <item>Ne pas toucher à la trésorerie de la compagnie : l'argent du joueur
 ///   ne bouge que par le transport.</item>
+///   <item>Composer ses taux du jour avec les multiplicateurs que le module events
+///   publie sur chaque marché avant la phase 1 (<see cref="Market.EventDemandFactor"/>,
+///   <see cref="Market.EventProductionFactor"/>), et dimensionner l'entrepôt d'un
+///   site sur son débit nominal. Un solveur qui les ignore rend le module muet sans
+///   erreur ; le test « un événement historique agit à sa date » le détecte, sous
+///   chacun des deux solveurs livrés.</item>
 /// </list>
 /// </summary>
 public interface IEconomySolver
@@ -50,10 +56,35 @@ public sealed class ReferenceEconomySolver : IEconomySolver
     {
         // L'ordre des phases est significatif et doit rester stable : le changer
         // change les résultats et invalide les traces de régression.
+        ApplyRates(world);
         ProducePrimary(world);
         RunIndustries(world);
         ConsumeDemand(world);
         RecomputePrices(world);
+    }
+
+    /// <summary>
+    /// Préambule : les taux du jour. La référence n'a pas de modulation propre —
+    /// ni saison ni croissance — donc le taux du jour est le taux nominal, multiplié
+    /// par ce que le module events a publié sur le marché.
+    /// <para>
+    /// Sans événement, les deux multiplicateurs valent 1 exactement, et
+    /// <c>nominal × 1</c> est <c>nominal</c> au bit près : la trace de la référence
+    /// est celle d'avant le module, ce que vérifient les traces de référence. Le
+    /// même produit est composé par le solveur anticipant avec sa saison et la taille
+    /// de ses villes. Toute la logique des événements — dates, enveloppes, tirages,
+    /// cibles, bornes — vit dans le module events ; un solveur ne lit qu'un nombre
+    /// par marché et par levier.
+    /// </para>
+    /// </summary>
+    private static void ApplyRates(WorldState world)
+    {
+        foreach (var city in world.Cities)
+            foreach (var market in world.MarketsOf(city))
+            {
+                market.BaseDemandRate = market.NominalDemandRate * market.EventDemandFactor;
+                market.BaseProductionRate = market.NominalProductionRate * market.EventProductionFactor;
+            }
     }
 
     /// <summary>
@@ -74,7 +105,13 @@ public sealed class ReferenceEconomySolver : IEconomySolver
                 // Le frein est l'encombrement de l'entrepôt du site, pas le prix
                 // ni la demande locale : plein régime jusqu'à mi-capacité, puis
                 // décroissance linéaire jusqu'au débit résiduel.
-                double storage = market.BaseProductionRate * cfg.ProductionStorageTicks;
+                //
+                // L'entrepôt est dimensionné sur le débit NOMINAL, pas sur celui du
+                // jour. Une grève ne rétrécit pas le carreau : dimensionné sur le
+                // débit du jour, un site touché verrait son frein mordre plus tôt
+                // précisément quand il produit moins, et subirait l'événement deux
+                // fois. Sans événement les deux débits sont égaux au bit près.
+                double storage = market.NominalProductionRate * cfg.ProductionStorageTicks;
                 double factor = storage > 0
                     ? Maths.Clamp(2.0 * (1.0 - market.Stock / storage), cfg.MinProductionFactor, 1.0)
                     : 1.0;

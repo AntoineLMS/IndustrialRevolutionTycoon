@@ -26,6 +26,29 @@ public sealed class Market
     /// <summary>Demande induite par les usines locales (somme de leurs intrants).</summary>
     public double IndustryDemandRate;
 
+    /// <summary>
+    /// Consommation des habitants telle que le scénario la déclare. Fixée à la
+    /// construction du monde, jamais modifiée : c'est la référence de toutes les
+    /// modulations du jour — saison, taille de la ville, événements — sans quoi les
+    /// facteurs se composeraient d'un tick au suivant et dériveraient sans retour.
+    /// </summary>
+    public double NominalDemandRate { get; internal set; }
+
+    /// <summary>Production primaire telle que le scénario la déclare. Même rôle que <see cref="NominalDemandRate"/>.</summary>
+    public double NominalProductionRate { get; internal set; }
+
+    /// <summary>
+    /// Multiplicateur du jour publié par le module events (phase 0b) sur la
+    /// production primaire, et que le solveur économique compose dans
+    /// <see cref="BaseProductionRate"/>. Vaut 1 exactement quand aucun événement
+    /// n'agit — et multiplier par 1 ne change pas le dernier bit d'un taux, ce qui
+    /// garde toutes les traces existantes intactes.
+    /// </summary>
+    public double EventProductionFactor = 1.0;
+
+    /// <summary>Multiplicateur du jour publié par le module events sur la demande des habitants.</summary>
+    public double EventDemandFactor = 1.0;
+
     // --- Télémétrie du tick courant. Remise à zéro au début de chaque tick.
     // Ces compteurs ne sont pas cosmétiques : ils servent à vérifier
     // l'invariant de conservation et à tracer les courbes.
