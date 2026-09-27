@@ -197,8 +197,16 @@ public sealed class TractionDef
     /// résistance de rampe en distance : c'est ainsi que le relief atteint
     /// l'économie sans que le transport ait à connaître le profil.
     /// <para>
-    /// 0,03 correspond à l'ordre de grandeur classique — une rampe de 1 % triple la
-    /// résistance au roulement d'un train de marchandises.
+    /// À 0,03, un kilomètre en rampe de 1 % (10 m gagnés) coûte 1,3 kilomètre de
+    /// plat. Ce commentaire justifiait autrefois la valeur par « une rampe de 1 %
+    /// triple la résistance au roulement » : c'est vrai de la résistance, mais cela
+    /// correspondrait à environ 0,2, pas à 0,03. Aucune des deux lectures n'est
+    /// tranchée ; les deux sont chiffrées dans docs/FINDINGS.md, section « Relief
+    /// et économie ensemble ».
+    /// </para>
+    /// <para>
+    /// Le coût est facturé au transporteur, mais n'entre aujourd'hui dans aucune de
+    /// ses décisions : voir <c>RailLine.LegCostFactor</c>.
     /// </para>
     /// </summary>
     public double ClimbEquivalentKm { get; set; } = 0.03;

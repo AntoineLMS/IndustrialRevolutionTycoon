@@ -51,6 +51,7 @@ internal static class Program
         double initialStock = Invariants.InitialStockTotal(sim.World);
         var recorder = new CsvRecorder { Every = opts.RecordEvery };
         var stats = new RunStatistics { WarmupTicks = opts.WarmupTicks };
+        var rotation = new FreightRotation { WarmupTicks = opts.WarmupTicks };
 
         var cashHistory = new List<double>();
         var violations = new List<(int Tick, Invariants.Violation V)>();
@@ -68,6 +69,7 @@ internal static class Program
             sim.Step();
             recorder.Record(sim.World);
             stats.Sample(sim.World);
+            rotation.Sample(sim.World);
             cashHistory.Add(sim.World.Company.Cash);
 
             decimal residual = Report.WorstResidual(sim.World);
@@ -101,7 +103,7 @@ internal static class Program
         recorder.WriteTo(opts.OutDir);
         CsvRecorder.WriteEvents(sim.World, opts.OutDir);
         Report.PrintBalance(scenario);
-        Report.PrintRun(sim, opts, recorder, stats, cashHistory);
+        Report.PrintRun(sim, opts, recorder, stats, cashHistory, rotation);
         Report.PrintEvents(sim);
         Report.PrintFinance(sim, worstResidual, worstResidualTick, worstFrontierGap);
 
@@ -321,7 +323,7 @@ internal static class Report
 
     public static void PrintRun(
         Simulation sim, Options opts, CsvRecorder recorder,
-        RunStatistics stats, List<double> cashHistory)
+        RunStatistics stats, List<double> cashHistory, FreightRotation rotation)
     {
         var w = sim.World;
 
@@ -420,12 +422,22 @@ internal static class Report
             }
         Console.WriteLine();
 
+        rotation.Print(w);
+
         var co = w.Company;
         Console.WriteLine("Compagnie");
         Console.WriteLine($"  Trésorerie           {co.Cash.ToString("N0", Ci),12}");
         Console.WriteLine($"  Recettes transport   {co.TotalHaulRevenue.ToString("N0", Ci),12}");
         Console.WriteLine($"  Achats de fret      -{co.TotalCargoPurchases.ToString("N0", Ci),12}");
         Console.WriteLine($"  Exploitation        -{co.TotalOperatingCost.ToString("N0", Ci),12}");
+        // Ce que le relief a ajouté au coût kilométrique : l'écart entre ce qui a été
+        // facturé et ce qu'auraient coûté les mêmes kilomètres à plat. C'est le seul
+        // effet du relief sur l'économie tant qu'il n'entre dans aucune décision du
+        // transporteur (docs/FINDINGS.md, « Relief et économie ensemble »).
+        double flatCost = w.Trains.Sum(t => t.TotalKmTravelled * t.CostPerKm);
+        if (w.Network is not null && flatCost > 0)
+            Console.WriteLine($"    dont relief       -{(co.TotalOperatingCost - flatCost).ToString("N0", Ci),12}" +
+                              $"   ({((co.TotalOperatingCost / flatCost - 1) * 100).ToString("0.0", Ci)} % du coût à plat)");
         Console.WriteLine($"  Résultat net         {co.NetProfit.ToString("N0", Ci),12}");
         // Quatrième flux de bilan-tresorerie. Négatif = la finance a prélevé au
         // transporteur ; c'est de l'argent qui n'est plus disponible pour le fret.
@@ -647,5 +659,54 @@ internal static class Report
                           (worstFrontierGap <= 0.005 + 1e-9
                               ? "   (sous le demi-centime, et il ne s'accumule pas)"
                               : "   ← DÉRIVE de l'arrondi"));
+    }
+}
+
+/// <summary>
+/// Rotation du fret : chargements livrés rapportés aux chargements produits, par
+/// marchandise, après la chauffe.
+/// <para>
+/// Un rapport de 1 veut dire que chaque chargement produit a fait un voyage. Bien
+/// au-delà, le transporteur revend d'une ville à l'autre ce qu'il vient de livrer :
+/// c'est légitime tant que chaque revente paie sa marge sur un vrai écart de prix,
+/// mais c'est aussi la signature d'un fret qui tourne en rond — la famille du
+/// lavage de fret. La campagne sur relief l'a relevé sur la nourriture (×70) et sur
+/// le charbon d'un bloc d'anticipation mal réglé (×41).
+/// </para>
+/// </summary>
+internal sealed class FreightRotation
+{
+    private static readonly CultureInfo Ci = CultureInfo.InvariantCulture;
+
+    // Jamais énumérés : l'affichage parcourt WorldState.CargoOrder.
+    private readonly Dictionary<string, double> _delivered = new();
+    private readonly Dictionary<string, double> _produced = new();
+
+    public int WarmupTicks { get; init; }
+
+    public void Sample(WorldState world)
+    {
+        if (world.Tick.Index < WarmupTicks) return;
+
+        foreach (var city in world.Cities)
+            foreach (var market in world.MarketsOf(city))
+            {
+                _delivered[market.CargoId] = _delivered.GetValueOrDefault(market.CargoId) + market.ImportedThisTick;
+                _produced[market.CargoId] = _produced.GetValueOrDefault(market.CargoId) + market.ProducedThisTick;
+            }
+    }
+
+    public void Print(WorldState world)
+    {
+        Console.WriteLine("Rotation du fret (après chauffe : chargements livrés ÷ produits)");
+        foreach (string cargoId in world.CargoOrder)
+        {
+            double delivered = _delivered.GetValueOrDefault(cargoId);
+            double produced = _produced.GetValueOrDefault(cargoId);
+            string ratio = produced > 1e-9 ? "×" + (delivered / produced).ToString("0.0", Ci) : "—";
+            Console.WriteLine($"  {world.Cargo(cargoId).Name,-13}{delivered.ToString("N0", Ci),10} livrés" +
+                              $"{produced.ToString("N0", Ci),10} produits{ratio,9}");
+        }
+        Console.WriteLine();
     }
 }

@@ -90,10 +90,17 @@ public sealed class RailLine
     /// <para>
     /// C'est le seul endroit où le relief atteint l'économie. Le résumer en un
     /// facteur est un choix : un train qui franchit un col paie plus cher le
-    /// kilomètre, ce qui rétrécit le rayon économique des marchandises à bas prix
-    /// dans cette direction — exactement le paramètre de conception que
-    /// docs/FINDINGS.md désignait comme majeur. Le transport n'a pas à savoir
-    /// pourquoi.
+    /// kilomètre. Le transport n'a pas à savoir pourquoi.
+    /// </para>
+    /// <para>
+    /// <b>Ce que ce facteur ne fait pas, mesuré sur data/sierra.json.</b> Il est
+    /// facturé (<c>OpportunisticHaulageSolver.MoveTrain</c>) mais n'entre dans
+    /// aucune décision : le coût imputé qui décide d'un achat se calcule sur la
+    /// distance plate. Il ne rétrécit donc <em>pas</em> le rayon économique des
+    /// marchandises à bas prix, contrairement à ce qu'annonçait ce commentaire : la
+    /// trace des marchés est la même au bit près que le relief coûte ou non. C'est un
+    /// impôt sur le kilomètre-train, pas une géographie. Les options et leurs
+    /// chiffres sont dans docs/FINDINGS.md, « Relief et économie ensemble ».
     /// </para>
     /// </summary>
     public double LegCostFactor(int fromIndex, int toIndex)
