@@ -1,0 +1,171 @@
+{
+  "//": "Catalogue de locomotives historiques, 1829-1945. Chaque caractéristique physique (année, effort de traction, vitesse) est sourcée dans docs/SOURCES.md, qui précise aussi ce qui est documenté contre ce qui est estimé. Coût d'achat, coût d'entretien et consommation sont TOUJOURS des estimations d'équilibrage : la conversion en unités monétaires du jeu n'est pas une donnée historique, voir la formule dans SOURCES.md.",
+
+  "locomotives": [
+    {
+      "id": "rocket",
+      "name": "Rocket (Stephenson, Royaume-Uni)",
+      "year": 1829,
+      "tractiveEffortKn": 3.7,
+      "topSpeedKmh": 48,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 0.6,
+      "purchaseCost": 200,
+      "maintenanceCostPerKm": 0.11
+    },
+    {
+      "id": "stourbridge_lion",
+      "name": "Stourbridge Lion (Foster, Rastrick & Co, États-Unis)",
+      "year": 1829,
+      "tractiveEffortKn": 10.2,
+      "topSpeedKmh": 24,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 1.5,
+      "purchaseCost": 200,
+      "maintenanceCostPerKm": 0.31
+    },
+    {
+      "id": "planet",
+      "name": "Planet (Robert Stephenson and Company, Royaume-Uni)",
+      "year": 1830,
+      "tractiveEffortKn": 6.1,
+      "topSpeedKmh": 48,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 0.9,
+      "purchaseCost": 200,
+      "maintenanceCostPerKm": 0.18
+    },
+    {
+      "id": "john_bull",
+      "name": "John Bull (Robert Stephenson and Company / Camden & Amboy, États-Unis)",
+      "year": 1831,
+      "tractiveEffortKn": 5.7,
+      "topSpeedKmh": 48,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 0.9,
+      "purchaseCost": 200,
+      "maintenanceCostPerKm": 0.17
+    },
+    {
+      "id": "lafayette",
+      "name": "Lafayette (Norris Locomotive Works / Baltimore & Ohio n°13, États-Unis)",
+      "year": 1837,
+      "tractiveEffortKn": 10.3,
+      "topSpeedKmh": 40,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 1.5,
+      "purchaseCost": 210,
+      "maintenanceCostPerKm": 0.31
+    },
+    {
+      "id": "gwr_firefly",
+      "name": "Fire Fly (Great Western Railway, voie large, Royaume-Uni)",
+      "year": 1840,
+      "tractiveEffortKn": 9.1,
+      "topSpeedKmh": 97,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 1.4,
+      "purchaseCost": 440,
+      "maintenanceCostPerKm": 0.27
+    },
+    {
+      "id": "gwr_iron_duke",
+      "name": "Iron Duke (Great Western Railway, voie large, Royaume-Uni)",
+      "year": 1847,
+      "tractiveEffortKn": 36.0,
+      "topSpeedKmh": 126,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 5.4,
+      "purchaseCost": 2270,
+      "maintenanceCostPerKm": 1.08
+    },
+    {
+      "id": "crampton_continent",
+      "name": "Crampton n°80 « Le Continent » (Cail & Cie, France)",
+      "year": 1852,
+      "tractiveEffortKn": 18.0,
+      "topSpeedKmh": 120,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 2.7,
+      "purchaseCost": 1080,
+      "maintenanceCostPerKm": 0.54
+    },
+    {
+      "id": "general_wa",
+      "name": "General (Rogers, Ketchum & Grosvenor / Western & Atlantic, États-Unis)",
+      "year": 1855,
+      "tractiveEffortKn": 31.8,
+      "topSpeedKmh": 64,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 4.8,
+      "purchaseCost": 1020,
+      "maintenanceCostPerKm": 0.95
+    },
+    {
+      "id": "prr_e6_atlantic",
+      "name": "Pennsylvania Railroad classe E6 Atlantic (États-Unis)",
+      "year": 1910,
+      "tractiveEffortKn": 142.3,
+      "topSpeedKmh": 161,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 21.3,
+      "purchaseCost": 11460,
+      "maintenanceCostPerKm": 4.27
+    },
+    {
+      "id": "lner_a1_flying_scotsman",
+      "name": "LNER classe A1 « Flying Scotsman » (Royaume-Uni)",
+      "year": 1923,
+      "tractiveEffortKn": 132.7,
+      "topSpeedKmh": 161,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 19.9,
+      "purchaseCost": 10680,
+      "maintenanceCostPerKm": 3.98
+    },
+    {
+      "id": "drg_05",
+      "name": "DRG classe 05 (Allemagne)",
+      "year": 1935,
+      "tractiveEffortKn": 148.3,
+      "topSpeedKmh": 200,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 22.2,
+      "purchaseCost": 14830,
+      "maintenanceCostPerKm": 4.45
+    },
+    {
+      "id": "lner_a4_mallard",
+      "name": "LNER classe A4 « Mallard » (Royaume-Uni)",
+      "year": 1938,
+      "tractiveEffortKn": 157.7,
+      "topSpeedKmh": 203,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 23.7,
+      "purchaseCost": 16010,
+      "maintenanceCostPerKm": 4.73
+    },
+    {
+      "id": "up_big_boy",
+      "name": "Union Pacific classe 4000 « Big Boy » (États-Unis)",
+      "year": 1941,
+      "tractiveEffortKn": 602.0,
+      "topSpeedKmh": 129,
+      "fuelType": "coal",
+      "fuelConsumptionKgPerKm": 90.3,
+      "purchaseCost": 38830,
+      "maintenanceCostPerKm": 18.06
+    },
+    {
+      "id": "emd_f3",
+      "name": "EMD F3 (États-Unis, diesel-électrique)",
+      "year": 1945,
+      "tractiveEffortKn": 245.0,
+      "topSpeedKmh": 104,
+      "fuelType": "diesel",
+      "fuelConsumptionKgPerKm": 7.0,
+      "purchaseCost": 12740,
+      "maintenanceCostPerKm": 7.35
+    }
+  ]
+}

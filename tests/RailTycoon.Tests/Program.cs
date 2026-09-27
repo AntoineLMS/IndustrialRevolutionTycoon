@@ -926,6 +926,103 @@ internal static class Program
             Check.Near(45, line.DistanceBetween(0, 1), 1e-9, "distance entre les deux premiers arrêts");
         });
 
+        // ------------------------------------------------------------- content
+        // Module `content` : catalogue de locomotives et second scénario
+        // (data/ironpeak.json, chaîne minerai → fonte → acier). Ces tests
+        // existent pour la même raison que ceux de heartland ci-dessus : une
+        // faute de frappe dans un JSON de données ne doit jamais passer
+        // inaperçue derrière un « ça charge sans exception ».
+
+        runner.Add("content — le catalogue de locomotives se charge et est cohérent", () =>
+        {
+            var catalog = LocomotiveLoader.Load(Fixtures.LocomotivesPath());
+            Check.True(catalog.Locomotives.Count >= 10,
+                $"au moins 10 locomotives attendues, {catalog.Locomotives.Count} trouvées");
+
+            int minYear = catalog.Locomotives.Min(l => l.Year);
+            int maxYear = catalog.Locomotives.Max(l => l.Year);
+            Check.True(minYear <= 1840, $"le catalogue doit couvrir le début du XIXe siècle, plus ancienne = {minYear}");
+            Check.True(maxYear >= 1930, $"le catalogue doit couvrir le XXe siècle, plus récente = {maxYear}");
+
+            // La progression technologique est le point du catalogue : une
+            // locomotive plus tardive ne doit pas, en moyenne, être moins
+            // capable qu'une locomotive ancienne. On vérifie seulement les
+            // extrêmes : la dernière machine doit largement dépasser la première.
+            var oldest = catalog.Locomotives.OrderBy(l => l.Year).First();
+            var newest = catalog.Locomotives.OrderBy(l => l.Year).Last();
+            Check.Less(oldest.TractiveEffortKn, newest.TractiveEffortKn,
+                "la locomotive la plus récente doit avoir un effort de traction supérieur à la plus ancienne");
+        });
+
+        runner.Add("content — le scénario ironpeak se charge sans erreur", () =>
+        {
+            var scenario = ScenarioLoader.Load(Fixtures.IronpeakPath());
+            Check.True(scenario.Cargos.Count == 7, $"7 marchandises attendues, {scenario.Cargos.Count} trouvées");
+            Check.True(scenario.Cities.Count == 12, $"12 villes attendues, {scenario.Cities.Count} trouvées");
+            Check.True(scenario.Recipes.Count == 3, $"3 recettes attendues, {scenario.Recipes.Count} trouvées");
+        });
+
+        runner.Add("content — la chaîne acier ajoute environ 70 % de valeur à chaque maillon", () =>
+        {
+            // Même vérification que celle qui manquait à heartland avant sa
+            // calibration (voir FINDINGS.md, « une chaîne de valeur jamais
+            // calibrée ») : on la fait ici, sur les vraies données, plutôt que de
+            // se fier au commentaire de conception dans le JSON.
+            var scenario = ScenarioLoader.Load(Fixtures.IronpeakPath());
+            var cargo = scenario.Cargos.ToDictionary(c => c.Id);
+
+            foreach (var recipe in scenario.Recipes)
+            {
+                double inputCost = recipe.Inputs.Sum(i => i.Qty * cargo[i.Cargo].BasePrice);
+                double outputValue = recipe.Outputs.Sum(o => o.Qty * cargo[o.Cargo].BasePrice);
+                double margin = outputValue / inputCost;
+                Check.True(margin > 1.5 && margin < 1.9,
+                    $"recette '{recipe.Id}' : marge {margin:0.###} hors de la plage visée [1.5, 1.9] (~70 %)");
+            }
+        });
+
+        runner.Add("content — le scénario ironpeak est équilibré offre/demande", () =>
+        {
+            var scenario = ScenarioLoader.Load(Fixtures.IronpeakPath());
+            foreach (var b in BalanceReport.Compute(scenario))
+            {
+                Check.True(b.Ratio >= 0.95 && b.Ratio <= 1.5,
+                    $"{b.CargoName} : offre/demande = {b.Ratio:0.00} ({b.Verdict})");
+            }
+        });
+
+        runner.Add("content — le scénario ironpeak tourne 720 ticks sans violer d'invariant", () =>
+        {
+            var sim = new Simulation(ScenarioLoader.Load(Fixtures.IronpeakPath()));
+            double initial = Invariants.InitialStockTotal(sim.World);
+
+            for (int i = 0; i < 720; i++)
+            {
+                sim.Step();
+                var violations = Invariants.Check(sim.World, initial);
+                if (violations.Count > 0)
+                    Check.True(false,
+                        $"tick {sim.World.Tick.Index} : {violations[0].Rule} — {violations[0].Detail}");
+            }
+        });
+
+        runner.Add("content — les trains d'ironpeak référencent des locomotives du catalogue", () =>
+        {
+            // Le lien TrainDef.Locomotive est purement informatif (la simulation
+            // ne le lit pas), mais une référence à une locomotive inexistante
+            // serait une faute de frappe silencieuse : ce test la détecterait.
+            var scenario = ScenarioLoader.Load(Fixtures.IronpeakPath());
+            var catalog = LocomotiveLoader.Load(Fixtures.LocomotivesPath());
+            var knownIds = catalog.Locomotives.Select(l => l.Id).ToHashSet();
+
+            foreach (var train in scenario.Trains)
+            {
+                if (train.Locomotive is null) continue;
+                Check.True(knownIds.Contains(train.Locomotive),
+                    $"le train '{train.Id}' référence la locomotive inconnue '{train.Locomotive}'");
+            }
+        });
+
         // Les invariants du module finance vivent dans leur propre fichier :
         // société, emprunts, bourse, insolvabilité. Un seul point d'entrée ici,
         // pour que trois modules qui avancent en parallèle n'entrent pas en

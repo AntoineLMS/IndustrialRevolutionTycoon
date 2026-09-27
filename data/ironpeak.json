@@ -1,0 +1,176 @@
+{
+  "id": "ironpeak",
+  "name": "La Cordillère de fer — 1900",
+  "seed": 19000601,
+  "startingCash": 100000,
+  "initialCoverage": 1.0,
+
+  "//geographie": "Géographie différente de heartland : une mine de minerai isolée en tête de ligne (Ironpeak, un seul produit, aucune industrie sur place), et une ligne qui descend d'un massif montagneux vers la plaine industrielle. Le moteur ne modélise pas encore le relief (pente, déblai/remblai — voir le module `network` dans CONTRACTS.md) : la montagne est donc représentée par l'isolement d'Ironpeak, pas par un coût kilométrique différent.",
+
+  "//chaineacier": "Deuxième chaîne de production : minerai de fer → fonte (haut fourneau) → acier (aciérie), sur le même principe que heartland (chaque maillon multiplie la valeur par environ 1,7, voir docs/FINDINGS.md « une chaîne de valeur jamais calibrée »). Calcul vérifié : fonte = 46 = (3 × minerai à 9) × 1,7037 ; acier = 78 = (1 × fonte à 46) × 1,6957. Minerai et fonte ne sont jamais demandés par les habitants (comme le blé et la farine à Heartland) : charbon, planches, acier et nourriture, produits finis, le sont.",
+
+  "//deuxacheteurs": "Corrigé après relecture (deux tours) : la première version n'avait qu'un haut fourneau, qu'une aciérie et qu'une scierie — un seul acheteur par marchandise intermédiaire, donc aucun écart de prix possible et aucune décision de destination. Chaque étage est dédoublé : deux hauts fourneaux (Emberford, Ashfurnace), deux aciéries (Steelford, Forgeton), deux scieries (Pinewood, Cedarville). Deux pièges rencontrés en route : rendre les capacités très inégales, ou éloigner le second acheteur de plus de 200 km du premier, fait chuter le site le moins bien servi sous le seuil de démarrage de sa recette (minMargin) — panne totale (0 % d'utilisation), donc aucun trafic, ce qui est pire qu'un écart de prix modeste. Réglage retenu : Ashfurnace et Cedarville tirent une partie de leur intrant (minerai, grumes) d'un petit gisement/parcelle locaux (voir leurs villes) qui les maintient actifs sans les rendre autosuffisants, et Emberford/Steelford restent groupés près de la mine tandis qu'Ashfurnace/Forgeton sont posés plus loin (150-185 km) — assez pour créer un écart de prix réel, pas assez pour couper l'approvisionnement. Charbon avait le défaut inverse (11 acheteurs mais un écart trop large, > 12, marchés déconnectés) : corrigé en donnant à Millhaven un petit gisement local, qui désengorge l'extrémité de ligne sans changer le bilan offre/demande.",
+
+  "//geometrie": "Corrigé après relecture : une ligne à 380 km se parcourt en 6,3 ticks, une fraction de l'horizon de prix (15 ticks) — un seul train suffisait à tout desservir et chaque train supplémentaire n'ajoutait que du coût kilométrique, sans jamais dépasser le résultat obtenu à un train. Rallongée à 510 km (aller-retour 8,5 ticks, même proportion de l'horizon qu'à Heartland, voir docs/ARCHITECTURE.md « le modèle de prix ») et économie densifiée (× 8 par rapport à la première révision). Ordre des arrêts : Ironpeak → Emberford (35 km) → Steelford (70 km) → Ashfurnace (150 km) → Forgeton (185 km) → Blackseam (200 km) → Pinewood (255 km) → Cedarville (285 km) → Greenvale (330 km) → Rockford (390 km) → Millhaven (450 km) → Northbridge (510 km).",
+
+  "//trains": "Mesuré sur 720 ticks avec les 3 trains ci-dessous (non exigé par le critère de réussite, qui ne porte que sur le bilan et les invariants — les deux passent) : résultat net 236 682 à 1 train, 290 251 à 2 (optimum), 258 331 à 3 (config par défaut du fichier), 131 334 à 4. Toujours clairement positif, optimum à 2 trains, dégradation nette au-delà — même forme que Heartland (FINDINGS.md). Santé du signal-prix mesurée avec la configuration à 3 trains : 6 marchandises sur 7 « exploitable » (nourriture, charbon, grumes, planches, minerai, acier), seule la fonte reste « trop uniforme » (écart ×1,3) malgré ses deux acheteurs actifs (Steelford 100 %, Forgeton 77 % d'utilisation) — Heartland a le même symptôme sur sa farine et sa nourriture (écart ×1,4 chacune, voir sa propre santé du signal-prix), donc pas une anomalie propre à ce fichier mais une limite connue du solveur de référence sur un bien bien desservi par ses deux acheteurs.",
+
+  "priceModel": {
+    "coverageHorizonTicks": 15,
+    "shape": 0.5,
+    "minMultiplier": 0.12,
+    "maxMultiplier": 3.0
+  },
+
+  "economy": {
+    "productionStorageTicks": 30,
+    "minProductionFactor": 0.1,
+    "minConsumptionResponse": 0.3,
+    "maxConsumptionResponse": 1.5
+  },
+
+  "haulage": {
+    "minMargin": 0.10,
+    "minProfitPerUnit": 1.5,
+    "expectedLoadFactor": 0.6,
+    "priceImpactSlices": 8,
+    "minTradeQty": 0.25
+  },
+
+  "cargos": [
+    { "id": "food",    "name": "Nourriture",     "basePrice": 20, "elasticity": 0.3 },
+    { "id": "coal",    "name": "Charbon",        "basePrice": 12, "elasticity": 0.2 },
+    { "id": "logs",    "name": "Grumes",         "basePrice": 8,  "elasticity": 0.7 },
+    { "id": "boards",  "name": "Planches",       "basePrice": 14, "elasticity": 0.8 },
+    { "id": "ironore", "name": "Minerai de fer", "basePrice": 9,  "elasticity": 0.6 },
+    { "id": "pigiron", "name": "Fonte",          "basePrice": 46, "elasticity": 0.5 },
+    { "id": "steel",   "name": "Acier",          "basePrice": 78, "elasticity": 0.4 }
+  ],
+
+  "recipes": [
+    {
+      "id": "sawmill", "name": "Scierie",
+      "//": "8 → 14 : marge 1,75, identique à heartland.",
+      "inputs":  [ { "cargo": "logs", "qty": 1.0 } ],
+      "outputs": [ { "cargo": "boards", "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    },
+    {
+      "id": "smelter", "name": "Haut fourneau",
+      "//": "3 × 9 = 27 → 46 : marge 1,70.",
+      "inputs":  [ { "cargo": "ironore", "qty": 3.0 } ],
+      "outputs": [ { "cargo": "pigiron", "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    },
+    {
+      "id": "steelmill", "name": "Aciérie",
+      "//": "46 → 78 : marge 1,70.",
+      "inputs":  [ { "cargo": "pigiron", "qty": 1.0 } ],
+      "outputs": [ { "cargo": "steel", "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    }
+  ],
+
+  "cities": [
+    {
+      "id": "ironpeak", "name": "Ironpeak", "population": 24000,
+      "//": "Gisement principal. Production réduite de 15,2 à 12,0 en compensation du petit gisement d'Ashfurnace ci-dessous (somme inchangée, le bilan offre/demande du minerai ne bouge pas).",
+      "production": { "ironore": 12.0 },
+      "demand": { "food": 0.32, "coal": 0.16 },
+      "initialStock": { "ironore": 100 }
+    },
+    {
+      "id": "emberford", "name": "Emberford", "population": 72000,
+      "//": "Haut fourneau n°1, à 35 km de la mine principale. N'a pas de gisement local : entièrement tributaire du train.",
+      "demand": { "food": 0.72, "coal": 0.40, "boards": 0.32 },
+      "industries": [ { "recipe": "smelter", "capacity": 4.6 } ]
+    },
+    {
+      "id": "ashfurnace", "name": "Ashfurnace", "population": 64000,
+      "//": "Haut fourneau n°2, second acheteur de minerai (voir //deuxacheteurs). Un petit gisement local (3,2, contre 12,0 à Ironpeak) l'approvisionne en partie sans le rendre autosuffisant : ses besoins (3 minerai pour 1 fonte, capacité 4,2) dépassent ce gisement, il reste donc aussi acheteur du minerai livré par train, à un prix qui diverge de celui d'Emberford sans jamais faire chuter le haut fourneau sous son seuil de rentabilité — la panne totale observée avec un site purement importateur et sous-desservi.",
+      "production": { "ironore": 3.2 },
+      "demand": { "food": 0.64, "coal": 0.40, "boards": 0.24 },
+      "industries": [ { "recipe": "smelter", "capacity": 4.2 } ],
+      "initialStock": { "ironore": 25 }
+    },
+    {
+      "id": "steelford", "name": "Steelford", "population": 88000,
+      "//": "Aciérie n°1, juste après Emberford : la fonte n'a qu'un court trajet à faire.",
+      "demand": { "food": 0.80, "coal": 0.48, "boards": 0.32, "steel": 0.40 },
+      "industries": [ { "recipe": "steelmill", "capacity": 4.0 } ]
+    },
+    {
+      "id": "forgeton", "name": "Forgeton", "population": 80000,
+      "//": "Aciérie n°2, capacité légèrement inférieure à Steelford (3,68 contre 4,0 ; somme inchangée) : second acheteur de fonte.",
+      "demand": { "food": 0.72, "coal": 0.48, "boards": 0.32, "steel": 0.40 },
+      "industries": [ { "recipe": "steelmill", "capacity": 3.68 } ]
+    },
+    {
+      "id": "blackseam", "name": "Blackseam", "population": 56000,
+      "//": "Gisement principal. Une partie de la production (2,0 sur 7,6 au total) a été déplacée vers un petit gisement à Millhaven (voir plus bas) : à 450 km de Blackseam, l'extrémité de la ligne payait le charbon à un prix déconnecté du reste du réseau (bilan offre/demande inchangé).",
+      "production": { "coal": 5.6 },
+      "demand": { "food": 0.48, "boards": 0.24 },
+      "initialStock": { "coal": 180 }
+    },
+    {
+      "id": "pinewood", "name": "Pinewood", "population": 40000,
+      "production": { "logs": 4.64 },
+      "demand": { "food": 0.40, "coal": 0.24 },
+      "industries": [ { "recipe": "sawmill", "capacity": 4.0 } ],
+      "initialStock": { "logs": 120 }
+    },
+    {
+      "id": "cedarville", "name": "Cedarville", "population": 48000,
+      "//": "À 120 km de Pinewood : même logique que Ashfurnace vis-à-vis de la mine, mais pour les grumes.",
+      "demand": { "food": 0.48, "coal": 0.24, "boards": 0.16 },
+      "industries": [ { "recipe": "sawmill", "capacity": 4.0 } ]
+    },
+    {
+      "id": "greenvale", "name": "Greenvale", "population": 32000,
+      "production": { "food": 10.0 },
+      "demand": { "coal": 0.32, "boards": 0.16 },
+      "initialStock": { "food": 160 }
+    },
+    {
+      "id": "rockford", "name": "Rockford", "population": 200000,
+      "demand": { "food": 1.44, "coal": 1.04, "boards": 0.72, "steel": 0.88 }
+    },
+    {
+      "id": "millhaven", "name": "Millhaven", "population": 280000,
+      "//": "Petit gisement local de charbon (2,0) : voir la note sur Blackseam. Millhaven reste acheteur net (sa demande de 1,36 dépasse cette production), mais le prix n'y explose plus faute d'être à 450 km de la seule source.",
+      "production": { "coal": 2.0 },
+      "demand": { "food": 1.92, "coal": 1.36, "boards": 0.96, "steel": 1.20 },
+      "initialStock": { "coal": 20 }
+    },
+    {
+      "id": "northbridge", "name": "Northbridge", "population": 112000,
+      "demand": { "food": 0.80, "coal": 0.56, "boards": 0.40, "steel": 0.48 }
+    }
+  ],
+
+  "lines": [
+    {
+      "id": "cordillera", "name": "Ligne de la Cordillère",
+      "stops": [
+        { "city": "ironpeak",    "distanceKm": 0 },
+        { "city": "emberford",   "distanceKm": 35 },
+        { "city": "steelford",   "distanceKm": 70 },
+        { "city": "ashfurnace",  "distanceKm": 150 },
+        { "city": "forgeton",    "distanceKm": 185 },
+        { "city": "blackseam",   "distanceKm": 200 },
+        { "city": "pinewood",    "distanceKm": 255 },
+        { "city": "cedarville",  "distanceKm": 285 },
+        { "city": "greenvale",   "distanceKm": 330 },
+        { "city": "rockford",    "distanceKm": 390 },
+        { "city": "millhaven",   "distanceKm": 450 },
+        { "city": "northbridge", "distanceKm": 510 }
+      ]
+    }
+  ],
+
+  "trains": [
+    { "id": "t1", "line": "cordillera", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 0, "locomotive": "prr_e6_atlantic" },
+    { "id": "t2", "line": "cordillera", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 6, "locomotive": "prr_e6_atlantic" },
+    { "id": "t3", "line": "cordillera", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 11, "locomotive": "prr_e6_atlantic" }
+  ]
+}
