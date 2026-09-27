@@ -201,6 +201,48 @@ Leçon, et c'est la même que pour le test de déterminisme creux : un banc de m
 mérite la même méfiance que le code qu'il mesure. Celui-ci reconstruisait son
 sujet d'étude au lieu de le prendre tel quel.
 
+## Le prix du développement en parallèle : rien n'éprouve deux modules ensemble
+
+*Constaté à l'intégration des quatre modules, en croisant les scénarios avec les
+blocs de configuration qu'ils déclarent.*
+
+| scénario | économie anticipante | réseau sur relief | finance |
+|---|---|---|---|
+| `heartland` | oui | non | oui |
+| `ironpeak` | **non** | non | non |
+| `terrain-plain` / `-valley` / `-pass` | **non** | oui | non |
+
+Chaque module est éprouvé par le scénario que son auteur a écrit, et par aucun
+autre. C'est la contrepartie attendue du travail en parallèle, et elle se voit
+dès qu'on la cherche.
+
+Le cas le plus net : passer `ironpeak` au solveur anticipant ne change **rien**,
+au bit près. Ce n'est pas un défaut du solveur — c'est exactement la propriété
+qu'il revendique, « à configuration neutre, la trace de la référence à
+l'identique » — mais cela signifie que **ses gains ne sont pas automatiques**.
+Un nouveau scénario n'en bénéficie que si quelqu'un règle son bloc
+`anticipating`. Les gains mesurés sur heartland (mobilité +50 %, la nourriture
+qui passe de « trop uniforme » à « exploitable ») sont des gains *de ce
+scénario-là*, pas du moteur.
+
+Deux conséquences à traiter, dans cet ordre :
+
+1. **Aucun scénario ne fait tourner relief et économie ensemble.** Or c'est
+   précisément là que se joue la question ouverte du rayon économique : le module
+   réseau expose un coût kilométrique qui dépend du relief, et personne n'a encore
+   mesuré ce que cela fait aux écarts de prix. Poser `heartland` sur un relief
+   déplacerait tous les chiffres de ce document — c'est une décision de conception,
+   pas une tâche technique, et elle mérite un scénario neuf plutôt qu'une mutation
+   de la référence.
+2. **Les scénarios de chaque module devraient déclarer les blocs des autres**, ou
+   assumer explicitement de ne pas le faire. Un bloc absent n'est pas neutre : il
+   est silencieusement inerte.
+
+Leçon, et c'est la troisième du même genre après le test de déterminisme creux et
+le banc de mesure qui reconstruisait son sujet : ce qui échappe à la vérification
+n'est pas ce que chaque module fait, c'est **l'espace entre eux**. Quatre modules
+verts ne font pas un jeu vert.
+
 ## Questions ouvertes pour l'équipe
 
 **Le rayon économique.** À 0,8 par kilomètre, une marchandise à bas prix ne peut
