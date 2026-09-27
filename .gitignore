@@ -5,3 +5,7 @@ out/
 .vs/
 .idea/
 .DS_Store
+
+# Worktrees des agents. Ce sont des copies de travail du dépôt lui-même :
+# les suivre reviendrait à imbriquer le dépôt dans son propre historique.
+.claude/worktrees/
