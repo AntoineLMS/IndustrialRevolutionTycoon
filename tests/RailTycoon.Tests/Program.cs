@@ -1,4 +1,5 @@
 using RailTycoon.Sim;
+using RailTycoon.Sim.Core;
 using RailTycoon.Sim.Economy;
 using RailTycoon.Sim.Telemetry;
 
@@ -351,6 +352,277 @@ internal static class Program
             Check.Equal(Fingerprint(), Fingerprint(), "empreinte de la trace");
         });
 
+        // ------------------------------------------- économie anticipante
+        // Le solveur anticipant ne remplace pas la référence : elle reste le témoin
+        // auquel on le compare. Ces cas vérifient donc deux choses distinctes —
+        // que ses mécanismes font ce qu'ils prétendent, et qu'il bat effectivement
+        // la référence sur le critère du contrat sans dégrader le reste.
+
+        runner.Add("anticipation — configuration neutre, trace identique à la référence", () =>
+        {
+            // La propriété qui rend toutes les mesures suivantes interprétables :
+            // à réglages neutres, le solveur anticipant EST la référence. Sans elle,
+            // une différence mesurée pourrait venir d'une divergence
+            // d'implémentation au lieu du mécanisme qu'on croit mesurer, et aucune
+            // comparaison ne voudrait rien dire.
+            string Fingerprint(IEconomySolver solver)
+            {
+                var scenario = ScenarioLoader.Load(Fixtures.HeartlandPath());
+                scenario.Anticipating = new AnticipatingEconomyDef();
+                var sim = new Simulation(scenario, solver);
+                var recorder = new CsvRecorder();
+                recorder.Record(sim.World);
+                for (int i = 0; i < 240; i++)
+                {
+                    sim.Step();
+                    recorder.Record(sim.World);
+                }
+                return recorder.Fingerprint();
+            }
+
+            Check.Equal(
+                Fingerprint(new ReferenceEconomySolver()),
+                Fingerprint(new AnticipatingEconomySolver()),
+                "empreinte à configuration neutre");
+        });
+
+        runner.Add("anticipation — un stock qui fond renchérit avant la pénurie", () =>
+        {
+            // Le mécanisme central. Un marché dont le stock fond doit valoir plus
+            // cher que le même marché au même stock mais qui se remplit : c'est ce
+            // qui crée des vagues de prix au lieu d'un régime stationnaire.
+            //
+            // La mesure se prend au deuxième tick, dès que la pente est connue et
+            // avant que les deux trajectoires n'aient eu le temps de s'écarter. Plus
+            // tard, l'effet se retourne pour une raison qui n'est pas un défaut mais
+            // qu'il faut connaître : un prix anticipé plus bas fait consommer
+            // davantage, donc vide le stock, donc renchérit le marché quelques ticks
+            // après. L'anticipation ne déplace pas seulement le prix, elle déplace le
+            // stock — c'est précisément la boucle qu'on cherchait, et c'est aussi
+            // pourquoi on ne peut pas la tester sur un état final.
+            double PriceAfter(double weight, double production, double coverage)
+            {
+                var scenario = Fixtures.Bare("anticipation");
+                double horizon = scenario.PriceModel.CoverageHorizonTicks;
+                scenario.Cities.Add(Fixtures.City(
+                    "ville", demand: 0.5, production: production, stock: coverage * 0.5 * horizon));
+                scenario.Anticipating = new AnticipatingEconomyDef
+                {
+                    AnticipationTicks = 6,
+                    AnticipationWeight = weight,
+                    DriftSmoothing = 1.0,
+                };
+
+                var sim = new Simulation(scenario, new AnticipatingEconomySolver());
+                sim.Run(2);
+                return sim.World.CityById("ville").Market("grain").Price;
+            }
+
+            // Un stock qui fond : aucune production, une couverture de 2 qui se vide.
+            Check.Less(PriceAfter(0.0, 0.0, 2.0), PriceAfter(1.0, 0.0, 2.0),
+                "un stock qui fond doit être plus cher avec anticipation que sans");
+
+            // Un stock qui se remplit : une production de 2 pour une consommation de
+            // 0,5, et un entrepôt à un quart de sa capacité pour que le frein
+            // d'encombrement ne l'arrête pas — première version du test, l'entrepôt
+            // démarrait exactement plein, la production tombait à son débit résiduel
+            // et les deux cas se vidaient.
+            Check.Less(PriceAfter(1.0, 2.0, 1.0), PriceAfter(0.0, 2.0, 1.0),
+                "un stock qui s'accumule doit être moins cher avec anticipation que sans");
+        });
+
+        runner.Add("anticipation — la saison est périodique et pilotée par le seul tick", () =>
+        {
+            // Une saison qui dériverait d'une année sur l'autre, ou qui dépendrait
+            // d'autre chose que du tick, rendrait les traces de régression
+            // incomparables — et, côté jeu, une récolte qu'on ne peut pas attendre
+            // n'est plus une décision.
+            var scenario = ScenarioLoader.Load(Fixtures.HeartlandPath());
+            scenario.Anticipating.Seasons.Clear();
+            scenario.Anticipating.Seasons.Add(new CargoSeasonDef
+            {
+                Cargo = "coal", DemandAmplitude = 0.5, DemandPeak = 0.25,
+            });
+
+            var sim = new Simulation(scenario, new AnticipatingEconomySolver());
+            var market = sim.World.CityById("kingsport").Market("coal");
+            double nominal = market.BaseDemandRate;
+
+            var byDay = new Dictionary<int, double>();
+            double yearlySum = 0;
+            for (int i = 0; i < 2 * SimTick.TicksPerYear; i++)
+            {
+                sim.Step();
+                int day = sim.World.Tick.DayOfYear;
+                if (byDay.TryGetValue(day, out double previous))
+                    Check.Near(previous, market.BaseDemandRate, 1e-12,
+                        $"jour {day} : la demande saisonnière doit se répéter à l'identique");
+                else
+                    byDay[day] = market.BaseDemandRate;
+
+                if (i < SimTick.TicksPerYear) yearlySum += market.BaseDemandRate;
+            }
+
+            // Le cosinus est centré sur 1 : la moyenne annuelle doit valoir le taux
+            // nominal. Une saison qui déplacerait la moyenne serait un déséquilibre
+            // structurel déguisé en dynamique, et --balance ne le verrait pas.
+            Check.Near(nominal, yearlySum / SimTick.TicksPerYear, nominal * 1e-3,
+                "moyenne annuelle de la demande saisonnière");
+        });
+
+        runner.Add("anticipation — la croissance des villes conserve la demande de la carte", () =>
+        {
+            // La croissance déplace la population, elle n'en crée pas. Sans cette
+            // garantie elle faisait fondre la demande totale de 9 % en deux ans :
+            // un scénario silencieusement plus mou que celui qu'on a équilibré, dont
+            // la marge kilométrique flatteuse ne venait d'aucun modèle.
+            var scenario = ScenarioLoader.Load(Fixtures.HeartlandPath());
+            scenario.Anticipating.Seasons.Clear();
+            scenario.Anticipating.GrowthRatePerTick = 0.05;
+            scenario.Anticipating.GrowthMemoryTicks = 30;
+            scenario.Anticipating.MinCitySize = 0.6;
+            scenario.Anticipating.MaxCitySize = 1.4;
+
+            var sim = new Simulation(scenario, new AnticipatingEconomySolver());
+
+            double Total()
+            {
+                double sum = 0;
+                foreach (var city in sim.World.Cities)
+                    foreach (var market in sim.World.MarketsOf(city))
+                        sum += market.BaseDemandRate;
+                return sum;
+            }
+
+            double before = Total();
+            sim.Run(500);
+            double after = Total();
+
+            // La conservation n'est pas exacte au dernier bit, et elle ne peut pas
+            // l'être : une ville collée à sa borne de taille ne peut plus absorber sa
+            // part de la correction. L'écart résiduel mesuré est de 0,04 % sur deux
+            // ans ; le seuil est à 0,5 %, largement en dessous des 9 % de dérive que
+            // ce mécanisme produisait avant renormalisation.
+            Check.Near(before, after, before * 0.005, "demande totale des habitants");
+
+            // Et la croissance doit avoir réellement bougé quelque chose, sans quoi
+            // le test précédent passerait pour une raison sans intérêt.
+            double spread = 0;
+            foreach (var city in sim.World.Cities)
+            {
+                double ratio = city.Market("food").BaseDemandRate / city.Def.Demand["food"];
+                spread = Math.Max(spread, Math.Abs(ratio - 1.0));
+            }
+            Check.True(spread > 0.05,
+                $"la croissance doit redistribuer la demande, écart maximal = {spread:0.###}");
+        });
+
+        runner.Add("anticipation — 720 ticks du scénario de référence sans violation", () =>
+        {
+            var sim = new Simulation(
+                ScenarioLoader.Load(Fixtures.HeartlandPath()), new AnticipatingEconomySolver());
+            double initial = Invariants.InitialStockTotal(sim.World);
+
+            for (int i = 0; i < 720; i++)
+            {
+                sim.Step();
+                var violations = Invariants.Check(sim.World, initial);
+                if (violations.Count > 0)
+                    Check.True(false,
+                        $"tick {sim.World.Tick.Index} : {violations[0].Rule} — {violations[0].Detail}");
+            }
+        });
+
+        runner.Add("anticipation — deux exécutions donnent la même trace", () =>
+        {
+            string Fingerprint()
+            {
+                var sim = new Simulation(
+                    ScenarioLoader.Load(Fixtures.HeartlandPath()), new AnticipatingEconomySolver());
+                var recorder = new CsvRecorder();
+                recorder.Record(sim.World);
+                for (int i = 0; i < 240; i++)
+                {
+                    sim.Step();
+                    recorder.Record(sim.World);
+                }
+                return recorder.Fingerprint();
+            }
+
+            Check.Equal(Fingerprint(), Fingerprint(), "empreinte de la trace anticipante");
+        });
+
+        runner.Add("anticipation — l'économie anticipante reste vivante", () =>
+        {
+            // Même exigence que pour la référence, et pour la même raison : un
+            // solveur qui gagnerait sur la mobilité en arrêtant les usines ou en
+            // collant les prix au plafond n'aurait rien gagné du tout.
+            var (sim, stats) = RunHeartland(new AnticipatingEconomySolver());
+            var w = sim.World;
+
+            int running = 0, total = 0;
+            foreach (var city in w.Cities)
+                foreach (var industry in city.Industries)
+                {
+                    total++;
+                    if (stats.MeanUtilization(city.Id, industry.Recipe.Id) > 0.5) running++;
+                }
+            Check.True(running >= total - 1,
+                $"au plus une usine peut rester à l'arrêt ; {total - running} sur {total} le sont");
+
+            foreach (string cargoId in w.CargoOrder)
+            {
+                double ceiling = stats.MeanCeilingFraction(w, cargoId);
+                Check.True(ceiling <= 0.4,
+                    $"{w.Cargo(cargoId).Name} : {ceiling * 100:0} % du temps au plafond — " +
+                    "le prix ne porte plus d'information");
+            }
+
+            double km = w.Trains.Sum(t => t.TotalKmTravelled);
+            double marginPerKm = w.Company.NetProfit / km;
+            Check.True(marginPerKm > 0,
+                $"le transport doit être rentable, marge = {marginPerKm:0.00}/km");
+            Check.Less(marginPerKm, 3.0,
+                $"marge de {marginPerKm:0.00}/km invraisemblable — chercher une faille d'arbitrage");
+        });
+
+        runner.Add("anticipation — la dispersion se déplace plus que celle de la référence", () =>
+        {
+            // LE test du contrat du module économie. Il ne vérifie pas qu'il existe
+            // des écarts de prix — la référence en a déjà — mais qu'ils *bougent* :
+            // une dispersion figée donne une seule route à entretenir pour toute la
+            // partie, et c'est l'économie morte la plus difficile à repérer, parce
+            // qu'elle a l'air saine dans toutes les autres statistiques.
+            //
+            // Mesures du 27 septembre 2026, heartland, 720 ticks, trois trains :
+            //   référence   mobilité 0,411   changement de tête 20,0 %
+            //   anticipant  mobilité 0,615   changement de tête 26,2 %
+            // Les seuils gardent de la marge : ils protègent contre une régression,
+            // ils ne consacrent pas ces chiffres exacts.
+            var (refSim, refStats) = RunHeartland(new ReferenceEconomySolver());
+            var (sim, stats) = RunHeartland(new AnticipatingEconomySolver());
+
+            double refMobility = refStats.MeanSpreadMobility(refSim.World);
+            double mobility = stats.MeanSpreadMobility(sim.World);
+            Check.True(mobility > refMobility * 1.25,
+                $"mobilité de l'amplitude {mobility:0.000} contre {refMobility:0.000} pour la " +
+                "référence — la dispersion ne respire pas assez plus");
+
+            double refChurn = refStats.MeanLeaderChurn(refSim.World);
+            double churn = stats.MeanLeaderChurn(sim.World);
+            Check.True(churn > refChurn + 0.03,
+                $"changement de ville la plus chère {churn * 100:0.0} % contre " +
+                $"{refChurn * 100:0.0} % pour la référence — le meilleur débouché ne bouge pas assez");
+
+            // La nourriture était la marchandise la plus uniforme du scénario, et
+            // c'était une question ouverte de FINDINGS.md : dix acheteurs nourris au
+            // prix de référence par un transporteur omniscient. C'est elle qui doit
+            // le plus profiter de l'anticipation.
+            Check.True(stats.SpreadMobility("food") > refStats.SpreadMobility("food") * 2.0,
+                $"nourriture : mobilité {stats.SpreadMobility("food"):0.000} contre " +
+                $"{refStats.SpreadMobility("food"):0.000} pour la référence");
+        });
+
         // ----------------------------------------------------------- validation
 
         runner.Add("validation — distances d'arrêts non croissantes rejetées", () =>
@@ -397,5 +669,23 @@ internal static class Program
         Console.WriteLine("RailTycoon — invariants de simulation");
         Console.WriteLine();
         return runner.Run();
+    }
+
+    /// <summary>
+    /// Exécution de référence : 720 ticks du scénario heartland, 90 de chauffe
+    /// exclus des statistiques. Les deux solveurs doivent être comparés sur
+    /// exactement le même protocole, sans quoi la comparaison ne mesure que le
+    /// protocole.
+    /// </summary>
+    private static (Simulation Sim, RunStatistics Stats) RunHeartland(IEconomySolver solver)
+    {
+        var sim = new Simulation(ScenarioLoader.Load(Fixtures.HeartlandPath()), solver);
+        var stats = new RunStatistics { WarmupTicks = 90 };
+        for (int i = 0; i < 720; i++)
+        {
+            sim.Step();
+            stats.Sample(sim.World);
+        }
+        return (sim, stats);
     }
 }

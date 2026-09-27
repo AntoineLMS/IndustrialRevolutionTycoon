@@ -218,6 +218,12 @@ public sealed class ScenarioDef
 
     public PriceModelDef PriceModel { get; set; } = new();
     public EconomyDef Economy { get; set; } = new();
+
+    /// <summary>
+    /// Réglages propres à <see cref="AnticipatingEconomySolver"/>. Absent du
+    /// scénario, ses défauts neutres le font se comporter comme la référence.
+    /// </summary>
+    public AnticipatingEconomyDef Anticipating { get; set; } = new();
     public HaulageDef Haulage { get; set; } = new();
     public List<CargoDef> Cargos { get; set; } = new();
     public List<RecipeDef> Recipes { get; set; } = new();

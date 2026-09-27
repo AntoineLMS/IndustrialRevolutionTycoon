@@ -128,6 +128,8 @@ public sealed class RunStatistics
             _spreadSum.TryGetValue(cargoId, out double sum);
             _spreadSum[cargoId] = sum + spread;
         }
+
+        SampleMobility(world);
     }
 
     public MarketStats Market(string cityId, string cargoId) => _markets[cityId][cargoId];
@@ -170,6 +172,194 @@ public sealed class RunStatistics
             var stats = Market(city.Id, cargoId);
             if (!stats.HasDemand) continue;
             sum += select(stats);
+            count++;
+        }
+        return count > 0 ? sum / count : 0;
+    }
+
+    // ------------------------------------------------------------------------
+    // Mobilité de la dispersion.
+    //
+    // MeanSpread répond à « y a-t-il quelque chose à transporter ». Il ne répond
+    // pas à la question du contrat du module économie, qui est autre : est-ce que
+    // ce quelque chose *change* ? Un écart moyen de ×5 parfaitement immobile — la
+    // même ville la plus chère du premier au dernier tick — donne une seule route
+    // à entretenir et plus aucune décision à prendre. C'est la forme la plus
+    // coûteuse d'économie morte, parce qu'elle a l'air saine dans toutes les
+    // statistiques existantes.
+    //
+    // Deux mesures, parce que la dispersion peut bouger de deux façons
+    // indépendantes et qu'une seule des deux suffirait à se tromper :
+    //   — son amplitude respire        → SpreadMobility
+    //   — son point chaud se déplace   → LeaderChurn
+    // Un modèle purement saisonnier fait monter la première sans toucher la
+    // seconde : tout le monde a soif au même moment, la meilleure destination
+    // reste la même. C'est LeaderChurn qui dit si le joueur doit rouvrir sa carte.
+    // ------------------------------------------------------------------------
+
+    private sealed class MobilityStats
+    {
+        public double SpreadSum;
+        public double SpreadSquareSum;
+        public int Samples;
+
+        /// <summary>Ville la plus chère au tick précédent, null au premier échantillon.</summary>
+        public string? Leader;
+
+        public int LeaderChanges;
+        public int Transitions;
+
+        /// <summary>Ticks passés en tête, par ville. Jamais énuméré directement.</summary>
+        public readonly Dictionary<string, int> TicksInLead = new();
+    }
+
+    private readonly Dictionary<string, MobilityStats> _mobility = new();
+
+    /// <summary>
+    /// Échantillonne la mobilité. Le calcul de l'écart est refait ici plutôt que
+    /// partagé avec la boucle de <see cref="Sample"/> : le prix de quelques
+    /// divisions par tick est sans importance devant celui d'une modification d'un
+    /// chemin de mesure dont trois campagnes dépendent déjà.
+    /// </summary>
+    private void SampleMobility(WorldState world)
+    {
+        foreach (string cargoId in world.CargoOrder)
+        {
+            if (!_mobility.TryGetValue(cargoId, out var stats))
+                _mobility[cargoId] = stats = new MobilityStats();
+
+            // Comme pour l'écart moyen : seuls les marchés ayant de vrais
+            // acheteurs comptent. Une ville qui ne consomme pas la marchandise est
+            // au plancher par construction et serait un « moins cher » permanent
+            // qui rendrait l'écart insensible à tout le reste.
+            double min = double.MaxValue, max = 0;
+            string? leader = null;
+            int buyers = 0;
+
+            foreach (var city in world.Cities)
+            {
+                var market = city.Market(cargoId);
+                if (market.BaseDemandRate + market.IndustryDemandRate <= 0) continue;
+
+                buyers++;
+                if (market.Price < min) min = market.Price;
+                // Comparaison stricte, et parcours dans l'ordre du scénario : à
+                // prix égaux la tête ne change pas, ce qui évite de compter comme
+                // mouvement un simple aléa d'énumération.
+                if (market.Price > max) { max = market.Price; leader = city.Id; }
+            }
+
+            if (buyers <= 1) continue;
+
+            double spread = min > 1e-9 ? max / min : 1.0;
+            stats.SpreadSum += spread;
+            stats.SpreadSquareSum += spread * spread;
+            stats.Samples++;
+
+            if (leader is not null)
+            {
+                stats.TicksInLead.TryGetValue(leader, out int ticks);
+                stats.TicksInLead[leader] = ticks + 1;
+
+                if (stats.Leader is not null)
+                {
+                    stats.Transitions++;
+                    if (stats.Leader != leader) stats.LeaderChanges++;
+                }
+                stats.Leader = leader;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Écart-type de l'écart de prix instantané, au cours du temps. Mesure la
+    /// respiration de la dispersion en unités d'écart.
+    /// </summary>
+    public double SpreadVolatility(string cargoId)
+    {
+        if (!_mobility.TryGetValue(cargoId, out var stats) || stats.Samples < 2) return 0;
+        double mean = stats.SpreadSum / stats.Samples;
+        double variance = stats.SpreadSquareSum / stats.Samples - mean * mean;
+        return variance > 0 ? Math.Sqrt(variance) : 0;
+    }
+
+    /// <summary>
+    /// Mobilité de l'amplitude : écart-type de l'écart de prix rapporté à sa
+    /// moyenne.
+    /// <para>
+    /// Le rapport est nécessaire pour comparer des marchandises entre elles. Le
+    /// charbon du scénario de référence vit autour d'un écart de ×11, la farine
+    /// autour de ×1,4 : à volatilité absolue égale, la seconde est bien plus
+    /// vivante que la première. Une moyenne de volatilités absolues ne mesurerait
+    /// que le charbon.
+    /// </para>
+    /// </summary>
+    public double SpreadMobility(string cargoId)
+    {
+        if (!_mobility.TryGetValue(cargoId, out var stats) || stats.Samples < 2) return 0;
+        double mean = stats.SpreadSum / stats.Samples;
+        return mean > 1e-9 ? SpreadVolatility(cargoId) / mean : 0;
+    }
+
+    /// <summary>
+    /// Taux de changement de la ville la plus chère : fraction des ticks où le
+    /// meilleur débouché n'est plus celui du tick précédent.
+    /// <para>
+    /// C'est la mesure la plus proche de la décision du joueur. À 0, une seule
+    /// route est à entretenir pour toute la partie. Très haut, la tête change si
+    /// souvent qu'aucune décision ne survit au temps de trajet, ce qui n'est pas
+    /// mieux : le bon régime est intermédiaire, et se juge en jouant.
+    /// </para>
+    /// </summary>
+    public double LeaderChurn(string cargoId)
+        => _mobility.TryGetValue(cargoId, out var stats) && stats.Transitions > 0
+            ? (double)stats.LeaderChanges / stats.Transitions
+            : 0;
+
+    /// <summary>
+    /// Part du temps détenue par la ville la plus souvent en tête. 1 = un débouché
+    /// unique et permanent ; proche de 1/nombre d'acheteurs = la tête tourne entre
+    /// toutes les villes.
+    /// </summary>
+    public double LeaderDominance(WorldState world, string cargoId)
+    {
+        if (!_mobility.TryGetValue(cargoId, out var stats) || stats.Samples == 0) return 0;
+
+        // Parcours des villes dans l'ordre du scénario, et non du dictionnaire :
+        // à égalité de ticks en tête, le résultat doit être le même d'une
+        // exécution à l'autre.
+        int best = 0;
+        foreach (var city in world.Cities)
+            if (stats.TicksInLead.TryGetValue(city.Id, out int ticks) && ticks > best)
+                best = ticks;
+
+        return (double)best / stats.Samples;
+    }
+
+    /// <summary>Nombre de ticks pendant lesquels cette marchandise avait au moins deux acheteurs.</summary>
+    public int MobilitySamples(string cargoId)
+        => _mobility.TryGetValue(cargoId, out var stats) ? stats.Samples : 0;
+
+    /// <summary>
+    /// Mobilité d'amplitude moyenne, sur les marchandises ayant plusieurs
+    /// acheteurs. C'est le chiffre unique qu'on compare entre deux solveurs.
+    /// </summary>
+    public double MeanSpreadMobility(WorldState world) => MeanOverCargos(world, SpreadMobility);
+
+    /// <summary>Taux de changement de tête moyen, sur les marchandises ayant plusieurs acheteurs.</summary>
+    public double MeanLeaderChurn(WorldState world) => MeanOverCargos(world, LeaderChurn);
+
+    private double MeanOverCargos(WorldState world, Func<string, double> select)
+    {
+        double sum = 0;
+        int count = 0;
+        foreach (string cargoId in world.CargoOrder)
+        {
+            // Une marchandise à acheteur unique n'a pas de dispersion : l'inclure
+            // à zéro pénaliserait un scénario simplement parce qu'il compte peu de
+            // villes consommatrices.
+            if (MobilitySamples(cargoId) < 2) continue;
+            sum += select(cargoId);
             count++;
         }
         return count > 0 ? sum / count : 0;
