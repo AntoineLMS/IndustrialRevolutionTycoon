@@ -169,6 +169,20 @@ référence maintenant la ferait échouer à chaque fusion légitime.
 Leçon générale, qui prolonge celle des quatre bugs : un test vert ne dit pas qu'il
 couvre quelque chose. Celui-ci était vert depuis le premier jour.
 
+*Traité après la fusion des quatre modules.* Le test creux a disparu, ainsi que
+son jumeau côté solveur anticipant. À leur place, `ReferenceTraceTests` fige
+l'empreinte de chaque scénario livré sur 720 ticks : les trois traces CSV, plus
+l'état financier de fin de partie au centime quand la finance est active. Une
+empreinte qui bouge sans justification dans le message de commit est une
+régression.
+
+Une limite reste ouverte : les empreintes ont été posées sous Linux x64. La
+consommation passe par `Math.Pow`, que .NET délègue à la bibliothèque
+mathématique du système, et rien ne garantit le même dernier bit sous Windows ou
+macOS. Si la suite échoue sur une autre plateforme sans changement de code, ce
+n'est pas un faux positif : la même partie n'y est pas la même, ce qui compte
+pour une sauvegarde partagée ou un multijoueur en lockstep.
+
 ## Une mesure qui ne mesurait pas la bonne chose
 
 *Relevé par le module `network`, sur le tableau ci-dessus — donc sur mon propre
@@ -237,6 +251,18 @@ Deux conséquences à traiter, dans cet ordre :
 2. **Les scénarios de chaque module devraient déclarer les blocs des autres**, ou
    assumer explicitement de ne pas le faire. Un bloc absent n'est pas neutre : il
    est silencieusement inerte.
+
+   *Traité.* Chaque scénario de `data/` déclare les blocs `anticipating`,
+   `network` et `finance`, ou dit pourquoi il s'en passe par une clé
+   `"//<bloc>"`. Un test l'exige, et le harnais signale au chargement tout bloc
+   ni déclaré ni écarté. En posant cette règle, un cas s'est révélé :
+   `heartland-finance.json`, censé reprendre l'économie de heartland « au
+   caractère près », n'avait pas son bloc `anticipating`. Le test d'équivalence
+   restait vert pour deux raisons : il tournait sous le solveur de référence, qui
+   ignore ce bloc, et il ne comparait que le *nombre* de villes, de marchandises
+   et de trains. Avec `--solver anticipating`, les deux scénarios jouaient deux
+   économies différentes. Le bloc est rétabli, et le test compare désormais le
+   contenu des deux scénarios, sous les deux solveurs.
 
 Leçon, et c'est la troisième du même genre après le test de déterminisme creux et
 le banc de mesure qui reconstruisait son sujet : ce qui échappe à la vérification

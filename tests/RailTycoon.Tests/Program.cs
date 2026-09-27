@@ -335,23 +335,8 @@ internal static class Program
             }
         });
 
-        runner.Add("déterminisme — deux exécutions donnent la même trace", () =>
-        {
-            string Fingerprint()
-            {
-                var sim = new Simulation(ScenarioLoader.Load(Fixtures.HeartlandPath()));
-                var recorder = new CsvRecorder();
-                recorder.Record(sim.World);
-                for (int i = 0; i < 240; i++)
-                {
-                    sim.Step();
-                    recorder.Record(sim.World);
-                }
-                return recorder.Fingerprint();
-            }
-
-            Check.Equal(Fingerprint(), Fingerprint(), "empreinte de la trace");
-        });
+        // Le déterminisme se vérifie contre des empreintes figées, pas en comparant
+        // deux exécutions du même processus : voir ReferenceTraceTests.
 
         // ------------------------------------------- économie anticipante
         // Le solveur anticipant ne remplace pas la référence : elle reste le témoin
@@ -532,25 +517,6 @@ internal static class Program
                     Check.True(false,
                         $"tick {sim.World.Tick.Index} : {violations[0].Rule} — {violations[0].Detail}");
             }
-        });
-
-        runner.Add("anticipation — deux exécutions donnent la même trace", () =>
-        {
-            string Fingerprint()
-            {
-                var sim = new Simulation(
-                    ScenarioLoader.Load(Fixtures.HeartlandPath()), new AnticipatingEconomySolver());
-                var recorder = new CsvRecorder();
-                recorder.Record(sim.World);
-                for (int i = 0; i < 240; i++)
-                {
-                    sim.Step();
-                    recorder.Record(sim.World);
-                }
-                return recorder.Fingerprint();
-            }
-
-            Check.Equal(Fingerprint(), Fingerprint(), "empreinte de la trace anticipante");
         });
 
         runner.Add("anticipation — l'économie anticipante reste vivante", () =>
@@ -1028,6 +994,11 @@ internal static class Program
         // pour que trois modules qui avancent en parallèle n'entrent pas en
         // conflit sur cette liste.
         FinanceTests.Register(runner);
+
+        // ------------------------------------------------ traces de référence
+        // En dernier : elles figent le comportement de tous les modules à la fois,
+        // et un échec ici se lit mieux une fois les invariants de chacun passés.
+        ReferenceTraceTests.Register(runner);
 
         Console.WriteLine("RailTycoon — invariants de simulation");
         Console.WriteLine();

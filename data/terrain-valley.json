@@ -9,6 +9,10 @@
 
   "//terrain": "Le relief est rigoureusement identique à celui de terrain-pass.json, et c'est voulu : entre les deux cartes, seule change la façon dont on traverse. La différence de devis est donc entièrement imputable au tracé, pas au terrain.",
 
+  "//anticipating": "Carte d'essai du module réseau : elle chiffre un tracé, elle ne mesure pas l'économie. Pas de bloc anticipating, donc le solveur anticipant y rendrait la trace de la référence. Le scénario qui fera tourner relief et économie ensemble sera un scénario neuf, pas une mutation de cette carte, dont le devis sert de référence aux tests.",
+
+  "//finance": "Pas de finance : une carte d'essai du réseau éprouve le devis de construction et rien d'autre.",
+
   "priceModel": { "coverageHorizonTicks": 15, "shape": 0.5, "minMultiplier": 0.12, "maxMultiplier": 3.0 },
 
   "cargos": [
