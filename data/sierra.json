@@ -1,0 +1,240 @@
+{
+  "id": "sierra",
+  "name": "La Sierra — 1875",
+  "seed": 18750412,
+  "startingCash": 100000,
+  "initialCoverage": 1.0,
+
+  "//": "Premier scénario où relief et économie tournent ensemble (point 1 de « Le prix du développement en parallèle », docs/FINDINGS.md). Une ligne de 505 km traverse une sierra : plaine de l'ouest à 150 m, plateau forestier de Pinecrest à 378 m, col de Coalpass à 1 112 m, plaine de l'est à 150 m. Le scénario existe pour une seule question — que fait le relief aux écarts de prix et au rayon économique ? — et la réponse mesurée est dans FINDINGS.md, section « Relief et économie ensemble ».",
+
+  "//economie": "L'économie est celle de heartland, table pour table : mêmes marchandises, mêmes recettes (chaque maillon ≈ +70 %), mêmes demandes par ville, mêmes capacités, dans le même ordre le long de la ligne. C'est délibéré : ces tables sont calibrées (--balance : chaque marchandise entre 1,10 et 1,14, « équilibré »), et les reprendre isole la seule variable neuve, la géographie. Les villes sont renommées parce qu'elles ne sont pas au même endroit : les distances diffèrent (505 km contre 500, l'ordre des écarts change), et la montagne s'intercale entre la forêt (Pinecrest) et les boulangeries de l'est. Deux acheteurs par marchandise intermédiaire : deux moulins (Fordham à l'ouest, Ashvale à l'est), deux boulangeries (Eastgate, Baymouth), deux scieries (Pinecrest sur sa forêt, Cedarton à 355 km de l'autre côté du col).",
+
+  "//relief": "Une crête nord-sud de 1 350 m, abaissée en selle par une cuvette de même portée : le long de la ligne, le relief est une cloche de 950 m centrée sur le col, dont la pente culmine à 2,3 % — sous la rampe maximale de 2,5 %. Le tracé suit donc le sol, et le devis (--survey) est à 99 % de la pose de voie : 1 524 566, dont 9 510 de terrassement sur les deux rampes du col, aucun pont, aucun tunnel. Rampe déterminante 2,49 % à l'aller, 2,50 % au retour. Un col plus haut ou plus étroit aurait coûté des ouvrages, mais le devis n'est débité nulle part (voir FINDINGS) : le choisir plus cher n'aurait rien mesuré de plus. La rugosité (20 m, 8 km) est volontairement plus douce que celle des cartes d'essai (25 m, 4 km) : sur ces dernières, elle coûte plus à l'exploitation que la montagne elle-même.",
+
+  "//traction": "climbEquivalentKm reste à 0,03, la valeur des trois cartes d'essai, pour que les chiffres soient comparables. Mesuré sur 720 ticks à trois trains : le relief ajoute 8,8 % au coût d'exploitation (225 596 contre 207 360 à 0). La montagne seule (rugosité retirée) en coûte 5,9 %, la rugosité seule (montagne retirée) 4,3 % : les deux ne s'additionnent pas, et la seconde pèse presque autant que la première. La valeur elle-même est une décision ouverte : le commentaire de TractionDef la justifiait par « une rampe de 1 % triple la résistance », ce qui correspondrait à environ 0,2 ; à 0,03, une rampe de 1 % ne coûte que 30 % de plus.",
+
+  "//geographie": "Le constat principal, figé par un test : le relief se paie, mais n'entre dans aucune décision. La trace des marchés est identique au bit près à climbEquivalentKm = 0 ; 0,03 ; 0,09 ; 0,2, et sans montagne ou sans rugosité, sous les deux solveurs : mêmes prix, mêmes écarts, mêmes usines. Seul le résultat net bouge (237 647 → 219 411 → 182 940 → 116 075). La scierie de Cedarton reste à 0 % dans tous les cas, comme celle d'Ironhill dans heartland : ce n'est pas la montagne qui la tue, c'est la règle de coût imputé du transporteur (expectedLoadFactor), qui la fait démarrer à 19 % quand on la passe de 0,6 à 2.",
+
+  "//trains": "Trois trains, aux arrêts 0, 4 et 9 comme heartland. Balayage en ne changeant que le nombre de trains (au-delà de trois, copies du premier aux arrêts 7, 2, 6) — solveur de référence : 76 695 / 178 139 / 219 411 / 200 890 / 134 325 / 47 819 de 1 à 6 trains ; anticipant : 76 243 / 160 108 / 242 254 / 228 096 / 171 811 / 103 973. L'optimum est à trois sous les deux solveurs, et le taux d'usines desservies monte de 72 % à 82 % pendant que le résultat s'effondre : la même forme que heartland, relief compris.",
+
+  "//anticipating": "Réglé pour ce scénario, pas recopié : le bloc de heartland (4 ticks, poids 1, lissage 0,15) fait ici chuter le résultat de 219 411 (bloc neutre, c'est-à-dire la référence) à 100 693, parce que le charbon se met à tourner en rond — 29 558 chargements livrés pour 723 produits après chauffe, contre 5 389 sous la référence. Grille mesurée (horizon 0 à 8, poids 0,5 et 1, lissage 0,10 à 0,25) : 2 ticks, poids 1, lissage 0,15 donne 242 254 (+10 %), une mobilité de 0,548 contre 0,384 (+43 %) et un changement de tête de 24,3 % contre 20,1 %, avec des voisins cohérents (lissage 0,10 : 232 603 et 0,511 ; 0,25 : 222 325 et 0,587). À 4 et 5 trains il bat encore la référence en résultat et en mobilité ; à 2 trains il perd 10 % de résultat pour une mobilité un peu moindre (0,404 contre 0,442). Le paysage est bruité — un seul cran sur un réglage voisin fait bouger le résultat de 4 à 10 % —, ce qui interdit d'optimiser plus finement que ce voisinage.",
+
+  "//saisons": "Aucune saison, et c'est mesuré. Celles de heartland coûtent 9 % de résultat (219 862) pour +1,5 % de mobilité. Une saison de chauffage sur le charbon, pourtant de circonstance en montagne, donne +15 % de mobilité à trois trains (amplitude 0,25) mais fait perdre 3,5 à 6 % de résultat à 2, 4 et 5 trains, et devient défavorable à 0,35 comme à 0,5 : un effet qui dépend du nombre de trains et n'est pas monotone n'est pas un réglage, c'est du bruit. Les grumes ne voyagent jamais (la scierie de Pinecrest consomme tout sur place) : leur saison laisse le résultat identique (242 254).",
+
+  "//croissance": "growthRatePerTick à 0, pour la même raison que heartland, re-mesurée ici : 0,003, 0,01 et 0,05 font tomber la mobilité de 0,628 à 0,524, 0,486 et 0,529, et le résultat de 243 680 à 218 364, 212 681 et 202 472 (mesures faites avec la saison de charbon à 0,25, écartée ensuite).",
+
+  "//finance": "Pas de finance : un scénario éprouve une chose à la fois, et celui-ci éprouve le couplage réseau ↔ économie. Activer la finance ferait entrer le découvert et les intérêts dans la trésorerie du transporteur, donc dans ses achats, et brouillerait la mesure du coût du relief. Le devis du réseau (1 524 566, quinze fois la mise de départ) n'étant débité nulle part, la finance n'aurait de toute façon rien à financer ici.",
+
+  "priceModel": {
+    "coverageHorizonTicks": 15,
+    "shape": 0.5,
+    "minMultiplier": 0.12,
+    "maxMultiplier": 3.0
+  },
+
+  "economy": {
+    "productionStorageTicks": 30,
+    "minProductionFactor": 0.1,
+    "minConsumptionResponse": 0.3,
+    "maxConsumptionResponse": 1.5
+  },
+
+  "haulage": {
+    "minMargin": 0.10,
+    "minProfitPerUnit": 1.5,
+    "expectedLoadFactor": 0.6,
+    "priceImpactSlices": 8,
+    "minTradeQty": 0.25
+  },
+
+  "anticipating": {
+    "anticipationTicks": 2,
+    "anticipationWeight": 1.0,
+    "driftSmoothing": 0.15,
+
+    "growthRatePerTick": 0,
+    "growthMemoryTicks": 90,
+    "growthDeadband": 0.04,
+    "minCitySize": 0.7,
+    "maxCitySize": 1.3,
+
+    "seasons": []
+  },
+
+  "cargos": [
+    { "id": "grain",  "name": "Blé",         "basePrice": 10, "elasticity": 0.4 },
+    { "id": "flour",  "name": "Farine",      "basePrice": 34, "elasticity": 0.5 },
+    { "id": "food",   "name": "Nourriture",  "basePrice": 58, "elasticity": 0.3 },
+    { "id": "logs",   "name": "Grumes",      "basePrice": 8,  "elasticity": 0.7 },
+    { "id": "boards", "name": "Planches",    "basePrice": 14, "elasticity": 0.8 },
+    { "id": "coal",   "name": "Charbon",     "basePrice": 14, "elasticity": 0.2 }
+  ],
+
+  "recipes": [
+    {
+      "id": "mill", "name": "Moulin",
+      "//": "2 × 10 → 34 : marge 1,70, comme heartland.",
+      "inputs":  [ { "cargo": "grain", "qty": 2.0 } ],
+      "outputs": [ { "cargo": "flour", "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    },
+    {
+      "id": "bakery", "name": "Boulangerie",
+      "//": "34 → 58 : marge 1,71, comme heartland.",
+      "inputs":  [ { "cargo": "flour", "qty": 1.0 } ],
+      "outputs": [ { "cargo": "food",  "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    },
+    {
+      "id": "sawmill", "name": "Scierie",
+      "//": "8 → 14 : marge 1,75, comme heartland.",
+      "inputs":  [ { "cargo": "logs",   "qty": 1.0 } ],
+      "outputs": [ { "cargo": "boards", "qty": 1.0 } ],
+      "ratePerTick": 0.5, "minMargin": 0.15
+    }
+  ],
+
+  "cities": [
+    {
+      "id": "westbrook", "name": "Westbrook", "population": 4000,
+      "//": "Ferme à blé de la plaine de l'ouest, terminus. Reprend Fairview.",
+      "production": { "grain": 2.0 },
+      "demand": { "food": 0.05, "coal": 0.04, "boards": 0.02 },
+      "initialStock": { "grain": 30 }
+    },
+    {
+      "id": "fordham", "name": "Fordham", "population": 9000,
+      "//": "Moulin de l'ouest, à 50 km de sa ferme. Reprend Millbrook.",
+      "demand": { "food": 0.07, "coal": 0.06, "boards": 0.04 },
+      "industries": [ { "recipe": "mill", "capacity": 2.0 } ]
+    },
+    {
+      "id": "pinecrest", "name": "Pinecrest", "population": 6000,
+      "//": "Forêt et scierie sur le plateau, au pied du col. Reprend Pinegrove.",
+      "production": { "logs": 0.8 },
+      "demand": { "food": 0.05, "coal": 0.04 },
+      "industries": [ { "recipe": "sawmill", "capacity": 0.7 } ],
+      "initialStock": { "logs": 20 }
+    },
+    {
+      "id": "coalpass", "name": "Coalpass", "population": 11000,
+      "//": "La mine au col, à 1 112 m : tout son charbon descend, vers l'ouest par 786 m de dénivelé, vers l'est par 961 m. Reprend Coalburg.",
+      "production": { "coal": 1.15 },
+      "demand": { "food": 0.10, "boards": 0.04, "grain": 0.05 },
+      "initialStock": { "coal": 30 }
+    },
+    {
+      "id": "eastgate", "name": "Eastgate", "population": 18000,
+      "//": "Boulangerie au pied est du col : sa farine vient de Fordham par-dessus la montagne, ou d'Ashvale par la plaine. Reprend Rivertown.",
+      "demand": { "food": 0.11, "coal": 0.08, "boards": 0.05 },
+      "industries": [ { "recipe": "bakery", "capacity": 1.1 } ]
+    },
+    {
+      "id": "ashvale", "name": "Ashvale", "population": 26000,
+      "//": "Moulin de l'est. Reprend Ashford.",
+      "demand": { "food": 0.16, "coal": 0.14, "boards": 0.09 },
+      "industries": [ { "recipe": "mill", "capacity": 1.1 } ]
+    },
+    {
+      "id": "baymouth", "name": "Baymouth", "population": 62000,
+      "//": "Le grand port de l'est, seconde boulangerie. Reprend Kingsport.",
+      "demand": { "food": 0.28, "coal": 0.22, "boards": 0.15 },
+      "industries": [ { "recipe": "bakery", "capacity": 1.7 } ]
+    },
+    {
+      "id": "southfield", "name": "Southfield", "population": 5000,
+      "//": "Seconde ferme à blé, dans la plaine de l'est. Reprend Weston.",
+      "production": { "grain": 1.5 },
+      "demand": { "food": 0.07, "coal": 0.05 },
+      "initialStock": { "grain": 25 }
+    },
+    {
+      "id": "cedarton", "name": "Cedarton", "population": 21000,
+      "//": "Seconde scierie, à 355 km de la forêt et de l'autre côté du col. Elle ne démarre jamais, comme Ironhill dans heartland, et pour la même raison : les grumes y valent 12,4 en moyenne contre 3,0 à Pinecrest, un gain de 7,6 par chargement contre un coût imputé de 19,7 à cette distance. Le relief n'y est pour rien (voir « //geographie »).",
+      "demand": { "coal": 0.20, "boards": 0.11, "food": 0.13 },
+      "industries": [ { "recipe": "sawmill", "capacity": 0.7 } ]
+    },
+    {
+      "id": "farport", "name": "Farport", "population": 48000,
+      "//": "Terminus est. Reprend Northgate.",
+      "demand": { "food": 0.25, "coal": 0.20, "boards": 0.13 }
+    }
+  ],
+
+  "network": {
+    "terrain": {
+      "columns": 261,
+      "rows": 81,
+      "cellSizeKm": 2.0,
+      "baseElevationM": 150,
+      "//": "520 × 160 km. La crête et la cuvette ont la même portée (65 km), ce qui fait du passage une selle propre : le long de la ligne, une cloche de 950 m sans double bosse. Le mamelon de 250 m porte le plateau forestier de Pinecrest.",
+      "features": [
+        { "kind": "ridge", "x1Km": 190, "y1Km": 0, "x2Km": 190, "y2Km": 160, "halfWidthKm": 65, "amplitudeM": 1350 },
+        { "kind": "bowl", "xKm": 190, "yKm": 80, "halfWidthKm": 65, "amplitudeM": -400 },
+        { "kind": "bowl", "xKm": 110, "yKm": 80, "halfWidthKm": 60, "amplitudeM": 250 }
+      ],
+      "noise": { "amplitudeM": 20, "wavelengthKm": 8, "octaves": 3, "seed": 21 }
+    },
+
+    "alignment": {
+      "maxGradePercent": 2.5,
+      "minCurveRadiusM": 600,
+      "sampleSpacingKm": 0.25,
+      "formationWidthM": 6.0,
+      "extraWidthPerTrackM": 4.5,
+      "sideSlopeRatio": 1.5,
+      "bridgeMinHeightM": 15,
+      "tunnelMinDepthM": 18,
+      "minStructureLengthKm": 0.3,
+      "profileMergeTolerancePercent": 0.1
+    },
+
+    "costs": {
+      "trackPerKmPerTrack": 3000,
+      "cutPerCubicMetre": 0.30,
+      "fillPerCubicMetre": 0.22,
+      "bridgePerKm": 40000,
+      "bridgePerKmPerMetre": 1800,
+      "tunnelPerKm": 120000,
+      "curvePerDegree": 400,
+      "extraTrackStructureFactor": 0.6
+    },
+
+    "traction": { "climbEquivalentKm": 0.03 },
+
+    "nodes": [
+      { "id": "westbrook",  "city": "westbrook",  "xKm": 10,  "yKm": 80, "passingTracks": 2 },
+      { "id": "fordham",    "city": "fordham",    "xKm": 60,  "yKm": 80, "passingTracks": 2 },
+      { "id": "pinecrest",  "city": "pinecrest",  "xKm": 115, "yKm": 80, "passingTracks": 2 },
+      { "id": "coalpass",   "city": "coalpass",   "xKm": 190, "yKm": 80, "passingTracks": 2 },
+      { "id": "eastgate",   "city": "eastgate",   "xKm": 255, "yKm": 80, "passingTracks": 2 },
+      { "id": "ashvale",    "city": "ashvale",    "xKm": 310, "yKm": 80, "passingTracks": 2 },
+      { "id": "baymouth",   "city": "baymouth",   "xKm": 370, "yKm": 80, "passingTracks": 2 },
+      { "id": "southfield", "city": "southfield", "xKm": 420, "yKm": 80, "passingTracks": 2 },
+      { "id": "cedarton",   "city": "cedarton",   "xKm": 470, "yKm": 80, "passingTracks": 2 },
+      { "id": "farport",    "city": "farport",    "xKm": 515, "yKm": 80, "passingTracks": 2 }
+    ],
+
+    "edges": [
+      { "id": "wes-for",      "from": "westbrook",  "to": "fordham" },
+      { "id": "for-pin",      "from": "fordham",    "to": "pinecrest" },
+      { "id": "rampe-ouest",  "from": "pinecrest",  "to": "coalpass" },
+      { "id": "rampe-est",    "from": "coalpass",   "to": "eastgate" },
+      { "id": "eas-ash",      "from": "eastgate",   "to": "ashvale" },
+      { "id": "ash-bay",      "from": "ashvale",    "to": "baymouth" },
+      { "id": "bay-sou",      "from": "baymouth",   "to": "southfield" },
+      { "id": "sou-ced",      "from": "southfield", "to": "cedarton" },
+      { "id": "ced-far",      "from": "cedarton",   "to": "farport" }
+    ],
+
+    "routes": [
+      { "id": "main", "name": "Ligne de la Sierra", "nodes": [ "westbrook", "farport" ] }
+    ]
+  },
+
+  "trains": [
+    { "id": "t1", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 0 },
+    { "id": "t2", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 4 },
+    { "id": "t3", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 9 }
+  ]
+}

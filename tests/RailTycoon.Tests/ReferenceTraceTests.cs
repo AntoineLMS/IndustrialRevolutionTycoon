@@ -53,6 +53,8 @@ internal static class ReferenceTraceTests
         new("terrain-plain.json", "reference", "AD49052A42109540"),
         new("terrain-valley.json", "reference", "AB05B9D83446BD73"),
         new("terrain-pass.json", "reference", "19AB8C39B5812F10"),
+        new("sierra.json", "reference", "E60F3BB3F1F2B083"),
+        new("sierra.json", "anticipating", "6CEA03DA2C0CDB89"),
     ];
 
     public static void Register(TestRunner runner)

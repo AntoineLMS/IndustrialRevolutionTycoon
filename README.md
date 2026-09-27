@@ -106,6 +106,7 @@ data/                      scénarios et cartes (données de conception, modifia
   heartland-finance.json   même économie, volet financier activé
   ironpeak.json            chaîne minerai → fonte → acier
   terrain-*.json           cartes d'essai du réseau : plaine, vallée, col
+  sierra.json              économie de heartland sur une sierra : relief et économie ensemble
   locomotives.json         catalogue historique, sources dans docs/SOURCES.md
 docs/                      architecture et contrats entre modules
 ```
