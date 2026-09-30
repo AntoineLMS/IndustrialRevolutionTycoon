@@ -49,6 +49,7 @@ changement au détour d'un correctif.
 |---|---|---|
 | 0 | Remise à zéro de la télémétrie du tick | `Simulation` |
 | 0b | Événements : ouverture et extinction, tirage des aléatoires, multiplicateurs du jour publiés sur les marchés | `IEventSolver` |
+| 0c | Conjoncture : lecture des événements du jour (bascules, poussées), échéance et tirage des phases, conditions du jour (taux, multiple de valorisation, demande publiée sur les marchés) | `ICycleSolver` |
 | 1 | Production primaire (fermes, mines, forêts) | `IEconomySolver` |
 | 2 | Usines : consommation des intrants, production | `IEconomySolver` |
 | 3 | Consommation des habitants, modulée par le prix | `IEconomySolver` |
@@ -97,6 +98,38 @@ sur la sienne (7) : activer les événements ne décale aucun autre tirage. Et c
 type aléatoire tire un nombre fixe de valeurs par jour, qu'il se déclenche ou non,
 si bien que le calendrier d'un type ne dépend ni de l'intensité des autres ni de
 leur fréquence.
+
+La phase 0c a été **insérée** entre 0b et 1, troisième décision de ce genre, et
+elle aussi ne change l'ordre d'aucune phase existante. Elle fait avancer la
+conjoncture (module `cycle`) et publie les conditions du jour : un ajustement de taux
+et un facteur du multiple de valorisation, que la finance lit en phase 6, et un
+multiplicateur de demande, posé sur chaque marché (`Market.CycleDemandFactor`) à côté
+de celui des événements. Sa place est contrainte des deux côtés :
+
+- **Après 0b**, parce que les événements la déplacent : la panique de 1873 force la
+  crise *le jour* où elle s'ouvre, et une poussée agit le jour de l'événement. Placée
+  avant, la conjoncture lirait les événements de la veille — une date qui glisse d'un
+  jour.
+- **Avant 1**, parce que sa demande entre dans les taux du jour, comme celle des
+  événements ; et donc bien avant la phase 6, qui lit les taux et le multiple du jour.
+- **Hors du module events**, et non comme un sous-bloc de celui-ci : elle a sa propre
+  séquence aléatoire, son propre journal, et elle touche la finance, ce que le contrat
+  `events` interdit (« des multiplicateurs sur la production et la demande, rien
+  d'autre »). Et un cycle doit pouvoir tourner sans aucun événement.
+- **Les deux multiplicateurs de demande ne se mélangent pas** : chaque module possède
+  le sien, le solveur économique les compose par un produit. La conjoncture ne réécrit
+  pas `EventDemandFactor`, ne passe pas par ses bornes de sécurité, et un test le
+  vérifie.
+- **Sans effet quand le module est inactif**, au bit près : le multiplicateur reste à
+  1, la finance ne reçoit aucune conjoncture et suit son chemin de code d'avant. Aucune
+  empreinte de `ReferenceTraceTests` n'a bougé à l'arrivée du module ; un test la
+  renouvelle en jouant heartland-cycle avec son bloc plein mais désactivé.
+
+La conjoncture tire sur **sa propre séquence** (`cycle.randomSequence`, 13 par défaut),
+**un nombre par phase**, à son ouverture : activer le cycle ne décale aucun autre
+tirage, et la k-ième phase reçoit le k-ième nombre quoi qu'aient fait les événements.
+Elle est **exogène** : aucune règle ne lit l'économie ni la compagnie pour décider de la
+phase — le cycle mû par l'activité a été écarté (VISION.md).
 
 Conséquence voulue de l'ordre 4 puis 5 : les trains voient les prix
 d'après-production. Le joueur arrive sur un marché tel qu'il est au matin, pas
@@ -419,7 +452,10 @@ manque encore est listé dans [CONTRACTS.md](CONTRACTS.md).
 
 Les événements historiques et aléatoires sont derrière `IEventSolver` (phase 0b) ;
 ils ne touchent que la production primaire et la demande des habitants, et ce
-qu'il leur manque est listé dans [CONTRACTS.md](CONTRACTS.md).
+qu'il leur manque est listé dans [CONTRACTS.md](CONTRACTS.md). La conjoncture est
+derrière `ICycleSolver` (phase 0c) ; elle touche les taux, la bourse et, modestement,
+la demande, et prépare l'appétit des investisseurs pour un module de fondation qui
+n'existe pas encore.
 
 `Transport/Rail.cs` reste une abstraction pauvre — une suite d'arrêts et de
 distances — et c'est désormais un choix et non une dette : c'est la projection du

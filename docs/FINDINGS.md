@@ -1268,6 +1268,339 @@ Aucune n'est tranchée ici ; le modèle est livré en opt-in, sur la seule
    trains d'une compagnie sans trésorerie doivent s'arrêter comme sous
    administration.
 
+## Le cycle économique : un rythme financier, pas une économie qui respire
+
+*Campagne du module `cycle` — 30 septembre 2026, scénario `heartland-cycle`, 2 160
+ticks (six années de jeu, 1870-1875), 90 de chauffe exclus, sous les deux solveurs,
+sur des ensembles de 40 trajectoires voisines.*
+
+### La question
+
+La vision (« Le cycle économique ») veut une conjoncture — expansion, ralentissement,
+crise, reprise — aux durées tirées au sort, que les événements font bouger, et qui
+touche les taux d'emprunt, la bourse, les investisseurs et, modestement, la demande
+des villes. Trois questions :
+
+1. Le cycle crée-t-il un **rythme financier exploitable** — emprunter en expansion,
+   racheter en crise — sans mener mécaniquement les compagnies à la faillite ?
+2. Quel effet de la demande, à ±5 % contre ±10 % ?
+3. Que change le **couplage avec les événements** par rapport à un cycle seul ?
+
+### Le modèle
+
+Le contrat est dans [CONTRACTS.md](CONTRACTS.md), la place dans le tick dans
+[ARCHITECTURE.md](ARCHITECTURE.md) (phase 0c). En bref :
+
+- **Des phases en boucle**, dans l'ordre des données, chacune avec ses bornes de durée ;
+  une durée est tirée à l'ouverture de la phase, **un nombre par phase**, sur la
+  séquence propre du module (13). Le calendrier est **exogène** : aucune règle ne lit
+  l'activité — le cycle endogène a été écarté.
+- **Les événements la déplacent par un attribut de données**, `cycle`, porté par un
+  historique ou un type aléatoire : `forcePhase` bascule la conjoncture le jour où
+  l'événement s'ouvre (la panique de 1873 force la crise ; déjà en crise, elle la
+  prolonge) ; `pushTicks` est une bonne (positive) ou une mauvaise (négative) nouvelle,
+  qui allonge une phase favorable et abrège une défavorable, ou l'inverse. Aucun
+  identifiant d'événement n'apparaît dans le code. Les poussées sont **équilibrées en
+  espérance** — 61,4 jours de bonnes nouvelles par an contre 61,0 de mauvaises —,
+  comme le catalogue lui-même.
+- **Quatre effets, tous dans les données**, en ligne droite sur 30 jours d'une phase à
+  la suivante : un ajustement du taux, **fixé à l'émission** pour une obligation
+  (variable au jour le jour pour le découvert), plus une prime de risque selon le
+  levier et la rentabilité de la compagnie ; un facteur du multiple de valorisation,
+  pour toute la cote, qui **multiplie** le multiple d'un résultat positif et le
+  **divise** pour une perte (appliqué tel quel à une perte, il l'allégerait en crise) ;
+  un facteur de demande des habitants, **publié sur chaque marché à côté de celui des
+  événements** et composé par un produit dans les deux solveurs ; des facteurs des
+  investisseurs, points d'accroche que personne ne lit encore. Le bonus selon le score
+  du dirigeant a sa place dans la formule du taux, et vaut 0.
+- **Le journal public** dit la phase, sa date, sa cause et chaque poussée ; il ne dit
+  jamais quand la phase finira. C'est la différence délibérée avec les événements,
+  qui annoncent leur fin : « garder de la trésorerie avant la crise » doit rester un
+  pari.
+
+Réglages livrés : expansion 360–900 jours, ralentissement 90–210, crise 270–630,
+reprise 120–240, soit un cycle moyen de 1 410 jours (47 mois) calé sur les cycles
+américains de 1854-1919 datés par le NBER ([SOURCES.md](SOURCES.md)) ; taux −1 / +0,5 /
++3 / +1 point ; multiple ×1,3 / ×1 / ×0,6 / ×0,85 ; demande ×1,04 / ×1 / ×0,95 / ×0,98.
+Demande et multiple sont équilibrés sur un cycle moyen (−0,06 % et ×0,987, affichés
+par `--balance`). La partie s'ouvre en crise : le NBER date un creux en décembre 1870.
+
+### Méthode
+
+**Le scénario d'épreuve** reprend au caractère près l'économie et la finance de
+`heartland-finance` et les événements de `heartland-events` (un test compare le contenu
+sérialisé à la réunion des deux), et n'ajoute que le bloc `cycle`. La finance est la
+première touchée, d'où ce socle plutôt que heartland seul.
+
+**2 160 ticks, pas 720.** Il faut contenir la panique (tick 1 337), au moins un cycle
+complet — la crise d'ouverture finit entre 270 et 630, la suivante arrive au plus tard
+à la panique — et la crise que la panique ouvre, jusqu'à la reprise (630 jours au
+plus). À 720 ticks, on ne mesurerait que la première crise et sa reprise.
+
+**Des ensembles, et des moyennes dans le temps.** Réalisation *i* (0 à 39) :
+`events.randomSequence` = 11 + *i*, `cycle.randomSequence` = 13 + *i* ; la réalisation 0
+est le scénario tel qu'écrit, qui reproduit les empreintes figées (`E8210450987FCE4E`,
+`3CA30C95E38BE915`). Le **témoin** est le même scénario, conjoncture désactivée : un
+test vérifie qu'elle ne tire alors rien et ne décale aucun autre flux, donc les deux
+jouent le même calendrier d'événements, et les différences se lisent **appariées**,
+réalisation par réalisation (« ± » y est une erreur type ; dans les tableaux de
+niveaux, un écart-type entre réalisations, la médiane entre parenthèses). Fortune du
+magnat, cours et dette sont des **moyennes sur les ticks après chauffe** ; la valeur au
+dernier tick n'est donnée qu'à côté — c'est la dette connue n° 2 de la finance. Chaque
+variante change **une seule valeur** en mémoire, sur le scénario tel qu'écrit.
+
+**Une stratégie qui ne lit que le journal.** Pour savoir si le rythme est exploitable
+par quelqu'un qui n'a que l'information publique, une variante du banc réécrit chaque
+jour la politique du magnat selon la phase affichée : il n'achète qu'en crise ou en
+reprise (« contracyclique »), le reste de sa politique inchangé.
+
+### Premier résultat : un rythme lisible, et aucune faillite
+
+| | référence, sans cycle | référence, livré | anticipant, sans cycle | anticipant, livré |
+|---|---|---|---|---|
+| mises sous administration | 0/40 | 0/40 | 0/40 | 0/40 |
+| cours moyen | 17,06 ± 0,66 | 17,08 ± 0,98 | 14,64 ± 1,04 | 14,54 ± 1,33 |
+| cours en expansion / en crise | — | 23,27 / 10,77 | — | 19,50 / 9,66 |
+| cours en ralentissement / en reprise | — | 21,14 / 15,81 | — | 18,14 / 13,35 |
+| taux d'une obligation type, expansion / crise | 6,00 | 5,45 / 11,01 | 6,00 | 5,40 / 11,01 |
+| taux des trois séries (réalisation 0) | 6 / 7,5 / 9 | 9,92 / 11,96 / 15,12 | 6 / 7,5 / 9 | 9,84 / 11,73 / 14,87 |
+| intérêts payés sur six ans | 66 000 | 93 000 (+27 000) | 64 000 | 88 000 (+24 000 ± 1 000) |
+| dette moyenne | 135 000 | 122 000 | 131 000 | 117 000 |
+| résultat du transport (milliers) | 1 074 ± 34 (1 081) | 1 125 ± 30 (1 129) | 943 ± 53 (950) | 986 ± 66 (997) |
+| mobilité de la dispersion | 0,424 | 0,454 (+0,029 ± 0,006) | 0,631 | 0,625 (−0,006 ± 0,003) |
+| tête du mois qui change | 38,0 % | 38,6 % | 41,3 % | 41,1 % |
+
+*« Obligation type » : ce que coûterait, chaque jour, 100 000 à 6 % faciaux, prime de
+risque de la compagnie du jour comprise, moyenné sur les jours de la phase. La prime
+moyenne vaut 0,45 point en expansion, 2,0 en crise.*
+
+**Le rythme est là, et il est lisible.** Le cours de la compagnie est divisé par 2,2
+entre l'expansion et la crise sous les deux solveurs, et remonte en reprise ; le
+crédit coûte deux fois plus cher en crise. Le cours **moyen**, lui, ne bouge pas
+(17,06 contre 17,08) : le multiple oscille autour de celui du scénario, comme prévu.
+**Aucune compagnie n'est menée à la faillite** : 0/40 sous administration sous les
+deux solveurs. Ouverte en crise, la compagnie emprunte ses trois séries 3,9 à 6,1
+points plus cher que le taux facial et paie 27 000 d'intérêts de plus sur six ans ;
+elle le supporte.
+
+**La demande fait tout le résultat.** Les 51 000 de résultat en plus (référence, ±
+5 000 en différence appariée) disparaissent exactement quand on neutralise la seule
+demande ; taux et bourse n'y touchent pas, le transporteur ne manquant jamais de
+trésorerie. Et ils ne viennent pas d'une demande plus forte, mais **plus faible** :
+sur ces six ans, la crise occupe 39 % du temps au lieu de 32 % en régime établi —
+ouverture en crise, panique —, la demande réalisée vaut −0,74 %, et le surplus de
+nourriture grossit d'autant, ce que le transporteur encaisse. C'est le mécanisme des
+épidémies de la section « Événements », à petite dose : un calendrier qui penche d'un
+côté déplace le surplus, et le résultat le suit.
+
+### Deuxième résultat : le magnat témoin est la victime désignée — et la dette de la finance fausse cette mesure
+
+Fortune du magnat, en milliers, moyenne dans le temps (médiane finale entre crochets) ;
+« < 0 » compte les réalisations où il finit avec une fortune négative :
+
+| configuration (référence sauf mention) | sans cycle | avec cycle | Δ | < 0 | appels de marge |
+|---|---|---|---|---|---|
+| magnat témoin (achats tous les 30 jours, 65 % sur marge) | 721 ± 161 [1 097] | 377 ± 218 [−24] | −344 ± 34 | 2 → 23 /40 | 40 → 448 |
+| le même, sans marge | 538 ± 66 [771] | 457 ± 78 [713] | −81 | 0 → 0 | 0 |
+| aucun ordre de bourse (il garde ses 30 %) | 569 ± 21 [840] | 586 ± 28 [974] | +17 | 0 → 0 | 0 |
+| **contracyclique** : n'achète qu'en crise ou en reprise | = témoin | 563 ± 123 [961] | +186 ± 25 contre le témoin avec cycle | 1 /40 | 22 |
+| contracyclique, sans marge | = sans marge | 475 ± 71 [786] | +18 contre « sans marge » avec cycle | 0 | 0 |
+| anticipant, magnat témoin | 391 ± 159 [375] | 436 ± 141 [433] | +45 ± 27 | 5 → 5 /40 | 65 → 118 |
+| anticipant, contracyclique | = témoin | 513 ± 130 [707] | +77 contre le témoin avec cycle | 6 /40 | 103 |
+
+**Le magnat témoin achète en haut et vend en bas.** Il achète à intervalles fixes, à
+65 % sur marge, quel que soit le cours : en expansion il achète cher, la crise divise
+le cours par deux, l'appel de marge le fait vendre au plus bas. Sous la référence, il
+perd la moitié de sa fortune moyenne et finit ruiné dans 23 réalisations sur 40. Sans
+marge, la perte tombe à 81 000 ; sans ordres, le cycle ne lui coûte rien (+17 000). Ce
+n'est donc pas le cycle qui ruine, c'est **le levier sur une règle aveugle au cycle**.
+Neutraliser la seule bourse (multiple ×1 partout) rend tout (+5 000 ± 45 000 contre la
+partie sans cycle) ; les taux seuls coûtent 31 000 ± 16 000. Sous l'anticipant, dont les
+trajectoires de cours sont autres, le même magnat ne perd rien (+45 000 ± 27 000) : la
+ruine n'est pas une propriété du cycle, c'est la rencontre d'un calendrier et d'un
+levier.
+
+**Le rythme est exploitable avec la seule information publique** : la règle qui
+n'achète qu'en crise ou en reprise regagne 186 000 ± 25 000 sur le témoin, et les
+appels de marge tombent de 448 à 22. Elle ne fait pas mieux que la partie sans cycle
+en moyenne dans le temps (563 contre 721), parce que la fortune se mesure au cours du
+jour et qu'un tiers du temps est de la crise ; à la fin, elle s'en approche (961 contre
+1 097 en médiane).
+
+**Mais cette mesure est faussée par la dette connue n° 1, et le cycle l'aggrave.** Le
+flottant est une contrepartie de profondeur infinie : le magnat y achète et y vend
+n'importe quel volume au cours affiché, et un cours qui oscille est une pompe pour qui
+le suit. Le signe le plus net : **raccourcir les phases de moitié fait passer la
+fortune moyenne du témoin de 377 000 à 1 228 000** (+506 000 ± 88 000 contre la partie
+sans cycle ; +593 000 ± 65 000 sous l'anticipant), alors que les ramener aux trois
+quarts la fait tomber à 278 000. Une grandeur qui répond de façon non monotone et à
+±500 000 près à la durée des phases n'est pas une mesure d'équilibrage : c'est l'effet
+d'un marché qui paie toujours au cours affiché. Tant qu'il n'y a pas de profondeur de
+carnet finie, **aucune conclusion sur la fortune du magnat ne vaut réglage du cycle** ;
+les conclusions qualitatives — le levier aveugle est puni, la lecture du journal paie
+— sont celles qu'on peut garder.
+
+### Troisième résultat : emprunter en expansion et racheter en crise ne vont pas ensemble
+
+La compagnie témoin emprunte ses trois séries et rachète ses deux concurrents dans les
+110 premiers jours. La phase d'ouverture décide donc des deux à la fois :
+
+| ouverture | taux des trois séries | intérêts | 1re fusion (médiane) | fusions | résultat du transport (k) | admin. |
+|---|---|---|---|---|---|---|
+| **crise (livré)** | 9,92 / 11,96 / 15,12 | 93 000 | tick 76 | 2,00 | 1 125 ± 30 | 0/40 |
+| reprise | 7,98 / 10,11 / 13,27 | 91 000 | tick 76 | 2,00 | 1 074 ± 43 | 0/40 |
+| expansion | 6,04 / 9,00 / 12,18 | 65 000 | **tick 1 702** | 1,38 | 987 ± 56 | 0/40 |
+| expansion, anticipant | 5,88 / 8,50 / 11,67 | 59 000 | jamais, pour plus de la moitié | 0,70 | 792 ± 191 | **2/40** |
+
+Ouverte en expansion, la compagnie emprunte 28 000 moins cher — mais le cours de Great
+Plains, porté par le multiple ×1,3, rend l'OPA trop chère pour sa trésorerie : la
+montée au capital se poursuit tranche par tranche, l'OPA attend, et elle n'aboutit
+qu'avec la panique de 1873, quand le cours de la cible s'effondre (tick 1 702 en
+médiane). Entre les deux, la trésorerie immobilisée prive le transporteur de fret :
+−138 000 ± 8 000 de résultat contre l'ouverture en crise sous la référence, et deux
+mises sous administration sur 40 sous l'anticipant. **Le crédit bon marché ne compense
+pas une cible chère** ; racheter en crise rapporte bien davantage qu'emprunter en
+expansion n'économise. Pour la compagnie témoin, dont la politique d'acquisition est
+une règle à seuils, c'est un effet de seuil ; pour un joueur, c'est exactement le
+choix que la vision annonce.
+
+### La demande : ±5 % contre ±10 %
+
+Une variable : l'écart de chaque phase à 1, multiplié par *k* (*k* = 1 : +4 % / −5 %,
+livré ; *k* = 2 : ±10 % ; *k* = 3 : ±15 %). Résultat en différence appariée contre la
+partie sans cycle, en milliers ; écart-type du résultat entre réalisations :
+
+| demande | résultat (réf.) | écart-type | mobilité (réf.) | tête/mois (réf.) | résultat (ant.) | mobilité (ant.) | tête/mois (ant.) |
+|---|---|---|---|---|---|---|---|
+| ×1 partout (*k* = 0) | 0 ± 0 | 34 | 0,424 | 38,0 % | 0 ± 0 | 0,631 | 41,3 % |
+| **±5 % (livré)** | +51 ± 5 | 30 | 0,454 | 38,6 % | +43 ± 11 | 0,625 | 41,1 % |
+| ±10 % | +42 ± 10 | 67 | 0,463 | 36,5 % | +31 ± 13 | 0,623 | 40,3 % |
+| ±15 % | −37 ± 20 | 127 | 0,493 | 35,9 % | −74 ± 20 | 0,630 | 38,6 % |
+
+**±5 % : un effet de niveau, pas de géographie.** Sous la référence, la mobilité de
+l'amplitude monte un peu (+0,03), la tête du mois ne bouge pas (38,0 → 38,6 %) ; sous
+l'anticipant, rien ne bouge. **±10 % n'apporte rien de plus au jeu et double le
+risque** : la mobilité gagne encore un centième, mais la ville la plus chère change
+*moins* souvent (36,5 %), l'écart-type du résultat double, et le magnat témoin finit
+ruiné dans 36 réalisations sur 40. C'est la conclusion de la section « Événements »
+sur la portée « all », retrouvée par un autre chemin : un choc qui frappe toutes les
+villes à la fois fait respirer l'amplitude, il ne déplace pas le meilleur débouché —
+et plus il est fort, moins la tête bouge. À ±15 %, le résultat baisse franchement.
+L'effet modeste que la vision demande est confirmé, et ±5 % en est la bonne dose.
+
+### Le couplage avec les événements
+
+Une variable à la fois, contre le livré ; les événements jouent dans toutes les
+lignes, seuls leurs attributs `cycle` changent (référence ; le calendrier de la
+conjoncture ne dépend pas de l'économie, il est le même sous l'anticipant) :
+
+| couplage | en crise au tick 1 337 | 2e crise (tick, médiane) | 1re reprise | Δ résultat (k) | Δ fortune moy. (k) |
+|---|---|---|---|---|---|
+| **livré** (panique + poussées) | 40/40 | 1 299 ± 69 (1 337) | 427 ± 104 | — | — |
+| sans couplage (cycle seul) | 14/40 | 1 441 ± 181 (1 473) | 430 ± 90 | +1 ± 3 | −1 ± 22 |
+| panique seule, sans poussées | 40/40 | 1 299 ± 70 (1 337) | 430 ± 90 | +3 ± 3 | −43 ± 24 |
+| poussées seules, sans panique | 14/40 | 1 424 ± 180 (1 444) | 427 ± 104 | −0 ± 2 | +20 ± 7 |
+| poussées ×2 | 40/40 | 1 280 ± 91 (1 337) | 427 ± 129 | −3 ± 3 | −21 ± 22 |
+| poussées ×4 | 40/40 | 1 237 ± 142 (1 337) | 445 ± 222 | +6 ± 4 | +64 ± 47 |
+
+**La panique fait un rendez-vous ; les poussées font un peu de brouillard.** Sans
+couplage, le tirage seul met la conjoncture en crise au 18 septembre 1873 dans 14
+réalisations sur 40, et la deuxième crise arrive à ±181 jours près autour du tick
+1 441 ; avec la panique, l'Histoire a lieu à sa date dans toutes, et la deuxième crise
+se resserre autour d'elle (écart-type de 181 à 69 jours). Les poussées livrées
+dispersent la première reprise de ±104 jours au lieu de ±90 : deux semaines de
+dispersion en plus sur une phase de six mois, de quoi montrer au journal que les
+récoltes et le bâtiment comptent, pas assez pour rendre la conjoncture illisible. À
+×4, la reprise se disperse de ±222 jours : les événements deviennent le cycle.
+
+**Sur les agrégats, le couplage ne se voit pas** : résultat, cours moyen, mobilité
+restent dans l'erreur type (Δ résultat +1 ± 3). Sur la fortune du magnat, les écarts
+(−43 à +64) ne dépassent pas deux erreurs types, et la section précédente dit ce que
+vaut cette grandeur. Le couplage est un **choix de récit** — l'Histoire à sa date, des
+aléas qui ont des conséquences —, pas un réglage d'équilibre, et c'est pour cela qu'il
+est livré équilibré : un couplage à sens unique déplacerait la part du temps passée en
+crise, donc la demande moyenne, donc le résultat (un test l'interdit, et `--balance`
+l'affiche).
+
+Et **le cycle seul, sans aucun événement**, fait monter la mobilité de 0,366 à 0,425
+sous la référence (+0,059 ± 0,004, autant que le catalogue d'événements seul), mais
+n'ajoute que +0,029 une fois les événements présents : les deux sources de variation
+ne s'additionnent pas.
+
+### Conclusions
+
+1. **Oui, le cycle crée un rythme financier, lisible et sans faillite.** Cours divisé
+   par 2,2 en crise, crédit deux fois plus cher, cours moyen inchangé, aucune compagnie
+   sous administration dans la configuration livrée, sous les deux solveurs.
+2. **Il est exploitable avec l'information publique** — une règle qui n'achète qu'en
+   crise ou en reprise regagne 186 000 sur la règle aveugle —, **mais la mesure de
+   l'exploitation passe par la fortune du magnat, que la dette connue n° 1 fausse**, et
+   le cycle l'aggrave : un cours qui oscille est une pompe sur un flottant infini. La
+   profondeur de carnet finie devient un prérequis de tout réglage fin de la bourse.
+3. **Le levier aveugle est puni** : le magnat témoin, à 65 % sur marge, finit ruiné une
+   fois sur deux sous la référence. C'est dans l'esprit de la vision (l'achat à crédit
+   doit être dangereux), et c'est un avertissement pour le futur concurrent IA : une IA
+   qui ne lit pas le journal de la conjoncture perdra contre un joueur qui le lit.
+4. **Racheter en crise l'emporte sur emprunter en expansion** pour la compagnie témoin :
+   l'ouverture en expansion économise 28 000 d'intérêts et coûte 138 000 de résultat,
+   parce que la cible devient trop chère.
+5. **±5 % de demande est la bonne dose** ; ±10 % double le risque sans rien déplacer.
+6. **Le couplage avec les événements est un récit, pas un réglage** : la panique ancre
+   la crise en 1873, les poussées ajoutent deux semaines de dispersion, aucun agrégat
+   ne bouge.
+
+### Décisions laissées à l'équipe
+
+Aucune n'est tranchée ici ; les chiffres sont des différences appariées contre la
+partie sans cycle, sous la référence, sauf mention.
+
+1. **Durée des phases.**
+   - *a. NBER (livré)* : cycle moyen de 47 mois, 5,6 changements de phase en six ans.
+     Historiquement défendable ; deux crises en six ans, celle de l'ouverture et 1873.
+   - *b. ×0,75* (35 mois) : 7,1 changements ; rien d'autre ne bouge que la fortune du
+     magnat (−443 000).
+   - *c. ×0,5* (24 mois) : 11,7 changements, mobilité +0,015 seulement, et la fortune du
+     magnat qui explose (+506 000) — la pompe du flottant. Un rythme plus rapide rend le
+     jeu de bourse plus riche, et la dette n° 1 plus grave.
+2. **Taux par phase** (ajustement en expansion / en crise, en points).
+   - *−1 / +3 (livré)* : obligation type à 5,5 % contre 11,0 % ; intérêts +27 000.
+   - *0 / 0* : les obligations à leur taux facial, intérêts −7 000 ; plus aucune raison
+     d'emprunter à un moment plutôt qu'à un autre.
+   - *−2 / +6* : 4,6 % contre 14,0 % ; intérêts +48 000 ; toujours 0/40 sous
+     administration.
+   - Et la **prime de risque** (2 points par unité de levier au-delà de 0,5, 10 par unité
+     de perte, plafond 5) : sans elle, intérêts +12 000 au lieu de +27 000. Le taux du
+     découvert suit la conjoncture au jour le jour ; celui de la **marge du magnat** ne la
+     suit pas — les taux de l'argent au jour le jour ont flambé en 1873 : à décider.
+3. **Force de la bourse** (multiple en expansion / en crise).
+   - *×1,3 / ×0,6 (livré)* : cours ÷2,2 ; magnat témoin −344 000, ruiné 23 fois sur 40.
+   - *×1,15 / ×0,8* : cours ÷1,6 ; −209 000, ruiné 23 fois sur 40 ; +95 000 sous
+     l'anticipant.
+   - *×1,45 / ×0,4* : cours ÷2,9 ; −393 000, ruiné 8 fois — la cible absorbée à
+     l'ouverture coûte moins, la dette moyenne baisse de 11 000.
+   - *×1 partout* : pas de rythme boursier ; +5 000.
+   Tant que le flottant est infini, ces chiffres disent surtout ce que le levier du
+   magnat témoin supporte ; la décision se prend avec la profondeur de carnet finie.
+4. **Force de l'effet sur la demande.** *±5 % (livré)* : +51 000, écart-type inchangé ;
+   *±10 %* : +42 000, écart-type doublé, tête du mois −2 points ; *0* : la conjoncture
+   ne touche plus que la finance, ce qui se défend — la demande n'apporte ni géographie
+   ni mobilité sous l'anticipant.
+5. **Couplage avec les événements.** *Panique + poussées équilibrées (livré)* ; *panique
+   seule* (les aléas ne touchent plus la conjoncture, aucun agrégat ne bouge) ;
+   *poussées ×2* (deuxième crise à ±91 jours) ; *aucun couplage* (la crise de 1873 n'a
+   lieu à sa date qu'une fois sur trois). Et : quels types doivent pousser ? Les
+   récoltes et le bâtiment sont livrés ; une faillite bancaire ou une ruée vers l'or
+   seraient de nouveaux types, donc un nouveau calendrier d'aléas pour heartland-events,
+   dont l'empreinte bougerait.
+6. **Phase d'ouverture.** *Crise (livré, le creux NBER de décembre 1870)* : crédit cher,
+   cibles bon marché. *Expansion* : crédit bon marché, OPA bloquée jusqu'à la panique,
+   −138 000. Pour une campagne, c'est un levier de difficulté.
+7. **Annoncer la fin d'une phase ?** Livré : non, à l'inverse du choix fait pour les
+   événements. L'annoncer rendrait la stratégie contracyclique triviale.
+8. **Les points d'accroche** — apport et patience des investisseurs, bonus du score de
+   dirigeant — attendent leurs modules ; leurs valeurs par phase (×1,2 / ×1 / ×0,5 /
+   ×0,8 pour l'apport) ne sont pas mesurées, puisque personne ne les lit.
+
 ## Questions ouvertes pour l'équipe
 
 **Le rayon économique.** À 0,8 par kilomètre, une marchandise à bas prix ne peut

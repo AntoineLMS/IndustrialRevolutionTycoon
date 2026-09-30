@@ -116,7 +116,11 @@ choses** :
 - **le score du dirigeant.**
 
 *Déjà en place* : le module finance émet des obligations et tient un découvert
-bancaire explicite, mais à des taux fixés par le scénario.
+bancaire explicite. Avec une conjoncture (module `cycle`), le taux d'une obligation
+est fixé à son émission : taux facial, plus l'ajustement de la phase, plus une prime
+de risque selon le levier et la rentabilité ; le bonus du dirigeant a sa place dans
+la formule et vaut 0 tant que le score n'existe pas. Sans conjoncture, les taux du
+scénario.
 
 ### Le cycle économique
 
@@ -145,6 +149,12 @@ s'est effondré, garder de la trésorerie avant la crise.
 confiance, qui nourrit la demande). Plus réaliste, mais une telle boucle diverge
 ou oscille facilement, et elle est très difficile à équilibrer.
 
+*Déjà en place* : le module `cycle` et son scénario `heartland-cycle` (taux, bourse et
+demande ; les investisseurs attendent le module de fondation, leur appétit est déjà
+publié). Les événements le font bouger par un attribut de données : la panique de
+1873 force la crise, les récoltes et le bâtiment poussent la conjoncture. Le journal
+public dit la phase, jamais la date où elle finira. Mesures dans FINDINGS.md.
+
 **À décider** :
 
 - **La courbe entre score et apport** : à quel score les investisseurs apportent-ils
@@ -156,9 +166,11 @@ ou oscille facilement, et elle est très difficile à équilibrer.
   compagnie devient-elle une lourde sanction ?
 - **Après l'éviction** : le joueur garde ses actions, donc sa fortune, mais perd la
   direction. Peut-il fonder une autre compagnie ? Est-ce la fin de la partie ?
-- **La formule du taux d'intérêt**, et ce que veut dire « la situation économique
-  de la partie » : un cycle économique à part entière, ou les événements du module
-  `events` ?
+- **La formule du taux d'intérêt** : *la situation économique de la partie est un
+  cycle à part entière, que les événements font bouger* (décidé plus haut) ; la
+  formule livrée — facial + phase + prime de risque − bonus du dirigeant — et ses
+  options sont chiffrées dans FINDINGS.md. Reste à fixer le barème du bonus, avec le
+  score.
 
 ## Une seule compagnie, qui transporte et produit
 
@@ -451,8 +463,11 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
    transporteur automatique décide seul, sur des lignes fixes, en regardant tous les
    arrêts à venir, avec une information parfaite.
 6. **Une bourse solide** : une profondeur de carnet finie, et des grandeurs
-   financières moyennées. Puis le vote d'éviction, le rachat par offre sur les
-   actions, et des taux d'emprunt qui dépendent de la situation.
+   financières moyennées. Puis le vote d'éviction et le rachat par offre sur les
+   actions. (Des taux d'emprunt qui dépendent de la conjoncture et de la compagnie
+   existent désormais ; il leur manque le score du dirigeant. La conjoncture rend la
+   profondeur de carnet plus urgente : un cours qui oscille est une pompe sur un
+   flottant infini.)
 7. **Des objectifs de scénario.**
 8. **Un relief qui pèse.** Le coût marginal réel existe, en option
    (`haulage.costModel = "mass"`) : il crée deux bassins de part et d'autre du col
@@ -466,6 +481,11 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
    investisseurs, et le barème des points.
 2. Ce qui suit une éviction : fonder une autre compagnie, ou fin de partie ?
 3. Les formules du cycle économique : durées des phases, taux par phase, force de
-   l'effet des événements (en cours de mesure).
+   la bourse et de la demande, force de l'effet des événements. *Mesuré, options
+   chiffrées* dans FINDINGS.md, « Le cycle économique » : le livré (phases calées sur
+   le NBER, −1 / +3 points de taux, multiple ×1,3 / ×0,6, demande ±5 %, panique et
+   poussées équilibrées) donne un rythme lisible sans aucune faillite de compagnie ;
+   ce qui reste à trancher dépend de la profondeur de carnet finie, sans laquelle la
+   fortune du magnat n'est pas une mesure fiable.
 4. Le prix d'une industrie sans propriétaire.
 5. Les tailles de gare, leur rayon d'action et leur prix.

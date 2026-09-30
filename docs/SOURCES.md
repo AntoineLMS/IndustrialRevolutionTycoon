@@ -1,13 +1,14 @@
-# Sources — modules `content` et `events`
+# Sources — modules `content`, `events` et `cycle`
 
 Ce document couvre les deux livrables du module `content` :
 [`data/locomotives.json`](../data/locomotives.json) (catalogue historique) et
 [`data/ironpeak.json`](../data/ironpeak.json) (second scénario, chaîne acier) ;
 et les événements historiques du module `events`, déclarés dans
 [`data/heartland-events.json`](../data/heartland-events.json) — voir la
-[dernière section](#evenements) ; et les masses du train du modèle de coût `mass`
+[section dédiée](#evenements) ; et les masses du train du modèle de coût `mass`
 ([`data/sierra-marginal.json`](../data/sierra-marginal.json)) — voir
-[« Masses du train »](#masses-du-train).
+[« Masses du train »](#masses-du-train) ; et les dates et durées qui calent la
+conjoncture du module `cycle` — voir [« Cycle économique »](#cycle-economique).
 
 Principe suivi partout : une caractéristique **physique** (année, effort de
 traction, vitesse, masse) est documentée quand une source le permet, et
@@ -422,3 +423,35 @@ récolte, récolte abondante, afflux d'ouvriers, épidémie, fièvre de construc
 marasme du bâtiment, éboulement, nouveau filon) ne prétendent à aucune source :
 ce sont des types génériques, dont les fréquences et les intensités sont justifiées
 par la mesure — voir [FINDINGS.md](FINDINGS.md) et les clés `"//…"` du scénario.
+
+<a id="cycle-economique"></a>
+## Cycle économique — `data/heartland-cycle.json`
+
+Le module `cycle` ne déclare aucun événement : il tire ses phases au sort. Deux
+choses seulement y prétendent à une source — les **dates** qui calent la partie de
+1870, et l'**ordre de grandeur** des durées de phase.
+
+- **Documenté** : le National Bureau of Economic Research date les cycles
+  américains depuis 1854. Il place un pic en juin 1869, un creux en décembre 1870,
+  un pic en octobre 1873 et un creux en mars 1879 — la contraction de 1873-1879,
+  65 mois, est la plus longue de sa chronologie. Sur 1854-1919, ses moyennes sont
+  d'environ 22 mois de contraction et 27 mois d'expansion, soit un cycle d'environ
+  quatre ans.
+- **Estimé / choisi** : l'ouverture en **crise** (lecture : la fin de la contraction
+  de 1869-1870, dont le creux tombe au tick 330, dans les bornes de la crise) ; le
+  découpage en quatre phases, où reprise + expansion valent l'expansion du NBER
+  (810 jours en moyenne) et ralentissement + crise sa contraction (600 jours) ; les
+  bornes de chaque phase ; tous les effets — taux, multiple, demande,
+  investisseurs. Ce sont des paramètres de jeu, jamais des mesures, comme les
+  multiplicateurs des événements. La contraction de 1873-1879 n'est pas reproduite :
+  la crise que force la panique dure 270 à 630 jours, pas 65 mois.
+- **Couplage** : la panique de 1873 est la seule bascule historique ; elle est
+  sourcée plus haut ([Panique de 1873](#panique-1873)). Les poussées des récoltes et
+  du bâtiment sont un choix : l'idée que les récoltes menaient le cycle américain du
+  XIXe siècle est une lecture courante de l'histoire économique, pas une mesure
+  chiffrée ici.
+- Source : [NBER — US Business Cycle Expansions and Contractions](https://www.nber.org/research/data/us-business-cycle-expansions-and-contractions).
+- **Limite** : les dates et les moyennes ci-dessus viennent de la connaissance de la
+  chronologie du NBER ; la page n'a pas pu être relue pendant ce chantier (accès
+  réseau bloqué). Les moyennes sont données à un mois près, et doivent être
+  revérifiées avant d'être citées comme exactes.

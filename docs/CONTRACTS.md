@@ -26,7 +26,7 @@ produisent du code qui ne s'assemble pas.
    bougé. Une empreinte recopiée sans explication rend le test aussi creux que
    celui qu'il remplace.
 8. Chaque scénario de `data/` déclare les blocs de tous les modules
-   (`anticipating`, `network`, `finance`, `events`), ou écarte explicitement ceux dont il
+   (`anticipating`, `network`, `finance`, `events`, `cycle`), ou écarte explicitement ceux dont il
    se passe avec une clé `"//<bloc>"` qui dit pourquoi. Un module qui ajoute un
    bloc l'inscrit dans `ScenarioLoader.ModuleBlocks`.
 
@@ -139,6 +139,15 @@ n'active pas la finance. Cette séparation est une décision, protégée par un 
 tous les chiffres de [FINDINGS.md](FINDINGS.md) supposent `heartland` exempte
 d'effets financiers, et un scénario doit éprouver une chose à la fois.
 
+**Avec une conjoncture** (module `cycle`, voir plus bas), trois lectures, et trois
+seulement : le taux d'une obligation est fixé **à l'émission** — taux facial, plus
+l'ajustement de la phase, plus une prime de risque selon le levier et la rentabilité,
+moins un bonus du dirigeant qui vaut 0 — et conservé avec elle (`Bond.Quote`) ; le taux
+du découvert suit la phase au jour le jour ; le multiple de valorisation est multiplié
+par le facteur de la phase pour un résultat positif, divisé pour une perte. Sans
+conjoncture active, `FinanceState.Cycle` est nul et chaque calcul suit son chemin
+d'avant le module, au centime — les empreintes de heartland-finance le prouvent.
+
 **Ce qui manque** : un vrai concurrent (le module `ai` — les concurrents actuels
 sont des bilans animés par des données, pas des réseaux), les dividendes des
 concurrents, la prime de contrôle négociée plutôt que fixée, la faillite
@@ -162,6 +171,12 @@ volontairement laissés en l'état :
    [FINDINGS.md](FINDINGS.md) documente pour les marchés. Il faut l'équivalent de
    `RunStatistics` pour les grandeurs financières avant de tirer une conclusion
    d'équilibrage de ces chiffres.
+
+   *Aggravées par la conjoncture* (FINDINGS.md, « Le cycle économique ») : un cours qui
+   oscille entre expansion et crise est une pompe pour qui trade contre un flottant
+   infini. Raccourcir les phases de moitié fait passer la fortune moyenne du magnat
+   témoin de 377 000 à 1 228 000. La profondeur de carnet finie est un prérequis de
+   tout réglage fin de la bourse sous conjoncture.
 
 **Critère de réussite** : tout bilan s'équilibre au centime à chaque tick, et
 l'invariant `bilan-tresorerie` reste vérifié. En finance, une fuite d'un
@@ -214,6 +229,14 @@ la gazette, un concurrent IA a le droit d'en lire autant et pas davantage.
    annoncée, puis s'éteint ; intensités et durées aléatoires restent dans leurs
    bornes ; une même définition ne s'empile pas sur une même ville.
 
+**Ce qu'il porte pour la conjoncture** : un attribut de données `cycle` sur un
+historique ou un type aléatoire (`forcePhase` ou `pushTicks`, l'un ou l'autre), que
+le module vérifie dans sa forme et reporte au journal (`EventRecord.Cycle`) sans le
+lire. C'est le module `cycle` qui le lit, le jour où l'événement s'ouvre ; sans lui,
+l'attribut est inerte, et l'empreinte de heartland-events n'a pas bougé en le
+recevant. Le couplage reste donc une donnée : aucun identifiant d'événement n'est
+écrit dans le code d'aucun des deux modules.
+
 **Ce qu'il exige des solveurs économiques** : composer ces multiplicateurs dans
 leurs taux du jour, et dimensionner l'entrepôt d'un site sur son débit nominal.
 C'est une ligne par levier dans chacun des deux solveurs livrés.
@@ -244,6 +267,82 @@ référence et +1,9 sous l'anticipant pour les aléatoires seuls, médiane neutr
 mobilité de l'amplitude, elle, ne bouge pas. Le critère du contrat `economy` n'est
 donc atteint qu'en partie, et la mesure dit pourquoi : le transporteur de mesure,
 une navette sans changement de parcours, ne peut pas exploiter un choc local.
+
+### `cycle` — conjoncture
+
+**Interface** : `ICycleSolver` (`src/RailTycoon.Sim/Cycle/CycleSolver.cs`), phase 0c
+du tick — voir le tableau des phases de [ARCHITECTURE.md](ARCHITECTURE.md) et la
+décision qui l'y a insérée, et pourquoi ce n'est pas un sous-bloc de `events`.
+**État actuel** : `ReferenceCycleSolver`, piloté par le bloc `cycle` du scénario.
+Inactif par défaut, et neutre au bit près tant qu'il l'est.
+
+**Périmètre** : une suite de phases en boucle (dans l'ordre des données : expansion,
+ralentissement, crise, reprise), chacune avec ses bornes de durée ; une durée tirée à
+l'ouverture de chaque phase, un nombre par phase, sur la séquence propre du module.
+Les phases sont désignées par leur identifiant ; seul `favorable` a un sens pour le
+code. Le calendrier est **exogène** : aucune règle ne lit l'activité (le cycle mû par
+l'économie est écarté par la vision).
+
+**Ce que les événements y font** : par leur attribut `cycle` (contrat `events`),
+`forcePhase` bascule la conjoncture le jour où l'événement s'ouvre, en tirant la durée
+de la phase forcée (déjà dans cette phase : elle est prolongée si le tirage finit plus
+tard) ; `pushTicks` allonge une phase favorable et abrège une défavorable (positif), ou
+l'inverse (négatif). Le module lit le journal public des événements, et rien d'autre.
+
+**Ce que le module publie** — les *conditions du jour*, en ligne droite sur
+`transitionTicks` d'une phase à la suivante (`CycleState`) :
+
+| condition | lue par | comment |
+|---|---|---|
+| `RateAdjustmentPercent` | finance | ajouté au taux facial d'une obligation **à son émission** (taux fixe ensuite), et au taux du découvert chaque jour |
+| prime de risque (`CycleState.QuoteBond`) | finance | levier (dette + découvert + principal, sur capitaux propres) et rentabilité lissée ; plafond et plancher du taux dans `cycle.credit` |
+| bonus du dirigeant | — | **point d'accroche** : terme de la formule du taux, vaut 0 tant que le score n'existe pas |
+| `EarningsMultipleFactor` | finance | multiplie le multiple de valorisation d'un résultat positif, le divise pour une perte ; toute la cote |
+| `DemandFactor` | économie | publié sur chaque marché, `Market.CycleDemandFactor`, composé par un produit avec `EventDemandFactor` dans les deux solveurs |
+| `InvestorContributionFactor`, `InvestorPatienceFactor` | — | **points d'accroche** du futur module de fondation et du score de dirigeant ; lus par personne aujourd'hui |
+
+Et un **journal public**, `CycleState.Journal` : changements de phase avec leur cause
+(ouverture, échéance, bascule forcée par un événement, poussée qui fait échoir) et
+chaque poussée avec son ampleur. Il ne publie **jamais** la date prévue de la fin d'une
+phase : c'est un pari, pas une lecture. Le harnais l'affiche et l'écrit dans
+`cycle.csv` ; un concurrent IA a le droit d'en lire autant, et pas davantage.
+
+**Ce que le module garantit** — et que les tests vérifient (`CycleTests.cs`) :
+
+1. Il ne touche ni stock, ni prix, ni argent : il publie des conditions, la matière
+   passe par `Produce`/`Consume`, l'argent par le grand livre de la finance.
+2. Inactif, il n'écrit rien : bloc absent ou `enabled = false`, les traces sont celles
+   d'avant le module au bit près, sous les deux solveurs — y compris heartland-cycle
+   désactivé contre la réunion de heartland-finance et heartland-events.
+3. Activé, il ne décale le flux aléatoire d'aucun autre module : conjoncture neutre et
+   conjoncture désactivée donnent la même partie au centime.
+4. Chaque phase achevée a duré son tirage plus les poussées publiées, au jour près ; le
+   tirage est dans ses bornes ; les phases se suivent dans l'ordre des données.
+5. Un événement marqué déplace la conjoncture, un événement non marqué ne la touche
+   pas ; la panique de 1873 met la conjoncture en crise à sa date, quel que soit le
+   calendrier tiré.
+6. Une obligation émise en crise coûte plus cher qu'en expansion, et son taux ne bouge
+   plus après l'émission ; la bourse cote plus bas en crise, pertes comprises.
+7. Sur heartland-cycle, demande moyenne et poussées sont équilibrées sur un cycle
+   (`CycleBalance`, affiché par `--balance`).
+
+**Scénario** : `data/heartland-cycle.json` : l'économie et la finance de
+heartland-finance et les événements de heartland-events au caractère près, et le seul
+bloc `cycle` en plus ; mesuré sur 2 160 ticks (la panique de 1873 et au moins un cycle
+complet). Les autres scénarios écartent le bloc par une clé `"//cycle"`.
+
+**Ce qui manque** : les lecteurs des points d'accroche (fondation, score de
+dirigeant) ; un taux de marge du magnat qui suive la conjoncture ; des types
+d'événements propres à la conjoncture (faillite bancaire, ruée vers l'or) ; la
+profondeur de carnet finie, sans laquelle la fortune du magnat n'est pas une mesure
+d'équilibrage sous conjoncture ; une IA qui lise le journal.
+
+**Critère de réussite** : sur son scénario d'épreuve, contre la même partie sans
+conjoncture, un rythme lisible — cours et coût du crédit qui varient nettement d'une
+phase à l'autre, cours moyen inchangé — **sans aucune mise sous administration** de la
+configuration livrée, sous les deux solveurs, et sans violer aucun invariant.
+Aujourd'hui : cours ÷2,2 en crise, obligation type à 5,5 % contre 11,0 %, 0/40 sous
+administration.
 
 ### `content` — données historiques
 

@@ -44,10 +44,25 @@ harnais affiche le journal public des événements déclenchés, avec leurs date
 jeu. Les dates, les sources et ce qui n'est qu'« inspiré de » sont dans
 [docs/SOURCES.md](docs/SOURCES.md).
 
-Le harnais écrit quatre CSV dans `out/` (`markets.csv`, `company.csv`,
-`industries.csv`, `events.csv`), affiche la matrice des prix finaux, la dispersion
-des prix par marchandise, l'utilisation des usines, le compte d'exploitation et,
-si le scénario en déclare, le journal des événements.
+Pour la conjoncture — expansion, ralentissement, crise, reprise, qui déplacent les
+taux d'emprunt, les cours et, un peu, la demande ; la panique de 1873 y force la
+crise :
+
+```bash
+dotnet run --project src/RailTycoon.Harness -- --scenario data/heartland-cycle.json --ticks 2160
+```
+
+L'économie et la finance de `heartland-finance`, les événements de
+`heartland-events`, au caractère près ; seul le bloc `cycle` s'ajoute. Six ans de jeu
+plutôt que deux, pour contenir la panique et au moins un cycle complet. Le harnais
+affiche le journal de la conjoncture — la phase, sa date, sa cause, jamais la date où
+elle finira — et, dans le volet financier, le taux de chaque obligation décomposé.
+
+Le harnais écrit cinq CSV dans `out/` (`markets.csv`, `company.csv`,
+`industries.csv`, `events.csv`, `cycle.csv`), affiche la matrice des prix finaux, la
+dispersion des prix par marchandise, l'utilisation des usines, le compte
+d'exploitation et, si le scénario en déclare, les journaux des événements et de la
+conjoncture.
 
 ## Tester
 
@@ -72,7 +87,8 @@ Ce bilan statique ne simule rien et détecte les pénuries structurelles — le 
 où tout tourne correctement et où les marchés concernés restent pourtant collés au
 plafond de prix à jamais. Sur un scénario à événements, il affiche aussi le biais
 attendu du catalogue aléatoire : un catalogue qui ne frappe que dans un sens est
-un déséquilibre structurel du même genre.
+un déséquilibre structurel du même genre. Sur un scénario à conjoncture, la demande
+et le multiple moyens sur un cycle, et la poussée nette des événements.
 
 Pour la sierra — l'économie de heartland posée sur un relief, `data/sierra.json` —
 sous le modèle de coût « mass », où le coût kilométrique suit la masse remorquée et
@@ -112,6 +128,7 @@ franchissant au col, et 2 690 000 en l'attaquant de front.
 | Trésorerie en croissance monotone et lisse | L'arbitrage ne se referme pas : trop facile |
 | Un écart de bilan non nul, même d'un centime | **Fuite comptable**, jamais un résidu de calcul : la finance est tenue en `decimal` |
 | Une compagnie sous administration | Le découvert a dépassé ce que ses capitaux propres gagent ; les trains sont à l'arrêt |
+| Une fortune de magnat qui bondit quand on raccourcit les phases | La pompe du flottant infini sur un cours qui oscille, pas un gain de jeu (voir FINDINGS, « Le cycle économique ») |
 | Un écart de quelques pourcents entre deux parties | **Rien**, tant qu'il n'est pas mesuré sur un ensemble : un choc de 0,1 % déplace le résultat de heartland de ±4 % (voir FINDINGS) |
 
 Les statistiques ignorent une période de chauffe (`--warmup`, 90 ticks par défaut)
@@ -129,6 +146,7 @@ src/RailTycoon.Sim/        bibliothèque de simulation, sans dépendance moteur
   Transport/               lignes, trains, échanges
   Finance/                 société, emprunts, bourse, OPA (comptabilité en decimal)
   Events/                  événements historiques et aléatoires, journal public
+  Cycle/                   conjoncture : phases, taux, bourse, demande, journal public
   Telemetry/               traces CSV et invariants
 src/RailTycoon.Harness/    exécutable en ligne de commande
 tests/RailTycoon.Tests/    invariants, sans dépendance externe
@@ -136,6 +154,7 @@ data/                      scénarios et cartes (données de conception, modifia
   heartland.json           référence de l'économie, sans finance ni relief
   heartland-finance.json   même économie, volet financier activé
   heartland-events.json    même économie, événements historiques (1871-1873) et aléatoires
+  heartland-cycle.json     finance et événements réunis, et la conjoncture (1870-1875)
   ironpeak.json            chaîne minerai → fonte → acier
   terrain-*.json           cartes d'essai du réseau : plaine, vallée, col
   sierra.json              économie de heartland sur une sierra : relief et économie ensemble
