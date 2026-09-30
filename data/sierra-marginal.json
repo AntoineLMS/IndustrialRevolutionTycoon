@@ -23,6 +23,8 @@
 
   "//events": "Pas d'événements, pour la même raison que sierra.json : un scénario éprouve une chose à la fois, et celui-ci éprouve le modèle de coût.",
 
+  "//cycle": "Pas de conjoncture, pour la même raison que sierra.json : un scénario éprouve une chose à la fois, et celui-ci éprouve le coût marginal réel.",
+
   "//finance": "Pas de finance, pour la même raison que sierra.json : le découvert et les intérêts entreraient dans les achats du transporteur et brouilleraient la mesure du coût d'exploitation.",
 
   "priceModel": {

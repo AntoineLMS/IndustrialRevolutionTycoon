@@ -102,9 +102,11 @@ internal static class Program
 
         recorder.WriteTo(opts.OutDir);
         CsvRecorder.WriteEvents(sim.World, opts.OutDir);
+        CsvRecorder.WriteCycle(sim.World, opts.OutDir);
         Report.PrintBalance(scenario);
         Report.PrintRun(sim, opts, recorder, stats, cashHistory, rotation);
         Report.PrintEvents(sim);
+        Report.PrintCycle(sim);
         Report.PrintFinance(sim, worstResidual, worstResidualTick, worstFrontierGap);
 
         if (violations.Count > 0)
@@ -240,9 +242,53 @@ internal static class Report
             }
             Console.WriteLine();
         }
+
+        PrintCycleBalance(scenario);
     }
 
     private static string Pct(double x) => (x * 100).ToString("+0.0;-0.0;0.0", Ci) + " %";
+
+    /// <summary>
+    /// Bilan statique de la conjoncture : part du temps de chaque phase, demande et
+    /// multiple moyens sur un cycle, poussée nette du catalogue. Un cycle oscille
+    /// autour du scénario ; s'il le déplace en moyenne, c'est un déséquilibre
+    /// déguisé. Voir CycleBalance.
+    /// </summary>
+    public static void PrintCycleBalance(RailTycoon.Sim.Economy.ScenarioDef scenario)
+    {
+        var def = scenario.Cycle;
+        if (!def.Enabled || def.Phases.Count == 0) return;
+
+        Console.WriteLine($"Conjoncture — cycle moyen de {RailTycoon.Sim.Cycle.CycleBalance.MeanCycleTicks(def).ToString("0", Ci)} jours" +
+                          $" ({(RailTycoon.Sim.Cycle.CycleBalance.MeanCycleTicks(def) / 30).ToString("0", Ci)} mois)");
+        Console.WriteLine($"  {"Phase",-16}{"durée",12}{"part",8}{"taux",8}{"multiple",10}{"demande",9}{"invest.",9}");
+        var shares = RailTycoon.Sim.Cycle.CycleBalance.PhaseShares(def);
+        for (int i = 0; i < def.Phases.Count; i++)
+        {
+            var p = def.Phases[i];
+            Console.WriteLine($"  {p.Name,-16}{($"{p.MinTicks}–{p.MaxTicks}"),12}" +
+                              $"{(shares[i].Share * 100).ToString("0", Ci),7} %" +
+                              $"{p.RateAdjustmentPercent.ToString("+0.0;-0.0;0.0", Ci),8}" +
+                              $"{("×" + p.EarningsMultipleFactor.ToString("0.00", Ci)),10}" +
+                              $"{("×" + p.DemandFactor.ToString("0.00", Ci)),9}" +
+                              $"{("×" + p.InvestorContributionFactor.ToString("0.00", Ci)),9}");
+        }
+        double bias = RailTycoon.Sim.Cycle.CycleBalance.DemandBias(def);
+        Console.WriteLine($"  Demande moyenne sur un cycle : {Pct(bias)}" +
+                          (Math.Abs(bias) <= 0.002 ? "  (équilibrée)" : "  ← DÉPLACE l'équilibre du scénario"));
+        Console.WriteLine($"  Multiple moyen sur un cycle  : ×{RailTycoon.Sim.Cycle.CycleBalance.MeanEarningsMultipleFactor(def).ToString("0.000", Ci)}");
+        if (scenario.Events.Enabled)
+        {
+            var (good, bad, net) = RailTycoon.Sim.Cycle.CycleBalance.PushBalance(scenario);
+            Console.WriteLine($"  Poussées des aléatoires      : {good.ToString("+0.0", Ci)} / {bad.ToString("0.0", Ci)} jours par an, " +
+                              $"net {net.ToString("+0.0;-0.0;0.0", Ci)}" +
+                              (Math.Abs(net) <= 2 ? "  (équilibrées)" : "  ← À SENS UNIQUE"));
+            var forcing = scenario.Events.Historical.Where(h => h.Cycle is { ForcePhase.Length: > 0 }).ToList();
+            foreach (var h in forcing)
+                Console.WriteLine($"  Bascule historique           : {h.Name} force « {h.Cycle!.ForcePhase} »");
+        }
+        Console.WriteLine();
+    }
 
     /// <summary>
     /// Devis du réseau, tronçon par tronçon, sans rien simuler.
@@ -569,6 +615,52 @@ internal static class Report
         return $"{day:D2}/{month:D2}/{startYear + t.Year}";
     }
 
+    /// <summary>
+    /// Journal de la conjoncture : la phase courante et chaque changement, avec sa
+    /// cause, puis les poussées des événements. Jamais la date prévue de la fin
+    /// d'une phase : personne ne sait quand une expansion s'arrête.
+    /// </summary>
+    public static void PrintCycle(Simulation sim)
+    {
+        var w = sim.World;
+        var cycle = w.Cycle;
+        if (!cycle.Enabled)
+        {
+            Console.WriteLine("Conjoncture module inactif (aucun bloc « cycle » dans le scénario)");
+            return;
+        }
+
+        string Name(string id) => cycle.Def.Phases.FirstOrDefault(p => p.Id == id)?.Name ?? id;
+
+        int changes = cycle.Journal.Count(r => r.Kind == RailTycoon.Sim.Cycle.CycleRecordKind.Phase);
+        int shifts = cycle.Journal.Count - changes;
+        Console.WriteLine($"Conjoncture (journal public, module {sim.Cycle.Name}) : {Name(cycle.Phase!.Id).ToLowerInvariant()}" +
+                          $" depuis le {Date(w, cycle.PhaseStartTick)}, {changes - 1} changement(s) de phase, {shifts} poussée(s)");
+        Console.WriteLine($"  Conditions du jour : taux {cycle.RateAdjustmentPercent.ToString("+0.00;-0.00;0.00", Ci)} pt," +
+                          $" multiple ×{cycle.EarningsMultipleFactor.ToString("0.000", Ci)}," +
+                          $" demande ×{cycle.DemandFactor.ToString("0.000", Ci)}," +
+                          $" investisseurs ×{cycle.InvestorContributionFactor.ToString("0.00", Ci)} (non lu)");
+        Console.WriteLine($"  {"date",-12}{"phase",-18}cause");
+        foreach (var r in cycle.Journal.Where(r => r.Kind == RailTycoon.Sim.Cycle.CycleRecordKind.Phase))
+        {
+            string cause = r.Cause switch
+            {
+                RailTycoon.Sim.Cycle.CycleCause.Opening => "ouverture de la partie",
+                RailTycoon.Sim.Cycle.CycleCause.Elapsed => $"échéance ({Name(r.PreviousPhaseId).ToLowerInvariant()})",
+                RailTycoon.Sim.Cycle.CycleCause.Forced => $"forcée par {r.EventInstanceId}",
+                _ => $"hâtée par {r.EventInstanceId}",
+            };
+            Console.WriteLine($"  {Date(w, r.Tick),-12}{Name(r.PhaseId),-18}{cause}");
+        }
+        if (shifts > 0)
+        {
+            int longer = cycle.Journal.Where(r => r.Kind == RailTycoon.Sim.Cycle.CycleRecordKind.Shift).Sum(r => Math.Max(0, r.ShiftTicks));
+            int shorter = cycle.Journal.Where(r => r.Kind == RailTycoon.Sim.Cycle.CycleRecordKind.Shift).Sum(r => Math.Min(0, r.ShiftTicks));
+            Console.WriteLine($"  Poussées : {longer} jours de phases allongées, {-shorter} de phases abrégées — détail dans cycle.csv");
+        }
+        Console.WriteLine();
+    }
+
     private static string Truncate(string text, int width)
         => text.Length <= width ? text : text[..(width - 1)] + "…";
 
@@ -653,6 +745,26 @@ internal static class Report
                           $"   appels de marge : {tycoon.MarginCalls}");
         Console.WriteLine($"  Part du capital      {(player.Register.HeldBy(Holders.Tycoon) * 100.0
             / Math.Max(1, player.Register.SharesIssued)).ToString("0.0", Ci),13} %");
+
+        // Les emprunts de la société, et ce qui a fait leur taux. Sans conjoncture, le
+        // taux facial de l'offre : la ligne n'apprend rien, on ne l'affiche pas.
+        if (sim.World.Cycle.Enabled && player.Bonds.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Emprunts obligataires (taux fixé à l'émission)");
+            Console.WriteLine($"  {"offre",-22}{"émis le",-12}{"phase",-16}{"facial",8}{"conj.",8}{"risque",8}{"taux",8}{"restant dû",14}");
+            foreach (var bond in player.Bonds)
+            {
+                var q = bond.Quote;
+                string phase = q is null ? "—" : sim.World.Cycle.Def.Phases.FirstOrDefault(p => p.Id == q.PhaseId)?.Name ?? q.PhaseId;
+                Console.WriteLine($"  {bond.OfferId,-22}{Date(sim.World, bond.IssuedTick),-12}{phase,-16}" +
+                                  $"{(q?.FacialPercent ?? bond.AnnualRatePercent).ToString("0.00", Ci),8}" +
+                                  $"{(q?.PhaseAdjustmentPercent ?? 0m).ToString("+0.00;-0.00;0.00", Ci),8}" +
+                                  $"{(q?.RiskPremiumPercent ?? 0m).ToString("+0.00;-0.00;0.00", Ci),8}" +
+                                  $"{bond.AnnualRatePercent.ToString("0.00", Ci),8}" +
+                                  $"{bond.Outstanding.ToString("N2", Ci),14}");
+            }
+        }
 
         Console.WriteLine();
         Console.WriteLine("Concurrents");

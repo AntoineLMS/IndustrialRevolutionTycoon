@@ -1,4 +1,5 @@
 using RailTycoon.Sim.Core;
+using RailTycoon.Sim.Cycle;
 
 namespace RailTycoon.Sim.Finance;
 
@@ -67,6 +68,11 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
 
         state.Enabled = true;
         state.Rng = new DeterministicRandom(world.Def.Seed, def.RandomSequence);
+
+        // La conjoncture, si le scénario en a une : la finance y lira chaque jour
+        // l'ajustement des taux et le facteur du multiple. Sans cycle actif, aucune
+        // de ces lectures n'a lieu, et chaque calcul suit le chemin d'avant le module.
+        state.Cycle = world.Cycle.Enabled ? world.Cycle : null;
 
         // Le transporteur échange déjà pendant son initialisation : la caisse
         // d'exploitation n'est donc plus forcément égale à la mise de départ quand
@@ -210,19 +216,31 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
         // Avant le reste, parce qu'on paie des intérêts sur ce qu'on devait, pas
         // sur ce qu'on devra le soir. Un jour de crédit gratuit, répété 720 fois,
         // est exactement le genre de cadeau qui ne se voit jamais.
-        AccrueOverdraftInterest(def, player);
+        AccrueOverdraftInterest(def, state, player);
 
         // 5 — intérêts et échéances, pour tout le monde.
         foreach (var company in state.Companies)
             if (!company.Merged) ServiceDebt(company, tick);
 
-        // 6 — valorisation. Après les charges, avant les décisions.
+        // 6 — valorisation. Après les charges, avant les décisions. Le multiple est
+        // celui du scénario, modulé par la conjoncture du jour s'il y en a une : la
+        // même pour toute la bourse, la compagnie du joueur comme ses concurrents.
+        // Un marché pessimiste paie un bénéfice moins cher ET compte une perte plus
+        // lourde : le facteur multiplie le multiple d'un résultat positif et divise
+        // celui d'un résultat négatif. Appliqué tel quel à une perte, il l'allégerait
+        // en crise — le cours d'une compagnie déficitaire y monterait.
+        decimal onProfit = def.Valuation.EarningsMultiple, onLoss = def.Valuation.EarningsMultiple;
+        if (state.Cycle is { } cycle)
+        {
+            onProfit = def.Valuation.EarningsMultiple * cycle.EarningsMultipleFactor;
+            onLoss = def.Valuation.EarningsMultiple / cycle.EarningsMultipleFactor;
+        }
         foreach (var company in state.Companies)
-            if (!company.Merged) Revalue(def, company);
+            if (!company.Merged) Revalue(def, company, onProfit, onLoss);
 
         // 7 — financement de la compagnie, puis distribution. Une société sous
         // administration ne distribue rien : le peu qui rentre va aux créanciers.
-        RaiseCashIfNeeded(def, player, tick, def.BorrowWhenCashBelow);
+        RaiseCashIfNeeded(def, state, player, tick, def.BorrowWhenCashBelow);
         if (!player.InReceivership) PayDividend(state, player, tick);
 
         // 8 — le magnat : coût de sa marge, puis ses ordres, puis l'appel de
@@ -253,10 +271,18 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
 
     // ------------------------------------------------------------ insolvabilité
 
-    private static void AccrueOverdraftInterest(FinanceDef def, FinanceCompany player)
+    /// <summary>
+    /// Intérêts du découvert. Son taux suit la conjoncture <em>au jour le jour</em>,
+    /// contrairement à celui d'une obligation, fixé à l'émission : un découvert est
+    /// une facilité que la banque renégocie en continu. Sans cycle, le taux du
+    /// scénario, tel quel.
+    /// </summary>
+    private static void AccrueOverdraftInterest(FinanceDef def, FinanceState state, FinanceCompany player)
     {
-        decimal interest = Money.InterestForTick(
-            player.OverdraftBalance, def.Overdraft.AnnualRatePercent);
+        decimal rate = state.Cycle is { } cycle
+            ? cycle.OverdraftRate(def.Overdraft.AnnualRatePercent)
+            : def.Overdraft.AnnualRatePercent;
+        decimal interest = Money.InterestForTick(player.OverdraftBalance, rate);
         if (interest <= 0m) return;
 
         AccrueExpense(player.Book, Accounts.RetainedEarnings, Accounts.InterestPayable,
@@ -560,11 +586,11 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
     /// partie — c'est le pire des deux mondes, on a payé la montée au capital sans
     /// jamais toucher le bénéfice du contrôle.
     /// </summary>
-    private static bool RaiseCashIfNeeded(FinanceDef def, FinanceCompany company, SimTick tick, decimal cashFloor)
+    private static bool RaiseCashIfNeeded(FinanceDef def, FinanceState state, FinanceCompany company, SimTick tick, decimal cashFloor)
     {
         if (company.Cash >= cashFloor) return false;
         var offer = NextOffer(def, company, tick, "", def.Acquisition.FundingBondId);
-        return offer is not null && IssueBond(company, offer, tick);
+        return offer is not null && IssueBond(state, company, offer, tick);
     }
 
     private static BondOfferDef? NextOffer(FinanceDef def, FinanceCompany company, SimTick tick,
@@ -589,10 +615,36 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
         return false;
     }
 
-    private static bool IssueBond(FinanceCompany company, BondOfferDef offer, SimTick tick)
+    /// <summary>
+    /// Émet une obligation. <b>Son taux est fixé à l'émission</b>, et c'est ainsi
+    /// qu'un emprunt se lit : un emprunt souscrit en expansion garde son taux bas
+    /// pendant la crise qui suit, un emprunt souscrit en crise garde son taux haut
+    /// pendant la reprise. C'est ce qui donne un sens à « emprunter pas cher en
+    /// expansion » (docs/VISION.md, « Le cycle économique ») : un taux variable
+    /// ferait payer la crise à toute la dette, et le moment de l'emprunt ne
+    /// compterait plus.
+    /// <para>
+    /// Sans conjoncture, le taux facial de l'offre, tel quel. Avec, le taux facial
+    /// plus l'ajustement de la phase, plus la prime de risque de la compagnie au jour
+    /// de l'émission (<see cref="CycleState.QuoteBond"/>), le tout conservé avec
+    /// l'obligation pour qu'on puisse le relire.
+    /// </para>
+    /// </summary>
+    private static bool IssueBond(FinanceState state, FinanceCompany company, BondOfferDef offer, SimTick tick)
     {
         decimal principal = Money.Round(offer.Principal);
         if (principal <= 0m) return false;
+
+        decimal rate = offer.AnnualRatePercent;
+        CreditQuote? quote = null;
+        if (state.Cycle is { } cycle)
+        {
+            quote = cycle.QuoteBond(offer.AnnualRatePercent,
+                company.Debt + company.OverdraftBalance + principal,
+                company.BookEquity,
+                company.EarningsEma * SimTick.TicksPerYear);
+            rate = quote.RatePercent;
+        }
 
         company.Bonds.Add(new Bond
         {
@@ -600,7 +652,8 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
             Name = offer.Name,
             Principal = principal,
             Outstanding = principal,
-            AnnualRatePercent = offer.AnnualRatePercent,
+            AnnualRatePercent = rate,
+            Quote = quote,
             IssuedTick = tick.Index,
             MaturityTick = tick.Index + Math.Max(1, offer.TermTicks),
         });
@@ -645,15 +698,22 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
     /// lentement. Le lissage compte : un cours qui suivrait le résultat du jour
     /// sauterait de dix pour cent chaque fois qu'un train décharge, et le magnat
     /// n'aurait plus qu'à acheter la veille des livraisons.
+    /// <para>
+    /// Deux multiples, qui ne diffèrent qu'avec une conjoncture : celui d'un résultat
+    /// lissé positif, et celui d'un résultat négatif (voir l'étape 6 de
+    /// <see cref="Step"/>). Sans cycle, c'est le multiple du scénario dans les deux
+    /// cas, et le calcul est celui d'avant le module.
+    /// </para>
     /// </summary>
-    private static void Revalue(FinanceDef def, FinanceCompany company)
+    private static void Revalue(FinanceDef def, FinanceCompany company, decimal multipleOnProfit, decimal multipleOnLoss)
     {
         var cfg = def.Valuation;
         decimal resultThisTick = company.OperatingResultThisTick - company.InterestThisTick;
         company.EarningsEma = Money.Round(
             company.EarningsEma + cfg.EarningsSmoothing * (resultThisTick - company.EarningsEma));
 
-        decimal intrinsic = company.BookEquity + cfg.EarningsMultiple * company.EarningsEma * SimTick.TicksPerYear;
+        decimal earningsMultiple = company.EarningsEma >= 0m ? multipleOnProfit : multipleOnLoss;
+        decimal intrinsic = company.BookEquity + earningsMultiple * company.EarningsEma * SimTick.TicksPerYear;
         decimal target = company.Register.SharesIssued > 0
             ? Money.Round(intrinsic / company.Register.SharesIssued)
             : cfg.MinSharePrice;
@@ -961,7 +1021,7 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
 
         decimal buffer = Money.Round(policy.MinCashBuffer);
         if (lot * price > acquirer.Cash - buffer)
-            RaiseCashIfNeeded(def, acquirer, tick, buffer + lot * price);
+            RaiseCashIfNeeded(def, state, acquirer, tick, buffer + lot * price);
 
         decimal spendable = acquirer.Cash - buffer;
         if (spendable <= 0m) return;
@@ -995,13 +1055,13 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
         if (cost > acquirer.Cash - buffer && policy.FundingBondId.Length > 0)
         {
             var offer = NextOffer(def, acquirer, tick, policy.FundingBondId);
-            if (offer is not null) IssueBond(acquirer, offer, tick);
+            if (offer is not null) IssueBond(state, acquirer, offer, tick);
         }
         // L'emprunt dédié peut avoir déjà servi : on se rabat alors sur n'importe
         // quelle ligne disponible plutôt que de laisser la participation coincée
         // entre le contrôle et la fusion pour le reste de la partie.
         if (cost > acquirer.Cash - buffer)
-            RaiseCashIfNeeded(def, acquirer, tick, buffer + cost);
+            RaiseCashIfNeeded(def, state, acquirer, tick, buffer + cost);
         if (cost > acquirer.Cash - buffer) return;
 
         acquirer.Book.Post($"OPA {target.Id}", Accounts.Investments, Accounts.Cash, cost);

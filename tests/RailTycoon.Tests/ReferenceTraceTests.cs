@@ -36,7 +36,7 @@ internal static class ReferenceTraceTests
 {
     private const int Ticks = 720;
 
-    private sealed record Case(string Scenario, string Solver, string Expected);
+    private sealed record Case(string Scenario, string Solver, string Expected, int Ticks = Ticks);
 
     /// <summary>
     /// Une ligne par couple scénario × solveur qu'un document cite ou qu'un module
@@ -65,15 +65,21 @@ internal static class ReferenceTraceTests
         // décisions, donc chaque solveur y joue sa propre partie.
         new("sierra-marginal.json", "reference", "3A328BE0FBB30F59"),
         new("sierra-marginal.json", "anticipating", "64BC50252805D975"),
+        // Le scénario du module cycle, sous les deux solveurs, sur six années de jeu
+        // et non deux : il faut contenir la panique de 1873 (tick 1 337), qui force la
+        // crise, et au moins un cycle complet. L'empreinte porte aussi le journal de
+        // la conjoncture et les taux des obligations.
+        new("heartland-cycle.json", "reference", "E8210450987FCE4E", CycleTests.Ticks),
+        new("heartland-cycle.json", "anticipating", "3CA30C95E38BE915", CycleTests.Ticks),
     ];
 
     public static void Register(TestRunner runner)
     {
         foreach (var c in Cases)
         {
-            runner.Add($"trace de référence — {c.Scenario}, solveur {c.Solver}, {Ticks} ticks", () =>
+            runner.Add($"trace de référence — {c.Scenario}, solveur {c.Solver}, {c.Ticks} ticks", () =>
             {
-                var (fingerprint, netProfit) = Run(c.Scenario, c.Solver);
+                var (fingerprint, netProfit) = Run(c.Scenario, c.Solver, c.Ticks);
                 Check.Equal(c.Expected, fingerprint,
                     $"empreinte de {c.Scenario} (résultat net obtenu : " +
                     $"{netProfit.ToString("N2", CultureInfo.InvariantCulture)}). " +
@@ -106,13 +112,13 @@ internal static class ReferenceTraceTests
         runner.Add("scénarios — un bloc absent sans explication est signalé", () =>
         {
             var undeclared = ScenarioLoader.UndeclaredModuleBlocks(
-                """{ "id": "nu", "Network": {}, "//finance": "pas de finance ici", "//events": "ni d'événements" }""");
+                """{ "id": "nu", "Network": {}, "//finance": "pas de finance ici", "//events": "ni d'événements", "//cycle": "ni de conjoncture" }""");
             Check.Equal("anticipating", string.Join(",", undeclared),
                 "seul le bloc ni déclaré ni écarté doit être signalé, casse ignorée");
         });
     }
 
-    private static (string Fingerprint, double NetProfit) Run(string scenarioFile, string solver)
+    private static (string Fingerprint, double NetProfit) Run(string scenarioFile, string solver, int ticks)
     {
         var scenario = ScenarioLoader.Load(Path.Combine(Fixtures.RepoRoot(), "data", scenarioFile));
         IEconomySolver economy = solver switch
@@ -125,15 +131,16 @@ internal static class ReferenceTraceTests
         var sim = new Simulation(scenario, economy);
         var recorder = new CsvRecorder();
         recorder.Record(sim.World);
-        for (int i = 0; i < Ticks; i++)
+        for (int i = 0; i < ticks; i++)
         {
             sim.Step();
             recorder.Record(sim.World);
         }
 
-        // Le résumé du journal des événements est vide quand le module est inactif :
-        // les empreintes des scénarios sans événements n'ont pas bougé à son arrivée.
-        return (recorder.TraceFingerprint(FinanceSummary(sim.World) + sim.World.Events.Summary()),
+        // Les résumés des journaux des événements et de la conjoncture sont vides
+        // quand leur module est inactif : les empreintes des scénarios qui s'en
+        // passent n'ont pas bougé à leur arrivée.
+        return (recorder.TraceFingerprint(FinanceSummary(sim.World) + sim.World.Events.Summary() + sim.World.Cycle.Summary()),
             sim.World.Company.NetProfit);
     }
 
@@ -141,6 +148,12 @@ internal static class ReferenceTraceTests
     /// L'état financier de fin de partie, au centime. Les traces CSV n'en portent
     /// que ce qui passe par la caisse du transporteur : un cours, une dette ou une
     /// fortune de magnat qui bougeraient seuls ne s'y verraient pas.
+    /// <para>
+    /// Avec une conjoncture, s'y ajoutent les taux des obligations émises : un taux
+    /// fixé à l'émission qui changerait sans rien déplacer d'autre dans la course ne
+    /// s'y verrait pas non plus. Sans conjoncture, rien n'est ajouté, et l'empreinte
+    /// de heartland-finance est celle d'avant le module.
+    /// </para>
     /// </summary>
     private static string FinanceSummary(WorldState world)
     {
@@ -150,7 +163,10 @@ internal static class ReferenceTraceTests
         var ci = CultureInfo.InvariantCulture;
         var player = finance.Player;
         var tycoon = finance.Magnate;
-        return string.Join(";",
+        string rates = world.Cycle.Enabled
+            ? ";" + string.Join(",", player.Bonds.Select(b => b.AnnualRatePercent.ToString(ci)))
+            : "";
+        return rates + string.Join(";",
             player.Cash.ToString(ci),
             player.BookEquity.ToString(ci),
             player.SharePrice.ToString(ci),

@@ -27,6 +27,8 @@
 
   "//events": "Pas d'événements : ce scénario éprouve le couplage entre relief et économie, et un scénario éprouve une chose à la fois. Un choc local déplacerait la trajectoire de ±4 % à lui seul (voir « Événements historiques et aléatoires » dans docs/FINDINGS.md) et brouillerait la mesure du relief. Le module s'éprouve sur data/heartland-events.json.",
 
+  "//cycle": "Pas de conjoncture, pour la même raison que la finance et les événements : un scénario éprouve une chose à la fois, et celui-ci éprouve le couplage relief ↔ économie. Sans finance, un cycle n'y toucherait que la demande, de quelques pour cent, dans toutes les villes à la fois.",
+
   "//finance": "Pas de finance : un scénario éprouve une chose à la fois, et celui-ci éprouve le couplage réseau ↔ économie. Activer la finance ferait entrer le découvert et les intérêts dans la trésorerie du transporteur, donc dans ses achats, et brouillerait la mesure du coût du relief. Le devis du réseau (1 524 566, quinze fois la mise de départ) n'étant débité nulle part, la finance n'aurait de toute façon rien à financer ici.",
 
   "priceModel": {

@@ -324,6 +324,13 @@ public sealed class ScenarioDef
     /// inactif par défaut, et neutre au bit près tant qu'il l'est.
     /// </summary>
     public RailTycoon.Sim.Events.EventsDef Events { get; set; } = new();
+
+    /// <summary>
+    /// La conjoncture : phases, durées, effets sur les taux, la bourse, les
+    /// investisseurs et la demande. Voir <c>Cycle/CycleDefinitions.cs</c> ; inactive
+    /// par défaut, et neutre au bit près tant qu'elle l'est.
+    /// </summary>
+    public RailTycoon.Sim.Cycle.CycleDef Cycle { get; set; } = new();
     public List<CargoDef> Cargos { get; set; } = new();
     public List<RecipeDef> Recipes { get; set; } = new();
     public List<CityDef> Cities { get; set; } = new();

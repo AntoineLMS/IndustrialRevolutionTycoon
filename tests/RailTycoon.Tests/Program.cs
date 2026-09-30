@@ -1057,6 +1057,10 @@ internal static class Program
         // neutralité, flux aléatoire propre.
         EventTests.Register(runner);
 
+        // La conjoncture : phases, bascule forcée par la panique, poussées des
+        // événements, taux à l'émission, bourse, demande. Un seul point d'entrée ici.
+        CycleTests.Register(runner);
+
         // Relief et économie ensemble : data/sierra.json. Même raison que pour la
         // finance — un seul point d'entrée ici.
         SierraTests.Register(runner);

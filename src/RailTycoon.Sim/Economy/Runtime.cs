@@ -49,6 +49,16 @@ public sealed class Market
     /// <summary>Multiplicateur du jour publié par le module events sur la demande des habitants.</summary>
     public double EventDemandFactor = 1.0;
 
+    /// <summary>
+    /// Multiplicateur du jour publié par le module cycle (phase 0c) sur la demande
+    /// des habitants : le même sur tous les marchés, quelques pour cent au plus. Il
+    /// ne passe pas par <see cref="EventDemandFactor"/> : chaque module possède son
+    /// nombre, le solveur économique compose les deux par un produit, et aucun ne
+    /// réécrit, ne borne ni ne double la logique de l'autre. Vaut 1 exactement sans
+    /// cycle, ce qui laisse le taux du jour identique au bit près.
+    /// </summary>
+    public double CycleDemandFactor = 1.0;
+
     // --- Télémétrie du tick courant. Remise à zéro au début de chaque tick.
     // Ces compteurs ne sont pas cosmétiques : ils servent à vérifier
     // l'invariant de conservation et à tracer les courbes.

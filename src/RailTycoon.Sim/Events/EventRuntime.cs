@@ -61,6 +61,14 @@ public sealed class EventRecord
 
     public required IReadOnlyList<EventTarget> Targets { get; init; }
 
+    /// <summary>
+    /// Effet sur la conjoncture, repris de la définition. Le module events ne le lit
+    /// pas : c'est le module cycle qui le lit ici, le jour où l'événement s'ouvre.
+    /// Hors de <see cref="EventsState.Summary"/> : l'empreinte d'un scénario sans
+    /// cycle ne dépend pas de cet attribut, qui y est inerte.
+    /// </summary>
+    public EventCycleEffectDef? Cycle { get; init; }
+
     public int DurationTicks => EndTick - StartTick + 1;
 
     public bool IsActiveAt(int tick) => tick >= StartTick && tick <= EndTick;

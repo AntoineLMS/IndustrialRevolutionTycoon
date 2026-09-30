@@ -45,6 +45,41 @@ public sealed class EventEffectDef
 }
 
 /// <summary>
+/// Ce qu'un événement fait à la conjoncture (module cycle), en plus de ses effets
+/// sur les marchés. Un attribut de données, porté par un événement historique ou
+/// par un type aléatoire — jamais un cas particulier dans le code : la panique de
+/// 1873 déclenche la crise parce que ses données le disent, et n'importe quel
+/// autre événement peut en faire autant.
+/// <para>
+/// Deux formes, exclusives l'une de l'autre :
+/// </para>
+/// <list type="bullet">
+///   <item><c>forcePhase</c> — le jour où l'événement commence, la conjoncture
+///   bascule dans cette phase, quelle que soit la phase en cours ; la durée de la
+///   phase forcée est tirée dans ses bornes comme celle de toute autre. Déjà dans
+///   cette phase, elle est prolongée d'autant si le nouveau tirage finit plus
+///   tard. C'est une panique : un krach ne demande pas son tour.</item>
+///   <item><c>pushTicks</c> — une bonne nouvelle (positif) ou une mauvaise
+///   (négatif), en jours. Elle allonge une phase favorable et abrège une phase
+///   défavorable d'autant, ou l'inverse : elle précipite ou retarde le prochain
+///   changement de phase, sans jamais le décider seule.</item>
+/// </list>
+/// <para>
+/// Le module events ne lit pas cet attribut : il le reporte au journal, et le
+/// module cycle le lit là, le jour où l'événement s'ouvre. Sans module cycle actif,
+/// il est inerte — c'est une donnée sur l'événement, pas un effet de marché.
+/// </para>
+/// </summary>
+public sealed class EventCycleEffectDef
+{
+    /// <summary>Identifiant d'une phase du bloc cycle. Vide = pas de bascule forcée.</summary>
+    public string ForcePhase { get; set; } = "";
+
+    /// <summary>Poussée en jours : positive = bonne nouvelle, négative = mauvaise. 0 = aucune.</summary>
+    public int PushTicks { get; set; }
+}
+
+/// <summary>
 /// Un événement historique : daté, ciblé, d'intensité et de durée fixées.
 /// <para>
 /// <b>Deux natures, et la différence n'est pas cosmétique.</b>
@@ -102,6 +137,9 @@ public sealed class HistoricalEventDef
     public List<string> Cities { get; set; } = new();
 
     public List<EventEffectDef> Effects { get; set; } = new();
+
+    /// <summary>Effet sur la conjoncture, s'il y en a un. Voir <see cref="EventCycleEffectDef"/>.</summary>
+    public EventCycleEffectDef? Cycle { get; set; }
 }
 
 /// <summary>
@@ -145,6 +183,12 @@ public sealed class RandomEventTypeDef
     public int RampTicks { get; set; }
 
     public List<EventEffectDef> Effects { get; set; } = new();
+
+    /// <summary>
+    /// Effet de chaque occurrence sur la conjoncture, s'il y en a un. Une
+    /// occurrence pousse une fois, quel que soit le nombre de villes touchées.
+    /// </summary>
+    public EventCycleEffectDef? Cycle { get; set; }
 }
 
 /// <summary>

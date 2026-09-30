@@ -1,4 +1,5 @@
 using RailTycoon.Sim.Core;
+using RailTycoon.Sim.Cycle;
 using RailTycoon.Sim.Economy;
 using RailTycoon.Sim.Events;
 using RailTycoon.Sim.Finance;
@@ -23,9 +24,10 @@ public sealed class Simulation
     public IHaulageSolver Haulage { get; }
     public IFinanceSolver Finance { get; }
     public IEventSolver Events { get; }
+    public ICycleSolver Cycle { get; }
 
     public Simulation(ScenarioDef scenario, IEconomySolver? economy = null, IHaulageSolver? haulage = null,
-        IFinanceSolver? finance = null, IEventSolver? events = null)
+        IFinanceSolver? finance = null, IEventSolver? events = null, ICycleSolver? cycle = null)
     {
         var priceModel = new HyperbolicPriceModel(scenario.PriceModel);
 
@@ -34,12 +36,17 @@ public sealed class Simulation
         Haulage = haulage ?? new OpportunisticHaulageSolver();
         Finance = finance ?? new ReferenceFinanceSolver();
         Events = events ?? new ReferenceEventSolver();
+        Cycle = cycle ?? new ReferenceCycleSolver();
 
         // Les événements s'initialisent avant l'économie : ils valident leurs
         // cibles et ouvrent leur flux aléatoire, mais ne publient rien avant le
         // premier tick. Les multiplicateurs valent 1 à l'initialisation, donc les
         // prix d'ouverture sont ceux du scénario nu, avec ou sans module.
         Events.Initialize(World);
+        // La conjoncture après les événements, dont elle vérifie les attributs
+        // « cycle » ; elle ouvre sa phase initiale et tire sa durée, mais ne pose
+        // aucun multiplicateur de demande avant le premier tick.
+        Cycle.Initialize(World);
         Economy.Initialize(World);
         Haulage.Initialize(World);
         // La finance ouvre ses comptes en dernier : elle reflète la trésorerie
@@ -64,6 +71,14 @@ public sealed class Simulation
         // ni prix, ni argent ; inactif, n'écrit rien. Voir docs/ARCHITECTURE.md,
         // tableau des phases, pour la raison de cette place.
         Events.Step(World, tick);
+
+        // Phase 0c — conjoncture. Lit les événements ouverts aujourd'hui (bascules
+        // forcées, poussées), fait avancer la phase, et publie les conditions du
+        // jour : demande sur chaque marché pour l'économie, taux et multiple de
+        // valorisation pour la finance. Après les événements, dont elle lit le
+        // journal ; avant la production, qui compose sa demande. Inactive, n'écrit
+        // rien. Voir docs/ARCHITECTURE.md, tableau des phases.
+        Cycle.Step(World, tick);
 
         // Phase 1 — production, consommation, formation des prix.
         Economy.Step(World, tick);

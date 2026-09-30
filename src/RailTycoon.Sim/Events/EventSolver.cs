@@ -161,6 +161,7 @@ public sealed class ReferenceEventSolver : IEventSolver
                 RampTicks = s.Def.RampTicks,
                 Source = s.Def.Source,
                 Targets = s.Targets,
+                Cycle = s.Def.Cycle,
             });
         }
 
@@ -224,6 +225,7 @@ public sealed class ReferenceEventSolver : IEventSolver
                 EndTick = tick.Index + duration - 1,
                 RampTicks = ramp,
                 Targets = targets,
+                Cycle = def.Cycle,
             });
         }
     }
@@ -319,8 +321,22 @@ public sealed class ReferenceEventSolver : IEventSolver
         var ids = new HashSet<string>();
         var cityIds = world.Cities.Select(c => c.Id).ToHashSet();
 
-        void CheckCommon(string id, List<string> cities, List<EventEffectDef> effects)
+        void CheckCommon(string id, List<string> cities, List<EventEffectDef> effects, EventCycleEffectDef? cycle)
         {
+            // L'effet sur la conjoncture se vérifie ici dans sa forme ; que la phase
+            // nommée existe, c'est le module cycle qui le vérifie, lui seul connaissant
+            // ses phases — et seulement s'il est actif, puisque sinon l'attribut est
+            // inerte.
+            if (cycle is not null)
+            {
+                bool forces = !string.IsNullOrWhiteSpace(cycle.ForcePhase);
+                bool pushes = cycle.PushTicks != 0;
+                if (forces == pushes)
+                    throw new InvalidDataException(
+                        $"L'événement '{id}' : son effet « cycle » doit soit forcer une phase (forcePhase), " +
+                        "soit pousser la conjoncture (pushTicks ≠ 0), et pas les deux.");
+            }
+
             if (string.IsNullOrWhiteSpace(id))
                 throw new InvalidDataException("Un événement n'a pas d'identifiant.");
             if (!ids.Add(id))
@@ -342,7 +358,7 @@ public sealed class ReferenceEventSolver : IEventSolver
 
         foreach (var h in def.Historical)
         {
-            CheckCommon(h.Id, h.Cities, h.Effects);
+            CheckCommon(h.Id, h.Cities, h.Effects, h.Cycle);
 
             if (h.Basis != "historical" && h.Basis != "inspired")
                 throw new InvalidDataException(
@@ -385,7 +401,7 @@ public sealed class ReferenceEventSolver : IEventSolver
 
         foreach (var r in def.Random)
         {
-            CheckCommon(r.Id, r.Cities, r.Effects);
+            CheckCommon(r.Id, r.Cities, r.Effects, r.Cycle);
 
             if (r.Scope != "one" && r.Scope != "all")
                 throw new InvalidDataException(

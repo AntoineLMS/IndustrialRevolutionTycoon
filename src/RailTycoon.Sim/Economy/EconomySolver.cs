@@ -23,7 +23,9 @@ namespace RailTycoon.Sim.Economy;
 ///   <see cref="Market.EventProductionFactor"/>), et dimensionner l'entrepôt d'un
 ///   site sur son débit nominal. Un solveur qui les ignore rend le module muet sans
 ///   erreur ; le test « un événement historique agit à sa date » le détecte, sous
-///   chacun des deux solveurs livrés.</item>
+///   chacun des deux solveurs livrés. Même chose pour la demande avec le
+///   multiplicateur de la conjoncture (<see cref="Market.CycleDemandFactor"/>,
+///   phase 0c), composé par un produit avec celui des événements.</item>
 /// </list>
 /// </summary>
 public interface IEconomySolver
@@ -66,7 +68,9 @@ public sealed class ReferenceEconomySolver : IEconomySolver
     /// <summary>
     /// Préambule : les taux du jour. La référence n'a pas de modulation propre —
     /// ni saison ni croissance — donc le taux du jour est le taux nominal, multiplié
-    /// par ce que le module events a publié sur le marché.
+    /// par ce que le module events a publié sur le marché — et, pour la demande, par
+    /// ce que le module cycle y a publié (phase 0c). Les deux se composent par un
+    /// produit ; ni l'un ni l'autre ne réécrit le nombre de l'autre.
     /// <para>
     /// Sans événement, les deux multiplicateurs valent 1 exactement, et
     /// <c>nominal × 1</c> est <c>nominal</c> au bit près : la trace de la référence
@@ -82,7 +86,7 @@ public sealed class ReferenceEconomySolver : IEconomySolver
         foreach (var city in world.Cities)
             foreach (var market in world.MarketsOf(city))
             {
-                market.BaseDemandRate = market.NominalDemandRate * market.EventDemandFactor;
+                market.BaseDemandRate = market.NominalDemandRate * market.EventDemandFactor * market.CycleDemandFactor;
                 market.BaseProductionRate = market.NominalProductionRate * market.EventProductionFactor;
             }
     }

@@ -331,7 +331,9 @@ public sealed class AnticipatingEconomySolver : IEconomySolver
     /// Ce multiplicateur vaut 1 exactement sans événement, ce qui laisse le produit
     /// identique au bit près : la trace de ce solveur n'a pas bougé à l'arrivée du
     /// module. La montée d'un événement, sa cible, son tirage ne sont pas l'affaire
-    /// de ce solveur ; il en lit le résultat, comme la référence.
+    /// de ce solveur ; il en lit le résultat, comme la référence. La demande subit
+    /// en plus le multiplicateur de la conjoncture (phase 0c), qui vaut lui aussi 1
+    /// exactement sans cycle.
     /// <para>
     /// La production n'est pas affectée par la taille de la ville : une mine ne
     /// creuse pas plus vite parce que le bourg a grandi. Cette asymétrie est
@@ -348,7 +350,8 @@ public sealed class AnticipatingEconomySolver : IEconomySolver
             {
                 ms.Market.BaseDemandRate = ms.NominalDemand * city.Size
                     * Seasonal(ms.DemandAmplitude, ms.DemandPeak, phase)
-                    * ms.Market.EventDemandFactor;
+                    * ms.Market.EventDemandFactor
+                    * ms.Market.CycleDemandFactor;
                 ms.Market.BaseProductionRate = ms.NominalProduction
                     * Seasonal(ms.ProductionAmplitude, ms.ProductionPeak, phase)
                     * ms.Market.EventProductionFactor;

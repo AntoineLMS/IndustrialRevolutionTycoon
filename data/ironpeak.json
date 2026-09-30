@@ -23,6 +23,8 @@
 
   "//events": "Pas d'événements : ce scénario éprouve la chaîne acier du module content, et son empreinte de référence ne doit pas bouger. Le scénario d'épreuve du module est data/heartland-events.json. Candidat pour un futur ironpeak-events, NON vérifié ici et donc à sourcer dans docs/SOURCES.md avant d'être déclaré historique : une grève de l'anthracite à l'automne 1900, qui tomberait dans les deux premières années de ce scénario.",
 
+  "//cycle": "Pas de conjoncture : ce scénario éprouve la chaîne acier du module content, sans finance ni événements. Un cycle déplacerait sa demande de quelques pour cent, et son empreinte de référence avec elle.",
+
   "priceModel": {
     "coverageHorizonTicks": 15,
     "shape": 0.5,

@@ -55,6 +55,14 @@ public sealed class WorldState
     /// </summary>
     public EventsState Events { get; } = new();
 
+    /// <summary>
+    /// La conjoncture : phase en cours, conditions du jour (taux, bourse, demande,
+    /// investisseurs) et journal public des changements de phase. Vide et inactive
+    /// tant qu'un scénario n'active pas le module. Remplie par
+    /// <see cref="RailTycoon.Sim.Cycle.ICycleSolver"/>.
+    /// </summary>
+    public RailTycoon.Sim.Cycle.CycleState Cycle { get; } = new();
+
     private readonly Dictionary<string, City> _citiesById = new();
     private readonly Dictionary<string, CargoDef> _cargosById = new();
     private readonly Dictionary<string, RecipeDef> _recipesById = new();

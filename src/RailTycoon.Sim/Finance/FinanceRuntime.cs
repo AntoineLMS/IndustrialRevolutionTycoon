@@ -190,6 +190,13 @@ public sealed class Bond
     public decimal Principal { get; init; }
     public decimal Outstanding;
     public decimal AnnualRatePercent { get; init; }
+
+    /// <summary>
+    /// Décomposition du taux à l'émission — taux facial, conjoncture, prime de risque,
+    /// bonus du dirigeant. Nulle sans module cycle : le taux est alors le taux facial.
+    /// </summary>
+    public Cycle.CreditQuote? Quote { get; init; }
+
     public int IssuedTick { get; init; }
     public int MaturityTick { get; init; }
     public decimal InterestAccrued;
@@ -378,6 +385,15 @@ public sealed class FinanceState
     /// régression de l'économie sans qu'aucune règle économique n'ait bougé.
     /// </summary>
     public DeterministicRandom? Rng { get; internal set; }
+
+    /// <summary>
+    /// La conjoncture, quand le scénario en a une active ; nulle sinon. La finance y
+    /// lit trois choses, et trois seulement : l'ajustement du taux d'un emprunt émis
+    /// aujourd'hui et la prime de risque qui l'accompagne, le taux du découvert, et
+    /// le facteur du multiple de valorisation. Nulle, chaque calcul suit le chemin
+    /// d'avant le module, au centime.
+    /// </summary>
+    public Cycle.CycleState? Cycle { get; internal set; }
 
     /// <summary>
     /// Trésorerie d'exploitation déjà reflétée au bilan, arrondie au centime.

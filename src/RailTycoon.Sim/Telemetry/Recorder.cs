@@ -127,6 +127,44 @@ public sealed class CsvRecorder
     }
 
     /// <summary>
+    /// Le journal de la conjoncture en CSV, une ligne par entrée : changement de
+    /// phase ou poussée d'un événement. Mêmes règles que <see cref="EventsCsv"/> :
+    /// écrit à part des traces, toujours écrit, même vide, et hors de
+    /// <see cref="Fingerprint"/> — les traces de référence ajoutent à leur empreinte
+    /// <c>CycleState.Summary</c>, vide quand le module est inactif.
+    /// <para>
+    /// Il ne contient que ce que le journal public contient : jamais la date prévue
+    /// de la fin d'une phase.
+    /// </para>
+    /// </summary>
+    public static string CycleCsv(WorldState world)
+    {
+        var ci = CultureInfo.InvariantCulture;
+        var sb = new StringBuilder("tick,kind,phase,previous_phase,cause,event,shift_ticks\n");
+        foreach (var r in world.Cycle.Journal)
+            sb.Append(r.Tick.ToString(ci)).Append(',')
+              .Append(r.Kind == Cycle.CycleRecordKind.Phase ? "phase" : "shift").Append(',')
+              .Append(r.PhaseId).Append(',')
+              .Append(r.PreviousPhaseId).Append(',')
+              .Append(r.Cause switch
+              {
+                  Cycle.CycleCause.Opening => "opening",
+                  Cycle.CycleCause.Elapsed => "elapsed",
+                  Cycle.CycleCause.Forced => "forced",
+                  _ => "pushed",
+              }).Append(',')
+              .Append(r.EventInstanceId).Append(',')
+              .Append(r.ShiftTicks.ToString(ci)).Append('\n');
+        return sb.ToString();
+    }
+
+    public static void WriteCycle(WorldState world, string directory)
+    {
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, "cycle.csv"), CycleCsv(world));
+    }
+
+    /// <summary>
     /// Empreinte de la trace des marchés. Deux exécutions de la même version sur
     /// la même graine doivent produire la même empreinte : c'est le test de
     /// déterminisme le moins cher qui existe.

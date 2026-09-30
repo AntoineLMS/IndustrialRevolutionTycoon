@@ -37,7 +37,7 @@ public static class ScenarioLoader
     /// tourne sur ses défauts et personne ne le voit. Passer ironpeak au solveur
     /// anticipant ne changeait rien, au bit près, pour cette seule raison.
     /// </summary>
-    public static IReadOnlyList<string> ModuleBlocks { get; } = ["anticipating", "network", "finance", "events"];
+    public static IReadOnlyList<string> ModuleBlocks { get; } = ["anticipating", "network", "finance", "events", "cycle"];
 
     /// <summary>
     /// Blocs de module ni déclarés, ni écartés explicitement. Un scénario peut
