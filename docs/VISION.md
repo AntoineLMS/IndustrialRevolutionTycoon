@@ -376,6 +376,32 @@ Un scénario peut en combiner plusieurs. **Le reste se décidera avec les scéna
 les paliers de réussite, ce qui fait perdre, la période et la géographie de la
 première campagne.
 
+*Déjà en place* : le module `objectives`, qui observe la partie sans rien y changer et
+dit, pour chaque palier d'un objectif, s'il est atteint (et quand), en cours ou
+manqué. Trois définitions, toutes lectures retenues, à confirmer :
+
+- **la fortune est celle du magnat**, jamais la trésorerie de la compagnie ; sans
+  module finance, un objectif de fortune est refusé. Chaque scénario dit s'il la lit
+  au jour le jour ou en moyenne glissante ;
+- **livrer, c'est ce que le rail laisse dans une ville** : vendu moins racheté. La
+  revente de ville en ville ne compte qu'une fois, là où la marchandise reste ;
+- **relier, c'est qu'un même train se soit arrêté dans les deux villes.** Une voie où
+  ne roule aucun train ne relie rien.
+
+Les paliers (plusieurs seuils, une échéance chacun) ont leur place dans les données,
+mais rien ne dit encore ce qu'ils valent. Mesures dans FINDINGS.md, « Les objectifs » :
+au jour le jour, une fortune se fabrique par un seul ordre de bourse tant que le
+flottant est infini ; les livraisons nettes avancent comme une horloge ; sur un réseau
+donné, relier n'est qu'une question d'horaire.
+
+**À décider** :
+
+- **Ce qu'un palier vaut** : victoire, médaille, simple jalon ? Et un palier manqué,
+  fait-il perdre ?
+- **Comment les objectifs se combinent** : tous, un nombre, un score ?
+- **La lecture de la fortune** : au jour le jour, ou en moyenne sur un mois — à
+  refaire quand la bourse aura une profondeur finie.
+
 ## La bourse doit être solide
 
 **Décidé.** **Le prix d'une compagnie est son cours multiplié par son nombre
@@ -568,7 +594,11 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
    existent désormais ; il leur manque le score du dirigeant. La conjoncture rend la
    profondeur de carnet plus urgente : un cours qui oscille est une pompe sur un
    flottant infini.)
-7. **Des objectifs de scénario.**
+7. **Des objectifs de scénario.** Ils existent et se mesurent (module `objectives`,
+   sur heartland-cycle et sierra) ; il manque ce qui fait gagner ou perdre. Et deux
+   des trois sortes attendent un autre chantier pour devenir un choix : la fortune,
+   une bourse à profondeur finie (point 6) ; relier, la construction en cours de
+   partie.
 8. **Un relief qui pèse.** Le coût marginal réel existe, en option
    (`haulage.costModel = "mass"`) : il crée deux bassins de part et d'autre du col
    sans détruire de valeur, mais seulement au-delà d'une traction de 0,12 à 0,15.
@@ -589,3 +619,6 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
    fortune du magnat n'est pas une mesure fiable.
 4. Le prix d'une industrie sans propriétaire.
 5. Les tailles de gare, leur rayon d'action et leur prix.
+6. Ce que vaut un palier d'objectif, comment les objectifs d'un scénario se combinent
+   en une victoire, et si une fortune se lit au jour le jour ou en moyenne. *Mesuré,
+   options chiffrées* dans FINDINGS.md, « Les objectifs ».

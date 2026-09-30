@@ -56,6 +56,7 @@ changement au détour d'un correctif.
 | 4 | Recalcul des prix | `IEconomySolver` |
 | 5 | Déplacement des trains, achats et ventes | `IHaulageSolver` |
 | 6 | Finance : exploitation constatée, découvert, intérêts, cours, dividendes, bourse, OPA | `IFinanceSolver` |
+| 7 | Objectifs : lecture du soir (fortune du magnat, carnet de route), paliers atteints ou manqués, journal public — observateur pur | `IObjectiveSolver` |
 
 La phase 6 a été **ajoutée à la fin**, jamais insérée. C'est la décision
 documentée qu'exige la règle ci-dessus, et sa raison est simple : la finance
@@ -130,6 +131,24 @@ La conjoncture tire sur **sa propre séquence** (`cycle.randomSequence`, 13 par 
 tirage, et la k-ième phase reçoit le k-ième nombre quoi qu'aient fait les événements.
 Elle est **exogène** : aucune règle ne lit l'économie ni la compagnie pour décider de la
 phase — le cycle mû par l'activité a été écarté (VISION.md).
+
+La phase 7 a été **ajoutée à la fin**, comme la finance, et pour la raison inverse de
+la 0b : elle ne fait rien à la journée, elle la constate. Le module `objectives` lit,
+le soir, la fortune du magnat telle que la bourse vient de la fixer et le carnet de
+route de la compagnie tel que les trains viennent de l'écrire, et conclut les paliers
+du scénario — atteints, manqués, en cours. Sa place est contrainte d'un seul côté :
+
+- **Après 6**, parce qu'une fortune se lit après la bourse, les dividendes et les
+  appels de marge du jour ; placée avant, elle lirait la fortune de la veille, et un
+  palier atteint le jour d'un ordre de bourse serait daté du lendemain.
+- **Observateur pur** : elle ne touche ni stock, ni prix, ni argent, ni décision, et ne
+  tire aucun aléa. Aucune empreinte de `ReferenceTraceTests` n'a bougé à son arrivée —
+  pas même celles de heartland-cycle et de sierra, qui portent un bloc actif —, et un
+  test rejoue ces deux scénarios avec et sans leur bloc, sous les deux solveurs.
+- **Le carnet de route qu'elle lit est tenu par le transport** (`Company.Freight`), à
+  l'instant de chaque échange et de chaque arrivée en gare, dans tous les scénarios.
+  C'est de la télémétrie : aucune règle ne le lit pour décider, et c'est lui aussi que
+  les empreintes inchangées couvrent.
 
 Conséquence voulue de l'ordre 4 puis 5 : les trains voient les prix
 d'après-production. Le joueur arrive sur un marché tel qu'il est au matin, pas
@@ -455,7 +474,9 @@ ils ne touchent que la production primaire et la demande des habitants, et ce
 qu'il leur manque est listé dans [CONTRACTS.md](CONTRACTS.md). La conjoncture est
 derrière `ICycleSolver` (phase 0c) ; elle touche les taux, la bourse et, modestement,
 la demande, et prépare l'appétit des investisseurs pour un module de fondation qui
-n'existe pas encore.
+n'existe pas encore. Les objectifs de scénario sont derrière `IObjectiveSolver`
+(phase 7) ; ils observent sans rien toucher, et ce qui fait gagner ou perdre reste à
+décider (VISION.md, « Gagner »).
 
 `Transport/Rail.cs` reste une abstraction pauvre — une suite d'arrêts et de
 distances — et c'est désormais un choix et non une dette : c'est la projection du

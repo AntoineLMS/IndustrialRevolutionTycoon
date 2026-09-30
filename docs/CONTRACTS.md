@@ -17,7 +17,8 @@ produisent du code qui ne s'assemble pas.
    `Market.Consume`. Les transferts passent par `Withdraw` / `Deposit`.
 3. Ne pas modifier l'ordre des phases d'un tick.
 4. Ne pas toucher à `Company` en dehors du module transport et du futur module
-   finance.
+   finance. Le carnet de route (`Company.Freight`) est écrit par le seul transport ;
+   le module `objectives` le lit, sans y écrire.
 5. Toute valeur équilibrable vit dans `data/*.json`, jamais en dur dans le code.
 6. `dotnet run --project tests/RailTycoon.Tests` doit rester vert, et chaque
    module ajoute ses propres invariants à la suite.
@@ -26,7 +27,7 @@ produisent du code qui ne s'assemble pas.
    bougé. Une empreinte recopiée sans explication rend le test aussi creux que
    celui qu'il remplace.
 8. Chaque scénario de `data/` déclare les blocs de tous les modules
-   (`anticipating`, `network`, `finance`, `events`, `cycle`), ou écarte explicitement ceux dont il
+   (`anticipating`, `network`, `finance`, `events`, `cycle`, `objectives`), ou écarte explicitement ceux dont il
    se passe avec une clé `"//<bloc>"` qui dit pourquoi. Un module qui ajoute un
    bloc l'inscrit dans `ScenarioLoader.ModuleBlocks`.
 
@@ -328,8 +329,9 @@ phase : c'est un pari, pas une lecture. Le harnais l'affiche et l'écrit dans
 
 **Scénario** : `data/heartland-cycle.json` : l'économie et la finance de
 heartland-finance et les événements de heartland-events au caractère près, et le seul
-bloc `cycle` en plus ; mesuré sur 2 160 ticks (la panique de 1873 et au moins un cycle
-complet). Les autres scénarios écartent le bloc par une clé `"//cycle"`.
+bloc `cycle` en plus — le bloc `objectives`, observateur pur, mis à part ; mesuré sur
+2 160 ticks (la panique de 1873 et au moins un cycle complet). Les autres scénarios
+écartent le bloc par une clé `"//cycle"`.
 
 **Ce qui manque** : les lecteurs des points d'accroche (fondation, score de
 dirigeant) ; un taux de marge du magnat qui suive la conjoncture ; des types
@@ -343,6 +345,109 @@ phase à l'autre, cours moyen inchangé — **sans aucune mise sous administrati
 configuration livrée, sous les deux solveurs, et sans violer aucun invariant.
 Aujourd'hui : cours ÷2,2 en crise, obligation type à 5,5 % contre 11,0 %, 0/40 sous
 administration.
+
+### `objectives` — objectifs de scénario
+
+**Interface** : `IObjectiveSolver` (`src/RailTycoon.Sim/Objectives/ObjectiveSolver.cs`),
+phase 7 du tick, la dernière — voir le tableau des phases de
+[ARCHITECTURE.md](ARCHITECTURE.md) et la décision qui l'y a ajoutée.
+**État actuel** : `ReferenceObjectiveSolver`, piloté par le bloc `objectives` du
+scénario. Inactif par défaut ; **observateur pur** quand il est actif.
+
+**Périmètre** : les trois sortes d'objectifs que la vision décide (« Gagner »), et
+elles seules. Un objectif a une mesure et un ou plusieurs **paliers** — une cible et
+une échéance facultative, **incluse**, donnée en tick ou en date du calendrier de jeu.
+Chaque soir, chaque palier en cours est conclu : **atteint** le jour où la mesure
+franchit la cible, **manqué** le soir de l'échéance s'il ne l'est pas. Un palier conclu
+l'est pour de bon, même si la mesure repasse de l'autre côté.
+
+| sorte | mesure | ce qu'elle lit |
+|---|---|---|
+| `fortune` | fortune du magnat, au soir du tick (`averageTicks` = 1) ou moyenne des N derniers soirs ; illisible, donc jamais atteinte, avant N soirs | `Tycoon.NetWorth` |
+| `deliveries` | chargements d'une marchandise **laissés par le rail** dans une ville — vendus moins rachetés, jamais négatif — ou la somme sur toutes les villes | `Company.Freight` |
+| `connect` | 1 dès qu'un **même train, sur une même ligne**, s'est arrêté dans les deux villes, arrêts traversés compris | `Company.Freight` |
+
+Les raisons de ces trois définitions, et celles qui ont été écartées, sont dans
+[FINDINGS.md](FINDINGS.md), « Les objectifs ». L'essentiel :
+
+- **Pas de fortune sans finance.** Sans magnat, un objectif de fortune est refusé au
+  chargement — jamais remplacé en silence par la trésorerie de la compagnie, que la
+  vision distingue de la fortune du joueur. La fenêtre de lecture est **obligatoire** :
+  au jour le jour, un seul ordre de bourse contre le flottant infini (dette n° 1 de la
+  finance) suffit à franchir un palier.
+- **Livré n'est pas vendu.** La revente de ville en ville s'annule dans chaque ville
+  intermédiaire ; livré au total vaut exactement ce que le rail a pris aux villes
+  exportatrices, moins ce qui est à bord. Une ville qui produit la marchandise ne
+  « reçoit » qu'au-delà de ce qu'elle exporte.
+- **Relier exige un train.** Deux villes desservies par deux trains sans voie commune
+  ne sont pas reliées ; le jour où la construction existera, il faudra poser la voie et
+  y faire rouler un train.
+
+**Le carnet de route** (`Transport/FreightLedger.cs`, `Company.Freight`) : chargements
+vendus et achetés par marchandise et par ville, gares desservies par train et par
+ligne. Écrit par le transporteur à l'instant de chaque échange et de chaque arrivée
+(trois lignes dans `OpportunisticHaulageSolver`), dans tous les scénarios ; lu par le
+seul module `objectives`. Un transporteur qui remplacerait le livré doit l'écrire aux
+mêmes endroits : un test compare le carnet aux dépôts et retraits des marchés,
+marchandise par ville.
+
+**Ce que le module publie** : `WorldState.Objectives` — la mesure du jour de chaque
+objectif et l'état de chaque palier (le tableau de bord), et un **journal public** des
+paliers atteints ou manqués, avec la date, la mesure ce jour-là, la cible et, pour une
+liaison, le train qui l'a faite. Le harnais l'affiche et l'écrit dans
+`objectives.csv`. Un concurrent IA a le droit d'en lire autant : la fortune d'un
+magnat et les livraisons d'une compagnie sont publiques.
+
+**Ce que le module garantit** — et que les tests vérifient (`ObjectiveTests.cs`) :
+
+1. Il ne touche ni stock, ni prix, ni argent, ni décision, et ne tire aucun aléa :
+   heartland-cycle et sierra jouent la même partie, au bit près et sous les deux
+   solveurs, avec et sans leur bloc. Aucune empreinte de `ReferenceTraceTests` n'a
+   bougé à son arrivée.
+2. Inactif, il n'écrit rien : ni progression, ni journal.
+3. Chaque sorte conclut au bon jour, recalculé par un autre chemin que le module : la
+   série des fortunes du magnat, les dépôts et retraits des marchés, la distance et la
+   vitesse d'un train. L'échéance est incluse ; un palier est manqué le soir même,
+   jamais avant.
+4. La revente ne gonfle pas les livraisons ; deux réseaux disjoints ne relient rien.
+5. Des objectifs combinés ne s'influencent pas : le journal de l'ensemble est la
+   réunion des journaux de chacun joué seul.
+6. Une donnée incohérente est refusée au chargement : sorte, marchandise ou ville
+   inconnue, fortune sans finance ou sans fenêtre, cible absente ou nulle, cible sur
+   une liaison, liaison qui n'a pas exactement deux villes distinctes, échéance à la
+   fois en tick et en date, date sans calendrier ou qui n'existe pas, échéance avant
+   le premier jour, deux calendriers différents (`objectives.startYear` et
+   `events.startYear`), identifiants en double.
+
+**Points d'accroche, que rien ne lit** : ce qu'un palier vaut (victoire, médaille,
+jalon, défaite s'il est manqué), comment les objectifs se combinent en une issue de
+partie, et ce qui fait perdre. La vision les laisse aux scénarios ; le module ne les
+interprète pas.
+
+**Scénarios** : `heartland-cycle` (fortune du magnat en moyenne sur 30 jours, à deux
+paliers ; mille chargements de nourriture ; trois cents de charbon à Northgate) et
+`sierra` (Pinecrest – Cedarton, de part et d'autre du col). Valeurs d'illustration,
+non réglées. Les tests qui comparent ces scénarios à leurs voisins (heartland-finance
++ heartland-events, sierra-marginal) mettent le bloc à part ; les autres scénarios
+l'écartent par une clé `"//objectives"`.
+
+**Ce qui manque** : une issue de partie (victoire, défaite) et ce qui la décide ; un
+objectif du **score de dirigeant** ou des **investisseurs** (VISION.md, « Le score de
+dirigeant ») — même mécanique, autre mesure ; la construction en cours de partie, sans
+laquelle « relier » n'est qu'un horaire ; la profondeur de carnet finie, sans laquelle
+une fortune se fabrique par un ordre de bourse ; un objectif par compagnie le jour où
+plusieurs compagnies rouleront (le carnet est déjà par compagnie, les objectifs lisent
+celle du joueur) ; un minimum sur une fenêtre (« tenir le million trente jours »),
+chiffré mais non implémenté.
+
+**Critère de réussite** : sur ses scénarios d'épreuve, donner pour chaque palier une
+date médiane, une dispersion et une part de parties manquées qui ne dépendent que de
+la partie jouée — pas d'une revente, pas d'un soir d'ordre de bourse —, sans rien
+déplacer de la partie. Aujourd'hui : livraisons nettes à 0 à 18 jours d'écart-type
+pour la nourriture et 43 à 90 pour le charbon de Northgate, sur des horizons de 1 150
+à 1 900 jours (en brut : de 200 à 925 jours pour le même charbon), fortune lisible en moyenne sur 30 jours (au jour le jour, le million se franchit
+le soir d'un ordre dans 40 témoins sur 40), liaison fixée par l'horaire (tick 4 dans
+40 parties sur 40), aucune empreinte déplacée.
 
 ### `content` — données historiques
 

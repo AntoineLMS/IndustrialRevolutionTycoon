@@ -1601,6 +1601,262 @@ partie sans cycle, sous la référence, sauf mention.
    dirigeant — attendent leurs modules ; leurs valeurs par phase (×1,2 / ×1 / ×0,5 /
    ×0,8 pour l'apport) ne sont pas mesurées, puisque personne ne les lit.
 
+## Les objectifs : ce qu'on compte, et quand ça tombe
+
+*Campagne du module `objectives` — 30 septembre 2026, scénarios `heartland-cycle`
+(2 160 ticks, 1870-1875) et `sierra` (720 ticks), sous les deux solveurs, sur des
+ensembles de 40 parties.*
+
+### La question
+
+La vision décide trois sortes d'objectifs — une fortune personnelle, des cargaisons
+livrées (au total ou vers une ville), deux villes reliées avant une date — et laisse
+aux scénarios les paliers, ce qui fait perdre et la géographie. Avant de régler un
+seul chiffre, trois questions de définition, dont chacune peut rendre un objectif
+creux :
+
+1. **Quelle fortune, lue quand ?** Celle du magnat, pas la caisse de sa compagnie ;
+   mais la dette connue n° 1 de la finance (un flottant de profondeur infinie) la rend
+   manipulable. Au tick courant ou en moyenne glissante ?
+2. **Qu'est-ce qu'une cargaison livrée**, quand la nourriture est vendue des dizaines
+   de fois pour une fois produite ?
+3. **Que veut dire « relier »** sur un réseau figé au chargement, et encore le jour où
+   la construction existera ?
+
+Et une question de mesure : à quelle date chaque objectif tombe-t-il, avec quelle
+dispersion, et quelle part des parties le manque ? C'est ce qui permettra de régler
+la difficulté d'un scénario.
+
+### Le module
+
+Le contrat est dans [CONTRACTS.md](CONTRACTS.md), la place dans le tick dans
+[ARCHITECTURE.md](ARCHITECTURE.md) (phase 7, après la finance). En bref : un bloc
+`objectives` déclare des objectifs, chacun avec un ou plusieurs **paliers** (une cible
+et une échéance facultative, incluse). Chaque soir, le module lit la mesure de chaque
+objectif et conclut chaque palier : **atteint** le jour où la mesure franchit la
+cible, **manqué** le soir de l'échéance s'il ne l'est pas, **en cours** sinon. Un
+palier conclu l'est pour de bon — une fortune qui fond après l'avoir atteinte ne le
+défait pas. Journal public, affiché par le harnais, écrit dans `objectives.csv`.
+
+**Un observateur pur.** Le module ne touche à rien et ne tire rien. La preuve est
+double : aucune empreinte de référence n'a bougé, y compris celles de heartland-cycle
+et de sierra qui portent désormais un bloc actif ; et un test rejoue ces deux
+scénarios avec et sans leur bloc, sous les deux solveurs, et compare marchés,
+compagnie, usines, état financier au centime et journaux. C'est aussi ce qui permet
+la méthode ci-dessous : on accroche à une partie autant de variantes de lecture qu'on
+veut sans la déplacer.
+
+### Trois définitions
+
+**La fortune est celle du magnat, et elle n'a pas de repli.** `Tycoon.NetWorth` :
+caisse personnelle, plus le portefeuille au cours du jour, moins la dette de marge.
+Sans module finance, il n'y a pas d'homme d'affaires, seulement une trésorerie de
+compagnie ; mesurer celle-ci sous le nom de fortune serait précisément la confusion
+que la vision interdit (« sa fortune personnelle est distincte de celle de la
+compagnie qu'il dirige »). Un objectif de fortune sans finance est donc **refusé au
+chargement**, avec un message qui dit pourquoi. Et la fenêtre de lecture —
+`averageTicks`, 1 pour la fortune du soir, N pour la moyenne des N derniers soirs —
+est **obligatoire** : la mesure qui suit montre que ce n'est pas un détail.
+
+**Livré, c'est ce que le rail a laissé dans une ville : vendu moins racheté.** Par
+ville et par marchandise, jamais négatif ; au total, la somme sur les villes. Le
+carnet de route de la compagnie (`Company.Freight`), écrit par le transporteur à
+l'instant de chaque échange, tient les deux cumuls. Trois définitions ont été écartées :
+
+- *toutes les ventes* : sur heartland-cycle, la nourriture est vendue **88 fois** pour
+  une fois produite (242 600 chargements vendus pour 2 760 produits en six ans) ;
+  « mille chargements livrés » tomberait en **63 jours** ;
+- *la première vente après la production* : il faudrait suivre la provenance de
+  chaque chargement, or un marché est fongible — le blé de Fairview et celui de Weston
+  se mélangent dans le même stock. Il faudrait marquer les stocks, donc toucher aux
+  marchés, pour un résultat que la définition retenue donne sans cela ;
+- *les imports cumulés d'un marché* : exacts aujourd'hui (seuls les trains déposent),
+  mais un marché ne sait pas qui y vend ; le jour où un concurrent roulera, ils
+  mélangeraient les compagnies. Un objectif appartient à un joueur.
+
+Ce que la définition retenue garantit : une marchandise revendue de ville en ville
+s'annule dans chaque ville intermédiaire (reçue puis rachetée) et ne compte qu'une
+fois, **là où elle est restée**. Livré au total vaut exactement ce que le rail a pris
+aux villes exportatrices, moins ce qui est à bord — un test le vérifie sur une
+revente construite à la main (le même blé vendu deux fois, compté une) et sur
+heartland-cycle. Revers assumé : une ville qui produit la marchandise n'en reçoit
+« livraison » qu'au-delà de ce qu'elle exporte. Livrer de la nourriture à Kingsport,
+qui a sa boulangerie, ne compte pas ; la vision parle de livrer à une ville, pas d'y
+faire transiter.
+
+**Relier, c'est qu'un même train, sur une même ligne, se soit arrêté dans les deux
+villes** — arrêts traversés en cours de tick compris, puisque le carnet note chaque
+arrivée en gare. Sur une ligne, un train qui a desservi A puis B a nécessairement fait
+le trajet de l'un à l'autre (il ne rebrousse chemin qu'aux terminus). Deux villes
+desservies par deux trains sur deux réseaux disjoints ne sont **pas** reliées — un
+test le vérifie. Pourquoi pas « les deux gares sont sur une même ligne exploitée » :
+sur un réseau figé, ce serait vrai au tick 0 ou jamais. Pourquoi pas « la voie
+existe » : la vision parle de relier des villes, et une voie où ne roule aucun train
+ne relie rien. Le jour où la construction existera, la définition restera juste — il
+faudra poser la voie **et** y faire rouler un train —, et la ligne fait partie de la
+clé, pour qu'un train réaffecté ne prouve rien de sa nouvelle ligne par l'ancienne.
+
+### Méthode
+
+Deux ensembles de 40 parties par scénario et par solveur, sur le scénario tel qu'écrit :
+
+- **témoin** : un seul choc de demande de 0,1 % pendant 38 jours, sur un couple
+  (ville, marchandise) et à une date qui changent avec la partie — la méthode du
+  témoin de la section « Événements ». C'est la sensibilité aux conditions initiales :
+  ce que deviennent les dates quand rien d'économique ne change ;
+- **calendrier** (heartland-cycle seulement) : `events.randomSequence` = 11 + *i*,
+  `cycle.randomSequence` = 13 + *i* — la méthode de la campagne du cycle. C'est ce que
+  font d'autres aléas et une autre conjoncture.
+
+À chaque partie s'ajoutent, sans la déplacer, des variantes de lecture : la fortune
+au jour le jour, sur 30 et sur 90 jours ; les livraisons sans échéance à plusieurs
+seuils ; et, relevées à part, les livraisons comptées en brut (toutes les ventes).
+Dates en ticks ; « médiane [p25 – p75] » ; « atteint » compte les parties sur 40. Les
+objectifs livrés sont des **valeurs d'illustration, non réglées** : un demi-million
+avant 1873 et un million avant 1876 (moyenne sur 30 jours) ; mille chargements de
+nourriture avant 1874 ; trois cents de charbon à Northgate avant le 1er juillet 1875
+(tick 1 979) ; Pinecrest – Cedarton avant le 1er février 1875 sur la sierra.
+
+### Premier résultat : au jour le jour, la fortune s'achète
+
+Le soir du 1er avril 1872 (tick 810), le magnat témoin de heartland-cycle passe un
+ordre de bourse : 38 000 actions de sa propre compagnie, à 65 % sur marge. L'impact de
+l'ordre porte le cours de 23,7 à 37,3, et **tout** son portefeuille est réévalué à ce
+cours : sa fortune passe de 536 000 à 1 059 000. Le lendemain elle vaut 1 018 000,
+cinq jours plus tard 886 000. Au jour le jour, le palier du million tombe ce soir-là.
+
+| référence | au jour le jour | moyenne 30 jours | moyenne 90 jours |
+|---|---|---|---|
+| demi-million, témoin | 40/40, 354 [350 – 354] | 40/40, 372 [370 – 372] | 40/40, 410 [408 – 410] |
+| million, témoin | **40/40, tick 810 dans les 40** | **0/40** | 0/40 |
+| demi-million, calendrier | 40/40, 347 [323 – 387] | 40/40, 363 [340 – 408] | 40/40, 400 [370 – 442] |
+| million, calendrier | 38/40, 810 [810 – 840] | 15/40, 914 [852 – 1 034] | 11/40, 1 000 [939 – 1 075] |
+
+| anticipant | au jour le jour | moyenne 30 jours | moyenne 90 jours |
+|---|---|---|---|
+| demi-million, témoin | 40/40, 342 [342 – 342] | 40/40, 356 [356 – 356] | 40/40, 390 [390 – 390] |
+| million, témoin | 12/40, 840 [818 – 1 028] | 7/40, 1 036 [969 – 1 152] | 5/40, 989 [988 – 1 068] |
+| demi-million, calendrier | 40/40, 398 [345 – 668] | 40/40, 415 [362 – 695] | 40/40, 448 [393 – 728] |
+| million, calendrier | 26/40, 870 [810 – 1 658] | 13/40, 1 180 [977 – 2 091] | 10/40, 1 045 [1 008 – 1 867] |
+
+Trois lectures :
+
+1. **Au jour le jour, un palier de fortune mesure un ordre de bourse, pas une
+   fortune.** Sous la référence, les 40 témoins atteignent le million le même soir,
+   celui de l'ordre, et repassent sous la cible dès le lendemain pour les 1 349 soirs
+   qui restent. En moyenne sur 30 jours, aucun ne l'atteint. Ce n'est pas un défaut
+   du module, c'est la dette n° 1 de la finance vue d'un autre côté : acheter ses
+   propres actions contre un flottant infini, avec un impact qui réévalue toute la
+   position, **fabrique** de la fortune affichée. Un joueur qui l'a compris gagne un
+   objectif de fortune en un ordre.
+2. **La moyenne ne coûte presque rien quand la fortune monte vraiment** : 14 à 18
+   jours de retard sur le demi-million à 30 jours (la moitié de la fenêtre, comme
+   attendu d'une série qui croît), 48 à 56 à 90 jours. Elle ne supprime pas la
+   manipulation, elle la rend chère : il faut tenir le cours gonflé pendant la
+   fenêtre, donc racheter et porter la marge, là où un soir suffisait.
+3. **Le million dépend du calendrier plus que du magnat témoin** : 0/40 sur les
+   témoins de la référence, 15/40 quand la conjoncture et les aléas changent. La
+   fortune est la plus dispersée des trois mesures ; un palier de fortune est un pari
+   sur la bourse autant qu'un objectif de gestion.
+
+### Deuxième résultat : les livraisons sont une horloge
+
+| | référence, témoin | référence, calendrier | anticipant, témoin | anticipant, calendrier |
+|---|---|---|---|---|
+| nourriture : 1 000 avant 1874 | 40/40, 1 175 [1 175 – 1 175] | 40/40, 1 155 [1 140 – 1 166] | 40/40, 1 169 [1 169 – 1 169] | 40/40, 1 147 [1 135 – 1 158] |
+| écart-type (jours) | 0 | 18 | 6 | 17 |
+| la même, comptée en brut | 63 | 63 [62 – 64] | 78 | 76 [72 – 77] |
+| charbon à Northgate : 300 avant le tick 1 979 | 37/40, 1 892 [1 834 – 1 917] | 30/40, 1 842 [1 759 – 1 900] | 40/40, 1 857 [1 822 – 1 875] | 38/40, 1 773 [1 730 – 1 832] |
+| écart-type (jours) | 48 | 90 | 43 | 62 |
+| la même, comptée en brut | 211 (de 200 à 925) | 646 [341 – 777] | 159 | 165 [146 – 178] |
+
+Sans échéance, la nourriture franchit 250, 500, 750, 1 000 et 1 500 chargements aux
+ticks 311, 624, 904, 1 175 et 1 767 sous la référence (témoins, écart-type ≤ 1 jour) :
+**environ 0,85 chargement par jour, d'un bout à l'autre de la partie**, crises et
+panique comprises. Le charbon de Northgate passe 100, 200 et 300 aux ticks 692, 1 213
+et 1 901, écart-type de 24 à 57 jours.
+
+Trois lectures :
+
+1. **Livré net, c'est un débit, pas un exploit.** La nourriture laissée par le rail
+   suit la consommation des villes qui n'en produisent pas, et le transporteur
+   automatique la sert au jour près : deux jours d'écart entre les 40 témoins. Un
+   objectif de livraisons se règle donc par un rapport cible / durée, et sa difficulté
+   viendra de ce que le joueur fait de ses trains, pas de l'économie. Le charbon d'une
+   ville en bout de ligne est plus dispersé (2 à 5 % de la durée), parce qu'il dépend
+   de ce que la ligne choisit de porter, en concurrence avec les autres marchandises.
+2. **Compté en brut, le même objectif tombe 18 fois plus vite et ne mesure plus rien
+   de stable** : mille chargements de nourriture en 63 jours au lieu de 1 175 ; le
+   charbon de Northgate entre 200 et 925 jours selon un choc de 0,1 %, entre 178 et
+   1 134 selon le calendrier. Ce qui varie, c'est la revente — la rotation que le
+   tableau de diagnostic du README signale déjà —, pas ce qui arrive à destination.
+3. **Le calendrier compte plus pour le charbon que pour la nourriture** : 10 parties
+   sur 40 manquent les trois cents chargements de Northgate quand la conjoncture
+   change, 3 sur 40 parmi les témoins. Un palier réglé sur la trajectoire de référence
+   serait manqué une fois sur quatre par un joueur qui ferait exactement la même chose
+   sous un autre tirage.
+
+### Troisième résultat : sur un réseau figé, relier, c'est l'horaire
+
+Sur la sierra, Pinecrest et Cedarton sont reliées au **tick 4**, par t1 parti de
+Westbrook, dans les 40 parties et sous les deux solveurs — écart-type nul. Aucune
+décision n'y entre : les trains roulent sur la ligne du scénario, pleins ou vides,
+tant que la compagnie n'est pas sous administration (et la sierra n'a pas de
+finance). L'objectif éprouve la définition, pas un joueur. Il ne deviendra un choix
+qu'avec la construction en cours de partie, qui n'existe pas (contrat `network`,
+« ce qui manque ») ; l'échéance et le palier en sont le point d'accroche.
+
+### Conclusions
+
+1. **Les trois définitions tiennent** : la fortune est celle du magnat et rien
+   d'autre ; livré ne compte qu'une fois ce que la revente fait tourner ; relier exige
+   un même train sur une même ligne. Chacune est vérifiée par un test qui échoue quand
+   on réintroduit la définition naïve.
+2. **Un objectif de fortune lu au jour le jour se gagne par un seul ordre de bourse**,
+   tant que le flottant est infini. La moyenne glissante le rend coûteux sans le rendre
+   impossible ; seule la profondeur de carnet finie (dette n° 1) le referme. C'est une
+   raison de plus, après celles du cycle, d'en faire un prérequis.
+3. **Les livraisons nettes sont une horloge**, les brutes un bruit : c'est la bonne
+   mesure pour régler un palier, et la difficulté se lira sur un rapport cible / durée.
+4. **Relier ne mesure rien tant que le réseau est donné** : l'objectif existe, il
+   attend la construction.
+5. **Le module n'a rien déplacé** : aucune empreinte, avec ou sans bloc.
+
+### Décisions laissées à l'équipe
+
+Aucune n'est tranchée ici.
+
+1. **Lire la fortune au jour le jour ou en moyenne glissante ?** Le module exige que
+   chaque scénario le dise (`averageTicks`), et heartland-cycle a choisi 30 jours.
+   - *Au jour le jour* : lisible, immédiat — et gagnable par un ordre de bourse tant
+     que le flottant est infini (40/40 témoins atteignent le million le soir de
+     l'ordre, 0/40 en moyenne sur 30 jours).
+   - *Moyenne sur 30 jours* : 14 à 18 jours de retard sur une fortune qui monte
+     vraiment, et la manipulation coûte un mois de cours tenu.
+   - *Moyenne sur 90 jours* : 48 à 56 jours de retard, et un objectif qui ne se lit
+     plus d'un coup d'œil.
+   - *Autre* : un minimum sur la fenêtre (« tenir le million trente jours ») plutôt
+     qu'une moyenne — non implémenté ; le plus robuste contre un pic, le plus sévère
+     pour une fortune qui oscille avec la conjoncture.
+   Le choix se refait quand la profondeur de carnet existera : la dette n° 1 réglée,
+   l'écart entre ces lectures devrait se refermer, et il faudra le remesurer.
+2. **Ce qu'un palier vaut.** Victoire, médaille, simple jalon, défaite s'il est
+   manqué ? Le module ne l'interprète pas. Les mesures disent où tombent les paliers
+   livrés : le demi-million et la nourriture toujours ; les trois cents chargements de
+   charbon de 30 à 40 fois sur 40 ; le million de 0 à 15 fois sur 40 selon le solveur
+   et le calendrier.
+3. **Comment les objectifs se combinent.** Tous ? Un nombre ? Un score ? Le journal
+   dit l'état de chacun ; rien ne les agrège.
+4. **Livrer à une ville qui produit.** La définition nette ne compte rien à Kingsport
+   pour la nourriture, qu'elle exporte. Si un scénario veut « livrer du grain au
+   moulin » d'une ville qui en produit aussi, il faudra une autre sorte d'objectif ; la
+   vision ne la demande pas aujourd'hui.
+5. **Relier sur un réseau donné.** Garder la sorte telle quelle en attendant la
+   construction, ou exiger d'ici là un chargement porté de l'une à l'autre (ce qui
+   demanderait la provenance des chargements à bord) ?
+6. **Fortune sans finance.** Refusée. L'alternative serait une quatrième sorte,
+   explicitement nommée « trésorerie de la compagnie » ; la vision ne la demande pas.
+
 ## Questions ouvertes pour l'équipe
 
 **Le rayon économique.** À 0,8 par kilomètre, une marchandise à bas prix ne peut

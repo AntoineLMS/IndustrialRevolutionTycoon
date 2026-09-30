@@ -53,16 +53,23 @@ dotnet run --project src/RailTycoon.Harness -- --scenario data/heartland-cycle.j
 ```
 
 L'économie et la finance de `heartland-finance`, les événements de
-`heartland-events`, au caractère près ; seul le bloc `cycle` s'ajoute. Six ans de jeu
-plutôt que deux, pour contenir la panique et au moins un cycle complet. Le harnais
-affiche le journal de la conjoncture — la phase, sa date, sa cause, jamais la date où
+`heartland-events`, au caractère près ; seul le bloc `cycle` s'ajoute (et un bloc
+`objectives`, qui ne fait qu'observer). Six ans de jeu plutôt que deux, pour contenir
+la panique et au moins un cycle complet. Le harnais affiche le journal de la conjoncture — la phase, sa date, sa cause, jamais la date où
 elle finira — et, dans le volet financier, le taux de chaque obligation décomposé.
 
-Le harnais écrit cinq CSV dans `out/` (`markets.csv`, `company.csv`,
-`industries.csv`, `events.csv`, `cycle.csv`), affiche la matrice des prix finaux, la
-dispersion des prix par marchandise, l'utilisation des usines, le compte
-d'exploitation et, si le scénario en déclare, les journaux des événements et de la
-conjoncture.
+Le même scénario porte aussi des **objectifs** — une fortune à amasser, des
+cargaisons à livrer — et la sierra une liaison à faire de part et d'autre du col : le
+harnais affiche, pour chaque palier, sa cible, son échéance et s'il est atteint (et
+quand), manqué ou en cours. Le module ne fait qu'observer : la partie est la même avec
+et sans. Ce que « fortune », « livré » et « relier » veulent dire, et pourquoi, est
+dans [docs/FINDINGS.md](docs/FINDINGS.md), « Les objectifs ».
+
+Le harnais écrit six CSV dans `out/` (`markets.csv`, `company.csv`,
+`industries.csv`, `events.csv`, `cycle.csv`, `objectives.csv`), affiche la matrice des
+prix finaux, la dispersion des prix par marchandise, l'utilisation des usines, le
+compte d'exploitation et, si le scénario en déclare, les journaux des événements, de
+la conjoncture et des objectifs.
 
 ## Tester
 
@@ -129,6 +136,8 @@ franchissant au col, et 2 690 000 en l'attaquant de front.
 | Un écart de bilan non nul, même d'un centime | **Fuite comptable**, jamais un résidu de calcul : la finance est tenue en `decimal` |
 | Une compagnie sous administration | Le découvert a dépassé ce que ses capitaux propres gagent ; les trains sont à l'arrêt |
 | Une fortune de magnat qui bondit quand on raccourcit les phases | La pompe du flottant infini sur un cours qui oscille, pas un gain de jeu (voir FINDINGS, « Le cycle économique ») |
+| Un palier de fortune atteint un soir d'ordre de bourse, perdu le lendemain | La fortune lue au jour le jour sur un flottant infini : un achat sur marge réévalue toute la position (voir FINDINGS, « Les objectifs ») |
+| Un objectif de livraisons atteint en quelques semaines | Vérifier qu'il compte le livré net (vendu moins racheté) : compter les ventes compte la revente, des dizaines de fois pour la nourriture |
 | Un écart de quelques pourcents entre deux parties | **Rien**, tant qu'il n'est pas mesuré sur un ensemble : un choc de 0,1 % déplace le résultat de heartland de ±4 % (voir FINDINGS) |
 
 Les statistiques ignorent une période de chauffe (`--warmup`, 90 ticks par défaut)
@@ -147,6 +156,7 @@ src/RailTycoon.Sim/        bibliothèque de simulation, sans dépendance moteur
   Finance/                 société, emprunts, bourse, OPA (comptabilité en decimal)
   Events/                  événements historiques et aléatoires, journal public
   Cycle/                   conjoncture : phases, taux, bourse, demande, journal public
+  Objectives/              objectifs de scénario : fortune, livraisons, liaisons (observateur pur)
   Telemetry/               traces CSV et invariants
 src/RailTycoon.Harness/    exécutable en ligne de commande
 tests/RailTycoon.Tests/    invariants, sans dépendance externe
@@ -154,10 +164,10 @@ data/                      scénarios et cartes (données de conception, modifia
   heartland.json           référence de l'économie, sans finance ni relief
   heartland-finance.json   même économie, volet financier activé
   heartland-events.json    même économie, événements historiques (1871-1873) et aléatoires
-  heartland-cycle.json     finance et événements réunis, et la conjoncture (1870-1875)
+  heartland-cycle.json     finance et événements réunis, et la conjoncture (1870-1875) ; objectifs de fortune et de livraisons
   ironpeak.json            chaîne minerai → fonte → acier
   terrain-*.json           cartes d'essai du réseau : plaine, vallée, col
-  sierra.json              économie de heartland sur une sierra : relief et économie ensemble
+  sierra.json              économie de heartland sur une sierra : relief et économie ensemble ; une liaison à faire
   sierra-marginal.json     même sierra, coût d'exploitation proportionnel à la masse (coût marginal réel)
   locomotives.json         catalogue historique, sources dans docs/SOURCES.md
 docs/                      architecture et contrats entre modules
