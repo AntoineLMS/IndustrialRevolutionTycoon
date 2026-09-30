@@ -339,17 +339,34 @@ Ce qui distingue deux locomotives :
   ligne à vapeur.
 - *Plus tard* : une mécanique pour influencer le cours du carburant.
 
-*Déjà en place* : un catalogue de 15 locomotives historiques, de 1829 à 1945, sourcé
-dans [SOURCES.md](SOURCES.md), avec leur effort de traction. Il n'est pas encore
-branché : la vitesse et le coût d'un train sont saisis à la main. Le modèle de coût
-« mass » (FINDINGS.md, « Le coût marginal réel ») connaît déjà la masse d'une
-locomotive et de ses wagons.
+*Déjà en place* : un catalogue de 17 locomotives historiques, de 1829 à 1945, sourcé
+dans [SOURCES.md](SOURCES.md) — effort de traction, vitesse, puissance, masse,
+carburant, consommation, prix, entretien —, branché par le module `vehicles` (opt-in,
+scénario `sierra-vehicules`). La compagnie achète les machines que le scénario
+déclare, au prix du catalogue, à l'ouverture ou à une date ; elles sont à son actif et
+s'amortissent quand la finance est active. Le carburant se paie à chaque arrêt au prix
+local, l'entretien chaque tick. La puissance et l'adhérence fixent la vitesse d'un
+train chargé en rampe, et la mise en vitesse au départ de chaque gare. Ce que cela
+donne : sur la sierra, la 2-8-0 puissante de 1866 bat la 4-4-0 rapide de 1870 ; sur
+la même carte sans relief, c'est l'inverse (FINDINGS.md, « Les véhicules »). Il n'y a
+pas encore de décision d'achat : la flotte est déclarée par le scénario.
 
 **Décidé, en connaissance de cause** : le prix local vaut même quand la ville n'a
 pas de carburant en stock. Une ville sans charbon affiche le prix plafond (trois
 fois la référence) : y faire le plein coûte donc cher, et c'est voulu. Où l'on fait
 le plein devient un choix d'itinéraire : une ligne à vapeur a intérêt à passer par
 une ville où le charbon abonde.
+
+*Lecture retenue, à confirmer.* Le modèle de prix n'affiche le plafond que dans une
+ville qui **consomme** du charbon sans en avoir ; là où personne n'en achète, il
+affiche le **plancher**, stock nul compris. Pris au pied de la lettre, le plein y
+serait presque gratuit — le contraire de ce qui est décidé. Le module `vehicles` fait
+donc payer le plafond dans une ville sans stock *ni* acheteur, et le prix du marché
+partout ailleurs, y compris le plancher du carreau d'une mine qui en déborde sans en
+consommer. Sur la sierra, le bois de la General se paie ainsi 24 dans huit gares sur
+dix, et 3,1 à la forêt. Et tant que les trains s'arrêtent à toutes les gares d'une
+ligne fixe, où faire le plein n'est pas encore un choix : chaque gare paie ce qui a
+été brûlé depuis la précédente.
 
 ## Ce que le joueur décide
 
@@ -582,9 +599,14 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
    qu'une compagnie fonde doivent encaisser pour elle.
 3. **Le rayon d'action des gares.** Les industries doivent avoir une position sur la
    carte, et les gares se servir dans celles qui sont à leur portée.
-4. **Des véhicules achetés**, avec les caractéristiques du tableau ci-dessus, et un
-   carburant acheté au marché. Un train est aujourd'hui déclaré par le scénario et
-   ne coûte rien à acquérir.
+4. **Des véhicules achetés** — *en place, en option* (module `vehicles`,
+   `data/sierra-vehicules.json`) : machines du catalogue achetées au prix du
+   catalogue et amorties, carburant payé au prix local à chaque arrêt, entretien par
+   tick, vitesse tirée de la puissance, de l'adhérence et de la masse du train. Il
+   manque la **décision** : la flotte est déclarée par le scénario, et personne
+   n'achète, ne vend ni ne remplace une machine en cours de partie ; le catalogue
+   n'est pas borné à l'époque du scénario ; le plein n'est pas un choix tant que les
+   trains s'arrêtent à toutes les gares (FINDINGS.md, « Les véhicules », décisions).
 5. **Des ordres de train** : une liste de gares, et des chargements forcés. Le
    transporteur automatique décide seul, sur des lignes fixes, en regardant tous les
    arrêts à venir, avec une information parfaite.
@@ -622,3 +644,7 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
 6. Ce que vaut un palier d'objectif, comment les objectifs d'un scénario se combinent
    en une victoire, et si une fortune se lit au jour le jour ou en moyenne. *Mesuré,
    options chiffrées* dans FINDINGS.md, « Les objectifs ».
+7. Les véhicules : quelles machines un scénario propose (bornées à son époque ?), à
+   quel prix (converti au charbon, le prix ne pèse presque rien ; au quadruple, il
+   équilibre les deux machines de 1870 sur la sierra), et une vitesse limite des
+   wagons. *Mesuré, options chiffrées* dans FINDINGS.md, « Les véhicules ».

@@ -82,7 +82,10 @@ stocks, bornes de prix, équilibre de la trésorerie, et côté finance l'équil
 bilan au centime à chaque tick. Elle compare aussi chaque scénario livré à une
 **trace de référence** figée : tout changement de comportement de la simulation
 la fait échouer, et doit être justifié dans le commit qui met l'empreinte à jour.
-Elle n'utilise aucun paquet NuGet et fonctionne hors ligne.
+Elle n'utilise aucun paquet NuGet et fonctionne hors ligne. La variable
+d'environnement `RAILTYCOON_TESTS` restreint la suite aux tests dont le nom la
+contient (par exemple `RAILTYCOON_TESTS=véhicules`) : c'est l'outil de la
+vérification par mutation, pas un substitut à la suite complète.
 
 Avant toute simulation, vérifier que le scénario est réalisable :
 
@@ -110,6 +113,24 @@ Même économie que `sierra.json`, au caractère près ; seul le modèle de coû
 Ce qu'il fait au relief et au résultat est dans [docs/FINDINGS.md](docs/FINDINGS.md),
 « Le coût marginal réel ».
 
+Pour les véhicules — des locomotives du catalogue achetées par la compagnie, un
+carburant payé à chaque arrêt au prix local, un entretien par tick, une vitesse que
+la puissance, l'adhérence et la masse du train ralentissent en rampe :
+
+```bash
+dotnet run --project src/RailTycoon.Harness -- --scenario data/sierra-vehicules.json
+```
+
+`sierra-marginal` au caractère près, plus le bloc `vehicles` et trois 4-4-0 de 1870.
+Le harnais affiche le parc — prix, kilomètres par tick, part des tronçons montés en
+plusieurs passes faute d'adhérence, carburant, entretien — et où les trains ont fait
+le plein, à quel prix. Changer de machine est une ligne :
+`jq '.trains[].locomotive = "lv_consolidation"' data/sierra-vehicules.json` ; le
+catalogue se lit relativement au scénario (`vehicles.catalogPath`), donc une copie
+écrite ailleurs que dans `data/` doit y pointer, par exemple
+`| .vehicles.catalogPath = "../data/locomotives.json"` pour une copie dans `out/`. Ce que le choix de la machine
+change, et pourquoi il dépend de la carte, est dans FINDINGS.md, « Les véhicules ».
+
 Pour un scénario posé sur un relief, le devis de construction se lit de la même
 façon, sans rien simuler :
 
@@ -135,6 +156,8 @@ franchissant au col, et 2 690 000 en l'attaquant de front.
 | Trésorerie en croissance monotone et lisse | L'arbitrage ne se referme pas : trop facile |
 | Un écart de bilan non nul, même d'un centime | **Fuite comptable**, jamais un résidu de calcul : la finance est tenue en `decimal` |
 | Une compagnie sous administration | Le découvert a dépassé ce que ses capitaux propres gagent ; les trains sont à l'arrêt |
+| Une part élevée de tronçons « coupés » dans le parc | La machine n'a pas l'adhérence de ses trains sur les rampes de la ligne : elle les monte en plusieurs passes, et perd ses trajets |
+| Un remplissage à 0 % avec des achats de matériel | La flotte a coûté plus que la caisse ; sans finance, le transporteur n'achète plus rien et les trains roulent à vide |
 | Une fortune de magnat qui bondit quand on raccourcit les phases | La pompe du flottant infini sur un cours qui oscille, pas un gain de jeu (voir FINDINGS, « Le cycle économique ») |
 | Un palier de fortune atteint un soir d'ordre de bourse, perdu le lendemain | La fortune lue au jour le jour sur un flottant infini : un achat sur marge réévalue toute la position (voir FINDINGS, « Les objectifs ») |
 | Un objectif de livraisons atteint en quelques semaines | Vérifier qu'il compte le livré net (vendu moins racheté) : compter les ventes compte la revente, des dizaines de fois pour la nourriture |
@@ -169,7 +192,8 @@ data/                      scénarios et cartes (données de conception, modifia
   terrain-*.json           cartes d'essai du réseau : plaine, vallée, col
   sierra.json              économie de heartland sur une sierra : relief et économie ensemble ; une liaison à faire
   sierra-marginal.json     même sierra, coût d'exploitation proportionnel à la masse (coût marginal réel)
-  locomotives.json         catalogue historique, sources dans docs/SOURCES.md
+  sierra-vehicules.json    même sierra, trains tirés par des locomotives du catalogue achetées
+  locomotives.json         catalogue historique (masse, puissance, carburant, prix), sources dans docs/SOURCES.md
 docs/                      architecture et contrats entre modules
 ```
 

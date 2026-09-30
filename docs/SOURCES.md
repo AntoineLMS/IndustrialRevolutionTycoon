@@ -1,4 +1,4 @@
-# Sources — modules `content`, `events` et `cycle`
+# Sources — modules `content`, `events`, `cycle` et `vehicles`
 
 Ce document couvre les deux livrables du module `content` :
 [`data/locomotives.json`](../data/locomotives.json) (catalogue historique) et
@@ -8,7 +8,10 @@ et les événements historiques du module `events`, déclarés dans
 [section dédiée](#evenements) ; et les masses du train du modèle de coût `mass`
 ([`data/sierra-marginal.json`](../data/sierra-marginal.json)) — voir
 [« Masses du train »](#masses-du-train) ; et les dates et durées qui calent la
-conjoncture du module `cycle` — voir [« Cycle économique »](#cycle-economique).
+conjoncture du module `cycle` — voir [« Cycle économique »](#cycle-economique) ; et,
+pour le module `vehicles` qui branche le catalogue, la masse, la puissance, le
+carburant, la consommation, le prix et l'entretien de chaque machine, et la
+résistance au roulement — voir la note de méthode du catalogue.
 
 Principe suivi partout : une caractéristique **physique** (année, effort de
 traction, vitesse, masse) est documentée quand une source le permet, et
@@ -23,8 +26,18 @@ cohérentes entre elles (voir la note de méthode plus bas).
 ## Catalogue de locomotives — `data/locomotives.json`
 
 Recherches effectuées via WebSearch le 27 septembre 2026 (Wikipédia et sites
-spécialisés de patrimoine ferroviaire). Pour chaque machine : ce qui est
-documenté, ce qui est estimé, et pourquoi.
+spécialisés de patrimoine ferroviaire), complétées le 30 septembre 2026 pour le
+module `vehicles`, qui branche le catalogue sur la simulation (masse, puissance,
+carburant, consommation, prix, entretien ; deux machines ajoutées, la PRR D5 et la
+Consolidation). Pour chaque machine : ce qui est documenté, ce qui est estimé, et
+pourquoi.
+
+**Limite, vérifiée le 30 septembre 2026** : les pages elles-mêmes n'ont pas pu être
+ouvertes — `en.wikipedia.org` est refusé par le proxy sortant (« EGRESS_BLOCKED »).
+Tout ce qui est ajouté ce jour-là et dit « documenté » l'est par les **extraits** que
+le moteur de recherche renvoie de ces pages, avec leurs adresses. C'est moins qu'une
+lecture, et une relecture humaine est la prochaine étape avant de s'y fier pour un
+texte de jeu.
 
 ### Rocket (Stephenson, 1829)
 - **Documenté** : effort de traction 825 lbf (3,7 kN) ; vitesse max. 30 mph
@@ -104,7 +117,38 @@ documenté, ce qui est estimé, et pourquoi.
   - vitesse (64 km/h) — non documentée pour cette machine ; retenue par
     comparaison avec les vitesses typiques des « American » 4-4-0 de l'époque
     (≈40 mph).
-- Source : [Wikipédia — The General (locomotive)](https://en.wikipedia.org/wiki/The_General_(locomotive)).
+- **Documenté (30 septembre 2026, extraits)** : chaudière **au bois** (« wood-burning
+  furnace », cheminée « balloon ») — d'où `fuelType: wood` ; achetée **8 500 $** par
+  le Western & Atlantic en 1855.
+- Source : [Wikipédia — The General (locomotive)](https://en.wikipedia.org/wiki/The_General_(locomotive)) ;
+  [american-rails.com — The General](https://www.american-rails.com/general.html).
+
+### Consolidation (Baldwin / Lehigh & Mahanoy, 1866) — ajoutée
+- **Documenté (extraits)** : la première 2-8-0, dessinée par Alexander Mitchell,
+  maître-mécanicien des ateliers de Delano, construite par Baldwin pour le lourd
+  trafic de charbon du Lehigh & Mahanoy, et baptisée pour la fusion qui fonda le
+  Lehigh Valley ; « en ordre de marche, la machine pesait 90 000 lb, dont 80 000
+  sur les roues motrices de 48 in » ; cylindres 20 × 26 in (une autre source dit
+  20 × 24).
+- **Estimé** : effort de traction **89 kN** — la limite d'adhérence, 80 000 lb ×
+  0,25 = 20 000 lbf (la formule des cylindres, à 125 psi supposés, donnerait
+  davantage ; c'est l'adhérence qui borne) ; vitesse **40 km/h** (25 mph, vitesse
+  de service d'une machine de fret à roues de 48 in, non documentée) ; tender
+  (0,6 × la machine, voir la note de méthode).
+- Sources : [Wikipédia — 2-8-0](https://en.wikipedia.org/wiki/2-8-0) ;
+  [Railway Wonders of the World — Consolidation](https://railwaywondersoftheworld.com/consolidation.html) ;
+  [american-rails.com — Lehigh Valley steam](https://www.american-rails.com/lvsteam.html).
+
+### Pennsylvania Railroad classe D5 (Altoona, 1870-1873) — ajoutée
+- **Documenté** : dix-huit 4-4-0 légères construites aux ateliers d'Altoona de 1870
+  à 1873 ; roues motrices de 56 in ; machine 65 200 lb (29,6 t), tender 40 800 lb
+  (18,5 t), ensemble **48,1 t** (déjà sourcé dans « Masses du train » plus bas, dont
+  le modèle `mass` tire sa masse de locomotive).
+- **Estimé** : effort de traction **48 kN** (adhérence : environ deux tiers de la
+  machine sur les roues motrices, × 0,25 ; les cylindres et la pression ne figurent
+  pas dans les extraits) ; vitesse **72 km/h** (45 mph, typique d'une 4-4-0 à roues
+  de 56 in, non documentée).
+- Source : [Wikipédia — Pennsylvania Railroad class D5](https://en.wikipedia.org/wiki/Pennsylvania_Railroad_class_D5).
 
 ### Pennsylvania Railroad classe E6 Atlantic (1910)
 - **Documenté** : effort de traction 32 000 lbf (142,3 kN) ; masse locomotive
@@ -141,6 +185,8 @@ documenté, ce qui est estimé, et pourquoi.
   locomotive seule 345,6 t (762 000 lb, tender exclu) ; vitesse maximale de
   conception 80 mph (129 km/h) — en service, ces machines roulaient
   généralement sous 60 mph.
+- **Documenté (30 septembre 2026, extraits)** : tender 427 500 lb, ensemble
+  1 189 500 lb (**539,5 t**, classe -1 de 1941) ; coût **265 174 $** pièce.
 - Source : [Wikipédia — Union Pacific Big Boy](https://en.wikipedia.org/wiki/Union_Pacific_Big_Boy).
 
 ### EMD F3 (1945, diesel-électrique)
@@ -153,46 +199,140 @@ documenté, ce qui est estimé, et pourquoi.
   dérivée d'un ordre de grandeur courant dans la littérature ferroviaire pour
   les locomotives diesel de 1 500 ch (≈3–4 gallons US/mile), converti en kg
   avec une densité gazole de 0,85 kg/L. Traitée comme une estimation, pas
-  comme une donnée sourcée.
+  comme une donnée sourcée. *Remplacée le 30 septembre 2026* par une consommation
+  spécifique (voir la note de méthode).
+- **Documenté (30 septembre 2026, extrait)** : une paire A-B de F3 coûtait
+  301 701 $ en mars 1948. **Estimé** : masse d'une unité A, 104 t (≈230 000 lb, non
+  vérifiée).
 - Source : [Wikipédia — EMD F3](https://en.wikipedia.org/wiki/EMD_F3).
 
-### Note de méthode — coût d'achat, entretien, consommation
+### Note de méthode — masse, puissance, consommation, prix, entretien
 
-Ces trois champs sont estimés pour **toutes** les locomotives, par les
-formules suivantes, appliquées uniformément pour rester cohérentes entre
-elles (une locomotive deux fois plus puissante coûte plus cher, pas au
-hasard) :
+*Réécrite le 30 septembre 2026, quand le module `vehicles` a branché le catalogue.*
+La première version estimait consommation (kg/km), prix et entretien par km à
+partir du seul effort de traction, à une échelle jamais confrontée à la
+simulation : l'entretien d'une General valait 0,95 par km, plus que tout le coût
+kilométrique d'un train de la sierra (0,8). Les formules ci-dessous remplacent
+les anciennes ; elles sont appliquées uniformément, et chaque valeur qui en sort
+est **estimée**, jamais documentée.
 
 ```
-consommation (kg/km)     = 0,15 × effort de traction (kN)      [locomotives à charbon]
-coût d'achat              = 0,5  × effort de traction (kN) × vitesse (km/h),
-                            plancher à 200
-coût d'entretien (/km)    = 0,03 × effort de traction (kN)
+masse (t)            = machine documentée × 1,6          (tender = 0,6 × machine)
+                       sauf ensemble documenté : Crampton 50,5, D5 48,1, Big Boy 539,5 ; F3 sans tender
+puissance (kW)       = 10 × machine (t, tender exclu)
+                       sauf documentée : Crampton 295, F3 1 119 (1 500 ch)
+prix                 = 132 × machine (t, tender exclu)   ; diesel × 1,9
+entretien (par tick) = prix × 15 % / 360                 ; diesel 8 %
+consommation         = kg pour 1 000 tonnes-km brutes, par époque (tableau plus bas)
 ```
 
-La consommation du diesel (EMD F3) déroge à cette formule — voir sa fiche
-ci-dessus — parce qu'un moteur diesel consomme beaucoup moins de carburant
-par unité d'effort qu'une chaudière à charbon (rendement thermique très
-supérieur) ; appliquer la même formule aurait donné un chiffre absurdement
-élevé et **faux**, pas seulement approximatif.
+- **Tender, 0,6 × la machine.** La D5 est le seul cas américain documenté des deux
+  masses (18,5 t pour 29,6 t, soit 0,63) ; le Big Boy donne 0,56.
+- **Puissance, 10 kW par tonne de machine.** La puissance d'une machine à vapeur
+  est celle de sa chaudière, qui croît avec sa taille. Deux ancrages : la Crampton,
+  295 kW documentés pour environ 30 t de machine ; le Big Boy, environ 4 700 kW au
+  crochet pour 345,6 t (ordre de grandeur de mémoire, non relu : 13,6 kW/t). La
+  formule sous-estime donc probablement de 20 à 35 % les machines surchauffées du
+  XXᵉ siècle. Une première piste, puissance = 0,3 × effort × vitesse, a été écartée :
+  elle donnait à la Consolidation, lente, la puissance d'une 4-4-0 légère, alors que
+  sa chaudière est d'un tiers plus lourde.
+- **Prix, 132 par tonne de machine.** Deux prix documentés en dollars courants : la
+  General, 8 500 $ en 1855 pour 50 300 lb (0,17 $/lb) ; le Big Boy, 265 174 $ en
+  1941 pour 762 000 lb (0,35 $/lb, dans des dollars de 1941). Retenu : 0,20 $ de 1870
+  par livre de machine. Converti en unités du jeu **au prix du charbon**, le seul
+  prix du jeu qui ait un équivalent historique direct : le charbon bitumineux de
+  Cumberland valait 4,72 $ la tonne courte à Baltimore en 1870 (5,20 $ la tonne), le
+  charbon du jeu 14 le chargement de 9 t (1,56 la tonne) ; un dollar de 1870 vaut
+  donc 0,30 unité, et une tonne de machine 0,20 × 2 204,6 × 0,30 ≈ 132 (prix du
+  charbon : extrait d'une recherche renvoyant aux séries NBER de prix du charbon
+  bitumineux publiées par la [Réserve fédérale de Saint-Louis](https://fred.stlouisfed.org/data/M04046US35620M294NNBR)
+  — la série exacte, « Cumberland à Baltimore » selon l'extrait, n'a pas été relue).
+  Le prix de la General par la même conversion, 2 550, est à 15 % de la formule
+  (3 010) : l'écart est laissé, la formule est la règle. La paire A-B
+  de F3 (301 701 $ en 1948, soit 0,66 $/lb) coûtait 1,9 fois le prix à la livre du
+  Big Boy : d'où le facteur du diesel.
+- **Entretien, 15 % du prix par an.** Ordre de grandeur des comptes des années
+  1870 : quelques cents de réparations par mille parcouru, pour 25 000 à 30 000
+  milles par an et par machine, contre 10 000 à 14 000 $ la machine. Ce n'est *pas*
+  relu dans une source (les extraits de rapports de commissaires du Wisconsin, 1878,
+  donnent des « coûts de réparation par mille » dont l'unité n'est pas lisible dans
+  l'extrait) : c'est une estimation. Le diesel à 8 % traduit ce qui fit son succès,
+  un entretien plus léger — estimé, lui aussi.
 
-Ces trois champs ne sont **jamais** présentés comme des données historiques
-dans `data/locomotives.json` — voir `LocomotiveDef` dans
+**La conversion au prix du charbon a une conséquence qu'il faut connaître** : au
+prix de jeu du charbon, le carburant pèse 5 % du coût d'un train de la sierra, contre
+un ordre de grandeur de 10 à 15 % des dépenses d'exploitation des chemins de fer
+américains du XIXᵉ siècle. Le charbon du jeu est bon marché par rapport à son
+`costPerKm` ; si l'on convertissait plutôt au coût d'exploitation d'un train, prix
+et entretien seraient environ quatre fois plus élevés. Les deux conversions sont
+mesurées dans [FINDINGS.md](FINDINGS.md), « Les véhicules », décision 3.
+
+**Consommation spécifique.** Les statistiques des chemins de fer américains de
+classe I publient la consommation de charbon **pour mille tonnes-milles brutes**
+(train entier, relief compris) : 174 lb en 1920, 130 en 1927, 125 en 1929, 121 en
+1930, 115 en 1940 (extraits de l'annuaire des minéraux du Bureau of Mines, 1940 et
+1945, sur [search.library.wisc.edu](https://search.library.wisc.edu/digital/A47FDW5A6Y2PTF8V/text/ALSCN754P6676E8B),
+et d'un chapitre du [NBER](https://www.nber.org/chapters/c4617.pdf) ; pages non
+ouvertes). Mille
+tonnes courtes-milles valent 1 460 tonnes-km : 174 lb font **54 kg pour mille
+tonnes-km**, 115 lb **36 kg**. Retenu :
+
+| époque | kg / 1 000 t-km | fondement |
+|---|---|---|
+| 1829-1831 | 90 | estimé : les premières machines, sans tirage ni détente efficaces |
+| 1837-1852 | 75 | estimé, entre les deux |
+| 1866-1870 (charbon) | 70 | estimé : « 41 milles par tonne de charbon » sur un chemin de fer du milieu du siècle (extrait, [*American Heritage*, « Wood burn »](https://americanheritage.com/wood-burn)), pour un train supposé de 200 t brutes |
+| 1855, **bois** (General) | 175 | 2,5 × le charbon de l'époque : « 5 000 lb de bois évaporent autant d'eau que 2 000 lb de charbon » (même extrait) ; le même chemin de fer faisait 26 milles à la corde de bois contre 41 à la tonne de charbon |
+| 1910 | 58 | estimé, un peu au-dessus de 1920 (54) |
+| 1923 | 48 | entre 1920 (54) et 1927 (40) |
+| 1935-1941 | 38 à 36 | 1940 : 36 (documenté) |
+| 1945, fioul (F3) | 6 | estimé : rendement d'un diesel 4 fois celui de la vapeur, fioul 1,45 fois plus énergétique que le charbon — 36 ÷ (4 × 1,45) |
+
+Ces chiffres sont des moyennes de réseaux entiers, relief compris. Le jeu les
+multiplie en plus par le facteur de relief du tronçon : sur une ligne de montagne,
+la consommation est donc légèrement comptée deux fois pour la part de relief que la
+moyenne contenait déjà. C'est assumé, et chiffrable : à `climbEquivalentKm` 0,03, le
+relief ne pèse que 8,8 % du coût de la sierra.
+
+<a id="resistance-au-roulement"></a>
+**Résistance au roulement, 0,004** (`vehicles.rollingResistance`). George
+Stephenson notait en 1829 que « la friction et la résistance de chaque tonne de
+voitures et de chargement étaient un peu inférieures à 8 livres », et 8 livres pour
+une tonne longue (2 240 lb) font 0,0036 ; retenu 0,004, l'ordre de grandeur des
+wagons à coussinets lisses du XIXᵉ siècle. Source : [Science Museum Group — carnet
+de John Urpeth Rastrick, pages 60-61](https://collection.sciencemuseumgroup.org.uk/documents/aa110154186)
+(extrait seulement). Les formules modernes (Davis, 1926) donnent moins pour des
+wagons lourds ; ce n'est pas la même époque.
+
+Ces champs ne sont **jamais** présentés comme des données historiques dans
+`data/locomotives.json` — voir `LocomotiveDef` dans
 [`src/RailTycoon.Sim/Economy/LocomotiveDef.cs`](../src/RailTycoon.Sim/Economy/LocomotiveDef.cs),
 dont la doc XML renvoie ici.
 
 ### Ce qui manque
 
-- Aucune consommation de combustible par kilomètre n'a de source directe pour
-  aucune des quinze machines : c'est la donnée la plus difficile à trouver
-  publiée par locomotive précise (les sources documentent des *capacités* de
-  soute, pas des débits). Toutes sont donc estimées.
+- Aucune consommation n'est documentée **par machine** : les sources donnent des
+  moyennes de réseau (1920-1940) ou des anecdotes (milles par tonne, par corde).
+  Toutes les consommations sont des estimations par époque.
+- La puissance n'est documentée que pour deux machines sur dix-sept ; les autres
+  sortent de la formule à 10 kW par tonne, probablement basse pour le XXᵉ siècle.
+- L'effort de traction de la D5 et de la Consolidation est une limite d'adhérence
+  (0,25 × masse adhérente), pas une mesure ; celle de la D5 suppose en plus la
+  répartition de sa masse.
+- La vitesse de la D5, de la Consolidation, de Lafayette et du General n'a pas de
+  source directe. Et la vitesse du catalogue est souvent un **record** (Mallard,
+  203 km/h) : un train de marchandises ne l'atteint pas. `vehicles.maxTrainSpeedKmh`
+  permet de borner la vitesse d'un train par celle de ses wagons ; aucune valeur
+  n'est sourcée pour 1875.
 - La pression de chaudière des cinq premières machines (Stourbridge Lion,
   Planet, John Bull, Fire Fly, General) n'est pas publiée dans les sources
   trouvées ; l'effort de traction qui en dépend est donc calculé sur une
   hypothèse (50 psi, ou 140 psi documentée pour le General), pas mesuré.
-- La vitesse de Lafayette et du General n'a pas de source directe et est
-  estimée par comparaison avec des machines contemporaines documentées.
+- Seule la General est documentée au bois. Plusieurs autres machines américaines
+  d'avant 1870 en brûlaient probablement (John Bull, Lafayette) ; faute de source,
+  elles restent au charbon.
+- Les pages citées le 30 septembre 2026 n'ont été lues qu'à travers les extraits
+  du moteur de recherche (voir la limite en tête de section).
 
 <a id="masses-du-train"></a>
 ## Masses du train — modèle de coût `mass` (`haulage.massCost`)
@@ -200,9 +340,12 @@ dont la doc XML renvoie ici.
 Le modèle de coût `mass` (voir [FINDINGS.md](FINDINGS.md), « Le coût marginal
 réel ») a besoin de trois masses : la locomotive avec son tender, la tare d'un
 wagon, la charge d'un wagon — un chargement du jeu est un wagon. Le catalogue
-`data/locomotives.json` ne porte pas de masse (les masses documentées plus haut
-ne sont pas dans le fichier) ; les trois valeurs sont donc des paramètres du
-scénario, et c'est ici qu'elles se justifient.
+`data/locomotives.json` ne portait pas de masse quand ce modèle a été écrit ; les
+trois valeurs sont donc des paramètres du scénario, et c'est ici qu'elles se
+justifient. *Depuis le 30 septembre 2026*, le catalogue porte la masse de chaque
+machine, et sous le module `vehicles` c'est elle qui remplace `locomotiveTonnes` ;
+tare et charge d'un wagon restent celles d'ici — elles donnent aussi la masse de la
+cargaison dans la dynamique du train (chargements × `tonnesPerLoad`).
 
 Recherches effectuées via WebSearch le 30 septembre 2026. Même limite que pour
 les événements : les pages n'ont pas pu être ouvertes depuis l'environnement de

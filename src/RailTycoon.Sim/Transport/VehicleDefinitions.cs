@@ -77,6 +77,15 @@ public sealed class VehiclesDef
     public double RollingResistance { get; set; } = 0.004;
 
     /// <summary>
+    /// Vitesse limite d'un train de marchandises, en km/h, quelle que soit la
+    /// locomotive : ce que permettent les wagons, leurs freins et la voie. 0 (défaut) :
+    /// pas de limite, la vitesse maximale du catalogue fait foi — y compris celle
+    /// d'une machine de vitesse attelée à des wagons de 1870, ce que la mesure
+    /// montre absurde (docs/FINDINGS.md, « Les véhicules »).
+    /// </summary>
+    public double MaxTrainSpeedKmh { get; set; }
+
+    /// <summary>
     /// Vrai (défaut) : le temps d'un tronçon compte la mise en vitesse au départ de
     /// chaque gare, limitée par l'adhérence puis par la puissance. Faux : le train
     /// roule d'emblée à sa vitesse de croisière — la variante qui isole l'effet de

@@ -54,7 +54,7 @@ changement au détour d'un correctif.
 | 2 | Usines : consommation des intrants, production | `IEconomySolver` |
 | 3 | Consommation des habitants, modulée par le prix | `IEconomySolver` |
 | 4 | Recalcul des prix | `IEconomySolver` |
-| 5 | Déplacement des trains, achats et ventes | `IHaulageSolver` |
+| 5 | Entretien des voies et des locomotives ; achats de matériel datés ; déplacement des trains, plein de carburant, achats et ventes | `IHaulageSolver` |
 | 6 | Finance : exploitation constatée, découvert, intérêts, cours, dividendes, bourse, OPA | `IFinanceSolver` |
 | 7 | Objectifs : lecture du soir (fortune du magnat, carnet de route), paliers atteints ou manqués, journal public — observateur pur | `IObjectiveSolver` |
 
@@ -149,6 +149,17 @@ du scénario — atteints, manqués, en cours. Sa place est contrainte d'un seul
   l'instant de chaque échange et de chaque arrivée en gare, dans tous les scénarios.
   C'est de la télémétrie : aucune règle ne le lit pour décider, et c'est lui aussi que
   les empreintes inchangées couvrent.
+Le module `vehicles` n'a **pas** de phase : tout ce qu'il fait appartient au
+transport, en phase 5, dans cet ordre — l'entretien des locomotives, dû avant la
+porte de l'administration judiciaire comme celui des voies ; l'achat d'une
+locomotive datée, le jour dit, et son premier échange ; puis, pour chaque train, le
+déplacement, et à chaque arrêt le plein avant la vente et l'achat. Le plein lit le
+prix que la gare affiche à l'arrivée, avant que les échanges du train ne le
+déplacent. Les locomotives achetées à l'ouverture le sont dans
+`IHaulageSolver.Initialize`, avant le premier échange ; la finance, qui s'ouvre
+après, les trouve payées et les porte à l'actif. Inactif, le module ne fait rien, au
+bit près : aucune empreinte de `ReferenceTraceTests` n'a bougé à son arrivée, et un
+test joue sierra-vehicules au bloc désactivé contre l'empreinte de sierra-marginal.
 
 Conséquence voulue de l'ordre 4 puis 5 : les trains voient les prix
 d'après-production. Le joueur arrive sur un marché tel qu'il est au matin, pas
@@ -248,8 +259,9 @@ distances par un **graphe de voies posé sur un relief**. Sa façade est
 Tout le reste — carte de hauteurs, enveloppe de profils, terrassement, ponts,
 tunnels — est derrière. Le transport ne connaît que `RailLine`, qui reste une suite
 plate d'arrêts et de distances : il demande `DistanceBetween` et reçoit la longueur
-réelle de la voie, il demande `LegCostFactor` et reçoit un nombre. **Aucun type du
-relief ne traverse cette frontière.**
+réelle de la voie, il demande `LegCostFactor` et reçoit un nombre — et, pour les
+véhicules, `LegClimbGradient`, un autre nombre : les mètres gravis ÷ la longueur.
+**Aucun type du relief ne traverse cette frontière.**
 
 ### Comment un tracé est chiffré
 
@@ -349,7 +361,11 @@ C'est le modèle de coût par défaut (`haulage.costModel = "flat"`). Le modèle
 `"mass"`, opt-in par les données, rend le coût proportionnel à la masse remorquée
 et fait décider le transporteur sur le surcoût réel d'un chargement, par la même
 formule que la facture (`Transport/TrainCost.cs`) : là, le relief entre dans les
-décisions — mesuré dans « Le coût marginal réel ».
+décisions — mesuré dans « Le coût marginal réel ». Le module `vehicles`, qui exige ce
+modèle, lit en plus une seconde grandeur du relief : la rampe moyenne gravie de
+chaque tronçon (`RailSegment.ForwardClimbM`, `RailLine.LegClimbGradient`), un
+scalaire de plus à travers la même frontière, dont il tire le temps qu'un train
+chargé met à franchir une rampe (FINDINGS.md, « Les véhicules »).
 
 ## La monnaie : `decimal` en finance, `double` partout ailleurs
 
@@ -408,7 +424,16 @@ pas un assouplissement :
 trésorerie = mise de départ
            + recettes du transport − achats de fret − coûts d'exploitation
            + flux financiers nets            ← le quatrième terme
+           − achats de matériel roulant      ← le cinquième (module vehicles)
 ```
+
+Le cinquième terme est de même nature que le quatrième : un achat de locomotive
+sort de la caisse sans être une charge d'exploitation, et `NetProfit` ne le voit pas
+(c'est l'amortissement qui le charge, quand la finance est active). Côté finance, il
+passe par un second point de conversion, `FinanceState.PostVehiclePurchases`, sur le
+modèle exact du premier — le cumul converti, la différence écrite —, et un invariant
+exige que le matériel porté à l'actif vaille les achats du transporteur au
+demi-centime près.
 
 `Company.Cash` est désormais **la seule vérité** sur l'argent disponible à
 l'exploitation. `NetProfit` reste volontairement hors flux financiers — un
@@ -477,6 +502,10 @@ la demande, et prépare l'appétit des investisseurs pour un module de fondation
 n'existe pas encore. Les objectifs de scénario sont derrière `IObjectiveSolver`
 (phase 7) ; ils observent sans rien toucher, et ce qui fait gagner ou perdre reste à
 décider (VISION.md, « Gagner »).
+n'existe pas encore. Les véhicules vivent dans le transport (`Transport/Vehicles.cs`,
+phase 5, sans façade propre) : ils remplacent la vitesse et le coût déclarés d'un
+train par ceux d'une locomotive achetée, et n'ont aucune décision d'achat — la flotte
+est déclarée par le scénario, faute d'une couche de décision du joueur.
 
 `Transport/Rail.cs` reste une abstraction pauvre — une suite d'arrêts et de
 distances — et c'est désormais un choix et non une dette : c'est la projection du

@@ -213,7 +213,7 @@ internal static class WorldBuilder
                 Capacity = trainDef.Capacity,
                 SpeedKmPerTick = vehicle is null
                     ? trainDef.SpeedKmPerTick
-                    : vehicle.Locomotive.TopSpeedKmh * scenario.Vehicles.RunningHoursPerTick,
+                    : VehicleRules.TopSpeedKmh(scenario.Vehicles, vehicle.Locomotive) * scenario.Vehicles.RunningHoursPerTick,
                 CostPerKm = vehicle is null ? trainDef.CostPerKm : scenario.Vehicles.OtherCostPerKm,
                 Vehicle = vehicle,
                 StopIndex = startStop,

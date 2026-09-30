@@ -1856,6 +1856,363 @@ Aucune n'est tranchée ici.
    demanderait la provenance des chargements à bord) ?
 6. **Fortune sans finance.** Refusée. L'alternative serait une quatrième sorte,
    explicitement nommée « trésorerie de la compagnie » ; la vision ne la demande pas.
+## Les véhicules : la locomotive est un choix de géographie, pas de catalogue
+
+*Campagne du module `vehicles` — 30 septembre 2026, scénario `sierra-vehicules`,
+720 ticks, 90 de chauffe exclus, sur des ensembles de 40 trajectoires voisines, sous
+les deux solveurs.*
+
+### La question
+
+VISION.md a décidé ce qui distingue deux locomotives — puissance, vitesse, prix,
+carburant, coût du carburant, entretien — et que le carburant s'achète en gare au
+prix du marché local, même là où il n'y en a pas. Le catalogue de quinze machines
+existait, mais n'était branché sur rien. La question : **une fois branché, le choix
+de la locomotive devient-il une vraie décision — des compromis — ou une machine
+domine-t-elle ?**
+
+### Le modèle
+
+Opt-in par un bloc `vehicles` (`Transport/VehicleDefinitions.cs`, règles dans
+`Transport/Vehicles.cs`). Un train qui référence une machine du catalogue :
+
+- **est acheté** au prix du catalogue, à l'ouverture ou au tick `purchaseTick` du
+  train. L'achat sort de la caisse, pas du résultat (cinquième terme de
+  `bilan-tresorerie`) ; avec la finance, il entre à l'actif et s'amortit au taux du
+  scénario, sur la valeur d'origine de tout le parc ;
+- **paie son carburant à chaque arrêt**, au prix local de la marchandise que le
+  scénario lui associe (`vehicles.fuels`) : consommation spécifique × tonnes brutes ×
+  kilomètres × facteur de relief, depuis le dernier plein. Aucun stock ne bouge ;
+- **paie son entretien chaque tick**, qu'il roule ou non ;
+- **roule à la vitesse que sa machine peut tenir** : `topSpeedKmh ×
+  runningHoursPerTick`, ralentie tronçon par tronçon (`TrainDynamics`).
+
+**La dynamique**, calculée d'un coup au départ de chaque gare — le pas est d'un jour,
+on ne simule pas les secondes —, avec *M* la masse brute : machine et tender, tare
+des wagons, et cargaison à bord (un chargement est un wagon plein de sa capacité
+nominale, `tonnesPerLoad` du modèle `mass`) :
+
+```
+résistance     R = M g (r + i)               r = 0,004 ; i = rampe moyenne gravie du tronçon
+effort         F(v) = min(TE, P / v)         TE : adhérence au démarrage ; P : puissance
+croisière      v_c = min(v_max, P / R)
+accélération   a = (F(v) − R) / M            de 0 à 98 % de P / R (au plus v_max)
+temps          t = t_accél + (d − x_accél) / v_c
+adhérence      si R > TE : le train monte en n passes (« doubling the hill »),
+               la machine redescendant haut-le-pied ; n = celui qui arrive le plus tôt
+```
+
+L'accélération est exacte à effort constant, intégrée sur 200 pas à puissance
+constante ; le freinage n'est pas compté ; la phase s'arrête à 98 % de l'asymptote
+`P / R`. La rampe est la **moyenne** gravie du tronçon (mètres gravis ÷ longueur), pas
+la rampe déterminante : le temps d'un trajet limité par la puissance ne dépend que du
+travail total, et une bosse courte se franchit sur l'élan (décision 5).
+
+**L'articulation avec le coût kilométrique** — ne rien compter deux fois. Le
+`costPerKm` d'un scénario sans véhicules est le coût complet d'un train, carburant
+compris. Le module exige le modèle `mass` et remplace ce coût par trois parts qui ne
+se recouvrent pas :
+
+| part | ce qu'elle paie | comment |
+|---|---|---|
+| `otherCostPerKm` | équipe, wagons, graissage, eau | remplace `costPerKm`, réparti par le modèle `mass` (tare / chargements, × relief), la machine du catalogue dans la tare |
+| carburant | l'énergie | la part énergétique du même modèle, rendue explicite : ∝ la même masse, × le même relief, payée au prix local |
+| entretien | la machine | par tick, qu'elle roule ou non |
+
+Le transporteur décide sur la dérivée exacte des deux premières : le surcoût `mass`
+d'un chargement, plus le carburant qu'il fera brûler, tronçon par tronçon, au prix
+qu'affiche aujourd'hui la gare où il sera payé. Un test vérifie que dix chargements
+de plus coûtent en carburant, payé gare après gare, dix fois ce qui a été décidé,
+dans les deux sens du col.
+
+**Une lecture retenue.** Le modèle de prix affiche le **plancher** là où personne
+n'achète une marchandise, stock nul compris : y faire le plein serait presque gratuit
+précisément là où il n'y a pas un gramme de charbon, le contraire de la « ville sans
+charbon » de VISION.md. Une ville sans stock *ni* acheteur se paie donc au
+**plafond** (`maxMultiplier` × la référence). Une ville qui en a sans en consommer —
+Coalpass, le carreau de la mine — garde son plancher : c'est là que le charbon
+abonde.
+
+### Calibration : deux points fixes
+
+`sierra-vehicules.json` est `sierra-marginal.json` au caractère près (un test le
+vérifie), plus le bloc et trois PRR D5 de 1870 — la machine dont le modèle `mass`
+tirait déjà sa masse (48,1 t). Deux valeurs du bloc sont des **conversions
+d'unité**, mesurées comme `calibrationLoadFactor`, pas réglées :
+
+- `runningHoursPerTick` = **4,0** : les trois D5 parcourent 258 044 km sur 720
+  ticks, contre 259 200 dans sierra-marginal (−0,4 %). À vide sur le plat, une D5
+  ferait 72 × 4 = 288 km par tick ; chargée, elle tombe à 57 km/h sur le plat
+  (puissance), à 29 km/h sur 1 %, et coupe un train plein en deux au col : la moyenne
+  retombe sur celle d'avant.
+- `otherCostPerKm` = **0,75** : par kilomètre, 0,816 d'autres coûts + 0,044 de
+  carburant + 0,014 d'entretien = 0,873, contre 0,870 dans sierra-marginal.
+
+On compare alors deux façons de rouler sur une même économie, au même coût moyen.
+
+### Méthode
+
+Celle du coût marginal réel : chaque configuration est jouée 40 fois, une seule
+demande d'une seule ville × 1,001 ou × 0,999 toute la partie durant, dans l'ordre des
+villes et des marchandises. Le banc (hors dépôt) reproduit 178 919 ± 1 552 sur
+sierra-marginal, le chiffre publié. « ± » est l'écart-type entre réalisations ; les
+**différences** sont **appariées** — même perturbation, deux variantes — et leur
+« ± » est une erreur type. Chaque variante est le scénario tel qu'écrit, **une
+valeur changée** en mémoire : la machine de toute la flotte, la puissance ou
+l'adhérence de la D5, le prix du catalogue, le relief. Toutes se relisent au harnais
+par un filtre `jq` (par exemple `.trains[].locomotive = "lv_consolidation"`), qui
+affiche le parc, la part des tronçons montés en plusieurs passes et le plein ville par
+ville.
+
+« Résultat » est le résultat net d'exploitation, entretien des voies compris ; il ne
+compte pas l'achat des machines, qui est un investissement. « − achats » le retire
+en entier, comme si les machines ne valaient plus rien après deux ans ; la vérité est
+entre les deux (l'amortissement à 4 % par an du module finance en retire 8 %).
+
+### Premier résultat : à la machine de référence, le module change peu
+
+| trois trains | résultat | − achats | carburant | entretien | km | tronçons en passes | Cedarton |
+|---|---|---|---|---|---|---|---|
+| *référence* | | | | | | | |
+| sierra-marginal | 178 919 ± 1 552 | — | — | — | 259 200 | — | 24 % (15–32) |
+| sierra-vehicules (3 D5) | 170 367 ± 2 466 | 158 637 | 11 250 | 3 521 | 258 044 | 11,0 % | 16 % (9–25) |
+| *anticipant* | | | | | | | |
+| sierra-marginal | 175 232 ± 6 295 | — | — | — | 259 200 | — | 19 % |
+| sierra-vehicules | 176 179 ± 3 073 | 164 449 | 11 884 | 3 521 | 257 976 | 11,0 % | 12 % |
+
+*Parties telles qu'écrites : 168 877 sous la référence, 175 130 sous l'anticipant ;
+empreintes figées `B84E4027ECD872F4` et `3235115C5B85C201`.*
+
+À coût et kilométrage moyens égaux, −5 % sous la référence, +0,5 % sous
+l'anticipant. Ce qui change est la **distribution** de la vitesse : rapide à vide sur
+la plaine, lente au col, où 11 % des tronçons — les rampes, chargées — se montent en
+deux passes. La scierie de Cedarton, de l'autre côté du col, y perd (16 % contre
+24 %) : les grumes y arrivent plus lentement. Le carburant pèse **5,0 %** du coût des
+trains, l'entretien 1,6 %.
+
+### Deuxième résultat : sur la sierra, une machine de 1866 bat celle de 1870
+
+La même flotte de trois, une machine à la fois. Référence, 40 réalisations :
+
+| machine (année) | prix × 3 | résultat | − achats | carburant | km | en passes | Cedarton |
+|---|---|---|---|---|---|---|---|
+| Crampton (1852), 18 kN | 12 510 | 59 643 ± 2 178 | 47 133 | 6 504 | 136 667 | 97 % | 9 % |
+| General (1855), bois, 32 kN | 9 030 | 84 755 ± 2 834 | 75 725 | **35 510** | 189 310 | 16 % | 12 % |
+| **PRR D5 (1870)**, 48 kN, 72 km/h | 11 730 | 170 367 ± 2 466 | 158 637 | 11 250 | 258 044 | 11 % | 16 % |
+| **Consolidation (1866)**, 89 kN, 40 km/h | 16 170 | **194 629** ± 2 419 | **178 459** | 12 949 | 286 228 | 2 % | 19 % |
+| *anachroniques* | | | | | | | |
+| PRR E6 (1910) | 43 770 | 576 153 ± 5 591 | 532 383 | 34 678 | 741 263 | 0 % | 39 % |
+| LNER A4 « Mallard » (1938) | 41 430 | 568 979 ± 4 026 | 527 549 | 20 922 | 721 512 | 0 % | 41 % |
+| Union Pacific « Big Boy » (1941) | 136 860 | −902 709 | — | 117 464 | 1 032 239 | 0 % | 0 % |
+
+*Anticipant : General 76 889 ± 3 181, D5 176 179 ± 3 073, Consolidation 198 942 ±
+2 650.* **Consolidation − D5, apparié : +24 263 ± 595 sous la référence, +22 763 ±
+647 sous l'anticipant, 40 réalisations sur 40.**
+
+La Consolidation, presque deux fois plus lente sur le papier, parcourt **11 % de
+kilomètres de plus** que la D5 : elle tient ses 40 km/h partout — chargée, en rampe
+—, là où la D5, bridée par ses 296 kW, tombe à 57 km/h chargée sur le plat, à 29 km/h
+sur 1 % et coupe son train en deux au col. C'est l'histoire de la machine : Alexander
+Mitchell l'a dessinée en 1866 pour le lourd charbon des rampes du Lehigh.
+
+Les machines anachroniques dominent tout, et c'est attendu — quarante ans de progrès
+technique —, mais l'ampleur (×3,4) est un artefact : l'E6 et la Mallard atteignent
+leurs 161 et 203 km/h *de record* avec des wagons de 1870. Bornées à 50 km/h
+(`maxTrainSpeedKmh`, la vitesse des wagons), l'E6 fait 304 717 ± 3 050 et la Mallard
+310 305 ± 1 745 — encore ×1,6 la Consolidation, que la borne ne touche pas (40 km/h) —,
+et la D5 tombe à 162 314 ± 1 781. Le Big Boy coûte 136 860 pour trois, plus que la
+mise de départ : voir les observations.
+
+### Troisième résultat : le relief renverse le choix
+
+La même carte, relief supprimé (sans formes ni rugosité), une variable :
+
+| machine | sierra (réf.) | sans relief (réf.) | sans relief (ant.) |
+|---|---|---|---|
+| General (1855) | 84 755 ± 2 834 | 249 024 ± 3 137 | 252 502 ± 3 484 |
+| D5 (1870) | 170 367 ± 2 466 | **389 371** ± 3 216 | **391 882** ± 5 006 |
+| Consolidation (1866) | **194 629** ± 2 419 | 275 349 ± 2 330 | 277 792 ± 3 168 |
+
+**D5 − Consolidation, sans relief : +114 023 ± 625** (40/40). Sur le plat, la vitesse
+de la 4-4-0 rapporte ; dans la montagne, c'est la puissance de la 2-8-0. C'est la
+réponse à la question posée : entre deux machines de la même époque, **le choix
+dépend de la carte**, et aucune ne domine l'autre partout. (Les niveaux sans relief
+ne se comparent pas à ceux de la sierra : le point fixe de `runningHoursPerTick`
+compense des rampes qui n'y sont plus, et les trains y font 1,2 à 2 fois plus de
+kilomètres.)
+
+La General, elle, est dominée partout. Voir le carburant.
+
+### Quatrième résultat : où l'on fait le plein, et ce que coûte une ville sans carburant
+
+Prix moyen payé par chargement de carburant, gare par gare, sierra, référence :
+
+| gare | charbon (D5) | bois (General) |
+|---|---|---|
+| Westbrook | 11,0 | 24,0 |
+| Fordham | 8,1 | 24,0 |
+| Pinecrest (forêt) | 5,3 | **3,1** |
+| Coalpass (mine) | **3,2** | 24,0 |
+| Eastgate | 12,6 | 24,0 |
+| Ashvale | 14,9 | 24,0 |
+| Baymouth | 15,9 | 24,0 |
+| Southfield | 17,2 | 24,0 |
+| Cedarton (scierie) | 18,2 | 11,5 |
+| Farport | 20,6 | 24,0 |
+
+Le charbon suit la géographie de l'économie : 3,2 au carreau de la mine, six fois plus
+au bout de la ligne. Aucune gare de la sierra n'est sans charbon — toutes en
+consomment. Le bois, lui, n'a d'acheteur qu'aux deux scieries : dans huit gares sur
+dix, ni stock ni marché, donc le **plafond, 24** (3 × 8). La General y paie 35 510 de
+carburant en deux ans, trois fois ce que les D5 brûlent en charbon pour 36 % de
+kilomètres de plus.
+
+**La même General au charbon** (même énergie : 70 kg de charbon pour 175 de bois),
+une variable : 109 337 ± 3 403 contre 84 755, **+24 582 ± 733** apparié (anticipant :
+88 827 contre 76 889). Le carburant tombe de 35 510 à 8 023. C'est ce que VISION.md
+voulait : une ville sans bois coûte cher, et le carburant d'une machine est une
+question de géographie. Mais sur une ligne fixe, où le train s'arrête à toutes les
+gares, **faire le plein n'est pas un choix** : chaque gare paie ce qui a été brûlé
+depuis la précédente. Le choix d'itinéraire attend les ordres de train.
+
+Tripler la consommation de la D5 (une variable) coûte 23 500 (146 865 ± 2 837) : une
+erreur d'un facteur deux sur les consommations estimées ne changerait pas le
+classement.
+
+### Cinquième résultat : la puissance compte plus que tout le reste
+
+La D5, une caractéristique changée à la fois, référence :
+
+| variante | résultat | km | tronçons en passes |
+|---|---|---|---|
+| puissance × 0,5 (148 kW) | 66 322 ± 3 212 | 139 670 | 11 % |
+| **telle qu'au catalogue** (296 kW, 48 kN) | 170 367 ± 2 466 | 258 044 | 11 % |
+| puissance × 2 (592 kW) | 296 772 ± 2 590 | 403 817 | 11 % |
+| adhérence × 0,5 (24 kN) | 80 820 ± 2 328 | 162 967 | 57 % |
+| adhérence × 2 (96 kN) | 196 525 ± 2 814 | 291 505 | 0 % |
+
+Doubler la puissance rapporte 126 000, dix fois le prix des trois machines. La
+puissance fixe la vitesse chargée partout, pas seulement en rampe : sur le plat, une
+D5 pleine est déjà bridée à 57 km/h. L'adhérence ne joue qu'au col, où elle décide
+du nombre de passes ; doubler celle de la D5 la mène au niveau de la Consolidation.
+
+### Sixième résultat : l'accélération coûte 4 % à une machine rapide, 2 % à une lente
+
+Temps d'un tronçon de 50 km, départ arrêté, sans et avec la mise en vitesse :
+
+| machine | train | plat | rampe de 1 % |
+|---|---|---|---|
+| D5 | vide (264 t) | 42 → 44 min (+4,7 %) | 102 → 104 min (+1,6 %) |
+| D5 | plein (480 t) | 53 → 57 min (+7,6 %) | 246 → 249 min, 2 passes (+1,3 %) |
+| Consolidation | vide (281 t) | 75 → 75 min (+0,5 %) | 79 → 80 min (+1,1 %) |
+| Consolidation | plein (497 t) | 75 → 76 min (+1,1 %) | 139 → 141 min (+0,9 %) |
+| General | plein (469 t) | 67 → 72 min (+6,9 %) | 366 → 372 min, 3 passes (+1,7 %) |
+
+Sur la sierra, 40 réalisations : sans accélération, la D5 fait 177 339 ± 2 696,
+**+6 973 ± 612** (apparié, 40/40), 3,7 % de kilomètres en plus ; la Consolidation
++3 320, la General +2 045. L'accélération pèse sur la machine qui a le plus de vitesse
+à prendre et le moins de puissance pour la prendre, et sur le train le plus lourd —
+ce qu'on lui demandait. Sur des tronçons de 45 à 75 km, elle reste un effet du second
+ordre : la puissance à vitesse établie fait l'essentiel, et l'accélération ne
+renverse aucun classement.
+
+### Septième résultat : au prix du catalogue, le prix ne décide de rien
+
+Au prix du charbon, la conversion du catalogue (SOURCES.md, note de méthode), trois
+machines coûtent 9 000 à 16 000, 5 à 10 % du résultat de deux ans, et l'entretien
+1,6 % du coût des trains. La Consolidation, plus chère de 4 440 pour trois, rapporte
+24 263 de plus.
+
+Convertis au coût d'exploitation d'un train plutôt qu'au charbon — prix et entretien
+**× 4**, une variable —, ils commencent à peser :
+
+| × 4 | résultat | − achats | entretien |
+|---|---|---|---|
+| D5 | 159 804 ± 2 466 | 112 884 | 14 083 |
+| Consolidation | 180 049 ± 2 419 | 115 369 | 19 440 |
+| General | 76 655 ± 2 834 | 40 535 | 10 800 |
+
+Consolidation − D5, apparié : +20 245 ± 595 en résultat, mais **+2 485 ± 595 une fois
+les achats retirés** (30/40 positives) ; sous l'anticipant, **+986 ± 647** (20/40).
+À ce prix, sur deux ans et achats passés en charge, les deux machines se valent sur
+la sierra : la puissance de la Consolidation paie tout juste son prix.
+
+### Deux observations en passant
+
+**Sans finance, une flotte plus chère que la caisse est une faillite silencieuse.**
+Trois Big Boy coûtent 136 860 pour 100 000 de mise : la caisse passe sous zéro à
+l'ouverture, le transporteur n'achète plus rien, et les trains roulent deux ans à
+vide en brûlant du charbon au plafond — −902 709. C'est la décision 6 du coût
+marginal réel (« le plancher de trésorerie sans finance ») sous une autre forme ; avec
+la finance, l'achat ferait un découvert, puis une mise sous administration.
+
+**La flotte et la machine se répondent.** Deux, trois, quatre trains (une variable) :
+D5 128 498, 170 367, 155 892 ; Consolidation 152 146, 194 629, 181 903. L'optimum
+reste à trois trains avec les deux machines ; une flotte mixte (deux Consolidation et
+une D5) fait 191 715 ± 2 657, entre les deux. Une machine plus rapide est de la
+capacité en plus : l'E6 sans borne parcourt 2,9 fois plus que la D5 avec trois trains,
+et l'économie de la sierra, qui fléchissait dès quatre D5, absorbe pourtant ses
+741 000 km (remplissage 91 %). La saturation ne se lit donc pas en kilomètres ; elle
+mériterait une mesure à part.
+
+### Conclusion
+
+**Oui, en partie : le choix de la locomotive est une vraie décision — mais c'est la
+carte qui la pose, pas le catalogue.**
+
+1. *Entre machines d'une même époque, aucune ne domine partout.* La 4-4-0 rapide
+   (D5) gagne 114 000 sur le plat ; la 2-8-0 puissante (Consolidation) 24 000 dans la
+   montagne. Le compromis vitesse / puissance existe, et il est géographique.
+2. *Le carburant fait une géographie des coûts*, mais pas encore un choix
+   d'itinéraire : le bois coûte trois fois le charbon là où il n'y a pas de forêt, et
+   la General au bois est dominée partout. Tant que les trains s'arrêtent à toutes les
+   gares d'une ligne fixe, où faire le plein n'est pas une décision.
+3. *Le prix et l'entretien ne décident de rien* à l'échelle du charbon du jeu (5 à
+   10 % du résultat). Au quadruple, ils rendent la D5 et la Consolidation
+   indiscernables sur la sierra.
+4. *La puissance domine le reste* : doubler celle de la D5 vaut dix fois son prix. Et
+   entre époques, la machine plus récente écrase la plus ancienne — ce qui est
+   attendu, et dit que le catalogue d'un scénario doit se borner à son époque.
+
+### Décisions laissées à l'équipe
+
+Aucune n'est tranchée ici ; le module est livré en opt-in, sur la seule
+`data/sierra-vehicules.json`.
+
+1. **Le catalogue d'un scénario doit-il se borner à son époque ?** Sans cela, l'E6
+   (1910) fait 3,4 fois la D5 (1870) sur une sierra de 1875. Options : une date de
+   disponibilité par machine, filtrée par l'année du scénario (à la manière de RT3),
+   ou une liste de machines déclarée par le scénario.
+2. **Faut-il une vitesse limite des wagons ?** `maxTrainSpeedKmh` existe (0 par
+   défaut, non déclaré par sierra-vehicules). À 50 km/h, la D5 perd 8 053 et la
+   Consolidation rien ; l'E6 tombe de 576 000 à 305 000. Sans elle, la vitesse *de
+   record* du catalogue fait la vitesse d'un train de marchandises. Aucune valeur
+   n'est sourcée pour 1875.
+3. **À quel prix convertir le catalogue ?** Au charbon (livré), prix et entretien ne
+   pèsent presque rien. Au coût d'un train (× 4), ils équilibrent la D5 et la
+   Consolidation sur la sierra (+2 485 ± 595 achats retirés). Le second rendrait le
+   prix décisif ; le premier est le seul ancré sur un prix documenté. Même question
+   pour le carburant : 5 % du coût d'un train, contre 10 à 15 % des dépenses des
+   chemins de fer du XIXᵉ siècle.
+4. **Le plein doit-il devenir un choix ?** Aujourd'hui chaque gare paie ce qui a été
+   brûlé depuis la précédente. Avec des ordres de train, faire le plein au carreau de
+   la mine (3,2) plutôt qu'à Farport (20,6) pourrait devenir une décision — il
+   faudrait alors une capacité de soute, donc une autonomie, par machine.
+5. **Rampe moyenne ou rampe déterminante ?** La dynamique lit la rampe moyenne
+   gravie. Avec la rampe déterminante (2,5 % au col, 0,7 à 1,4 % sur la plaine à cause
+   de la rugosité), toutes les machines de 1870 couperaient leurs trains jusque sur la
+   plaine : c'est la question de la rugosité (« Relief et économie ensemble »,
+   décision 3) sous une autre forme.
+6. **Deux reliefs pour un même train ?** L'argent (carburant, coût `mass`) suit le
+   facteur de relief, donc `climbEquivalentKm` (0,03, une valeur de conception) ; le
+   temps suit la rampe physique, avec une résistance au roulement de 0,004 — ce qui
+   revient à `climbEquivalentKm` = 1 ÷ (1 000 × 0,004) = 0,25. Les deux ne coïncident
+   qu'à 0,25. À 0,2, le résultat de la D5 tombe de 170 367 à 68 048 ± 2 556, et
+   Cedarton s'arrête dans les 40 réalisations.
+7. **Le transporteur doit-il compter le temps ?** Il décide sur ce que coûte un
+   chargement en argent — carburant compris —, pas sur ce qu'il coûte en temps : un
+   train plus lourd est plus lent, donc fait moins de trajets, et rien ne le lui dit.
+   Le coût d'opportunité du temps est le prochain terme marginal manquant.
 
 ## Questions ouvertes pour l'équipe
 

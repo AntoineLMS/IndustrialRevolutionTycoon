@@ -27,7 +27,7 @@ produisent du code qui ne s'assemble pas.
    bougé. Une empreinte recopiée sans explication rend le test aussi creux que
    celui qu'il remplace.
 8. Chaque scénario de `data/` déclare les blocs de tous les modules
-   (`anticipating`, `network`, `finance`, `events`, `cycle`, `objectives`), ou écarte explicitement ceux dont il
+   (`anticipating`, `network`, `finance`, `events`, `cycle`, `objectives`, `vehicles`), ou écarte explicitement ceux dont il
    se passe avec une clé `"//<bloc>"` qui dit pourquoi. Un module qui ajoute un
    bloc l'inscrit dans `ScenarioLoader.ModuleBlocks`.
 
@@ -86,7 +86,10 @@ dans `haulage.costModel` (`Transport/TrainCost.cs`) :
   géographie au-delà d'une traction de 0,12 à 0,15.
 
 Un module qui touche à `LegCostFactor`, à `MoveTrain` ou à `HaulCostPerUnitAhead`
-doit garder cette égalité sous `mass`, et la neutralité au bit près sous `flat`.
+doit garder cette égalité sous `mass`, et la neutralité au bit près sous `flat`. Le
+module `vehicles` l'étend au carburant (voir son contrat) et lit un second scalaire
+du relief, la rampe moyenne gravie de chaque tronçon (`RailSegment.ForwardClimbM`,
+`ReverseClimbM`, `RailLine.LegClimbGradient`), que le réseau calcule au chargement.
 
 **Ce qui manque** : les aiguillages comme objets (une bifurcation est pour l'instant
 un nœud sans contrainte de géométrie), la recherche automatique d'un tracé — le
@@ -152,8 +155,12 @@ d'avant le module, au centime — les empreintes de heartland-finance le prouven
 **Ce qui manque** : un vrai concurrent (le module `ai` — les concurrents actuels
 sont des bilans animés par des données, pas des réseaux), les dividendes des
 concurrents, la prime de contrôle négociée plutôt que fixée, la faillite
-liquidative (l'administration judiciaire gèle, elle ne liquide pas), et
-l'amortissement du matériel réellement acheté plutôt qu'une valeur de départ.
+liquidative (l'administration judiciaire gèle, elle ne liquide pas), et un
+amortissement par machine : depuis le module `vehicles`, les locomotives achetées
+entrent à l'actif et l'amortissement porte sur la valeur d'origine de tout le parc
+(`fixedAssetsAtStart` + achats), au taux unique du scénario, sans durée de vie ni
+valeur résiduelle par machine, et sans vente. `fixedAssetsAtStart` ne devrait plus
+compter que les voies et le matériel que le scénario ne déclare pas.
 
 **Dette connue, assumée, à traiter plus tard.** Deux points sont identifiés et
 volontairement laissés en l'état :
@@ -448,6 +455,81 @@ pour la nourriture et 43 à 90 pour le charbon de Northgate, sur des horizons de
 à 1 900 jours (en brut : de 200 à 925 jours pour le même charbon), fortune lisible en moyenne sur 30 jours (au jour le jour, le million se franchit
 le soir d'un ordre dans 40 témoins sur 40), liaison fixée par l'horaire (tick 4 dans
 40 parties sur 40), aucune empreinte déplacée.
+
+### `vehicles` — locomotives achetées, carburant, dynamique du train
+
+**Interface** : pas de façade propre — le module vit dans le transport, phase 5
+(`Transport/Vehicles.cs`, `Transport/VehicleDefinitions.cs`), et ne passe que par
+`Company` et la frontière de la finance. Voir [ARCHITECTURE.md](ARCHITECTURE.md),
+tableau des phases, pour l'ordre de ce qu'il fait dans la phase.
+**État actuel** : `VehicleRules` et `TrainDynamics`, pilotés par le bloc `vehicles`
+du scénario et le catalogue `data/locomotives.json` (`vehicles.catalogPath`, chargé
+par `ScenarioLoader.Load`). Inactif par défaut, et neutre au bit près tant qu'il
+l'est.
+
+**Périmètre** : pour chaque train qui référence une machine du catalogue
+(`trains[].locomotive`, obligatoire sous le module) —
+
+| ce que le train tire de sa machine | comment |
+|---|---|
+| son **achat** | au prix du catalogue, à l'ouverture ou au tick `trains[].purchaseTick` ; le train n'existe pas avant. Un investissement : il sort de la caisse (`Company.TotalVehiclePurchases`), pas du résultat |
+| sa **vitesse** | `topSpeedKmh × runningHoursPerTick` (bornée par `maxTrainSpeedKmh` si le scénario en déclare une), ralentie tronçon par tronçon par `TrainDynamics` : résistance au roulement et rampe moyenne, adhérence (effort de traction), puissance, mise en vitesse au départ de chaque gare, montée en plusieurs passes quand l'adhérence ne démarre pas le train |
+| sa **masse** | la tare du modèle `mass`, à la place de `massCost.locomotiveTonnes` |
+| son **carburant** | la marchandise que `vehicles.fuels` associe à son type (`wood`, `coal`, `oil`) ; consommation spécifique × tonnes brutes × km × facteur de relief, payée à chaque arrêt au prix local |
+| son **entretien** | par tick, qu'elle roule ou non, avant la porte de l'administration judiciaire |
+
+Le `costPerKm` du train est remplacé par `vehicles.otherCostPerKm` (ce qui n'est ni
+carburant ni entretien) et son `speedKmPerTick` par la vitesse de sa machine :
+déclarés, ils ne sont plus lus.
+
+**Ce que le module garantit** — et que les tests vérifient (`VehicleTests.cs`) :
+
+1. **Neutre au défaut** : bloc absent ou `enabled = false`, aucune empreinte ne
+   bouge ; sierra-vehicules au bloc désactivé rend l'empreinte de sierra-marginal au
+   bit près. `trains[].locomotive` reste informatif hors du module (ironpeak), et
+   `purchaseTick` y est refusé plutôt qu'ignoré.
+2. **Rien n'est compté deux fois** : le module exige `costModel = mass` ; le
+   carburant est la part énergétique de ce modèle, rendue explicite, et
+   `otherCostPerKm` remplace `costPerKm`.
+3. **Facture = décision** pour le carburant, comme pour le modèle `mass` : ce que dix
+   chargements de plus brûlent, payé gare après gare, vaut dix fois ce que le
+   transporteur leur a imputé (`MarginalFuelCost`, ajouté à `HaulCostPerUnitAhead`),
+   dans les deux sens du col, tant que les prix ne bougent pas en route.
+4. **Aucun stock ne bouge** au plein ; le prix est celui du marché local, et une ville
+   sans stock ni acheteur se paie au plafond du modèle de prix (lecture retenue de la
+   « ville sans charbon », docs/FINDINGS.md, « Les véhicules »).
+5. **Un scénario qui ne déclare pas la marchandise carburant est refusé** au
+   chargement, comme une machine inconnue, un train sans machine, un catalogue non
+   chargé, et une machine incapable de gravir seule une rampe de sa ligne.
+6. **Les comptes tiennent au centime** avec la finance : l'achat passe à l'actif
+   (`FinanceState.PostVehiclePurchases`, cumul converti, différence écrite),
+   l'amortissement suit le parc, et l'invariant `frontiere-tresorerie` exige que le
+   matériel à l'actif vaille les achats du transporteur au demi-centime près ; sans
+   finance, `bilan-tresorerie` compte les achats comme cinquième terme.
+7. La dynamique : plus puissante, une machine tient mieux la rampe ; plus lourd, un
+   train met plus longtemps à prendre sa vitesse (au temps perdu exact à effort
+   constant) ; à vide et sans relief, le train roule à la vitesse du catalogue.
+
+**Scénario** : `data/sierra-vehicules.json`, sierra-marginal au caractère près, plus
+le bloc et trois PRR D5 ; `runningHoursPerTick` 4,0 et `otherCostPerKm` 0,75 sont des
+points fixes mesurés (même kilométrage, même coût par km que sierra-marginal). Figé
+sous les deux solveurs. Les autres scénarios écartent le bloc par une clé
+`"//vehicles"`.
+
+**Ce qui manque** : une couche de décision (acheter, vendre, remplacer une machine —
+la flotte est déclarée par le scénario) ; un catalogue borné à l'époque du scénario ;
+une vitesse limite des wagons sourcée ; un amortissement par machine ; le plein comme
+choix (une soute, une autonomie, des ordres de train) ; le temps dans la décision du
+transporteur (un train plus lourd est plus lent, et rien ne le lui dit) ; la rampe
+déterminante plutôt que la moyenne ; des wagons spécialisés. Les options sont chiffrées
+dans FINDINGS.md, « Les véhicules ».
+
+**Critère de réussite** : sur son scénario d'épreuve, que le choix de la machine soit
+un compromis et non une domination — aucune machine contemporaine ne doit l'emporter
+sur toutes les cartes —, sans violer aucun invariant, sous les deux solveurs.
+Aujourd'hui : entre la D5 et la Consolidation, la montagne choisit la seconde
+(+24 263 ± 595) et le plat la première (+114 023 ± 625) ; la General au bois est
+dominée partout, et les machines d'autres époques dominent celles de 1870.
 
 ### `content` — données historiques
 

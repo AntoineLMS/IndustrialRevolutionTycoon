@@ -80,9 +80,6 @@ public sealed class Vehicle
 /// </summary>
 public static class VehicleRules
 {
-    /// <summary>Le module est-il actif pour ce scénario ?</summary>
-    public static bool Active(ScenarioDef def) => def.Vehicles.Enabled;
-
     /// <summary>
     /// Masse brute du train, en tonnes : locomotive et tender, tare des wagons, et
     /// chargement réellement à bord. Un chargement du jeu est un wagon plein de sa
@@ -95,6 +92,14 @@ public static class VehicleRules
         => LocomotiveTonnes(haulage, train)
            + train.Capacity * haulage.MassCost.WagonTareTonnes
            + load * haulage.MassCost.TonnesPerLoad;
+
+    /// <summary>
+    /// Vitesse maximale d'un train tiré par cette machine : celle du catalogue,
+    /// bornée par <see cref="VehiclesDef.MaxTrainSpeedKmh"/> quand le scénario en
+    /// déclare une.
+    /// </summary>
+    public static double TopSpeedKmh(VehiclesDef def, LocomotiveDef loco)
+        => def.MaxTrainSpeedKmh > 0 ? Math.Min(loco.TopSpeedKmh, def.MaxTrainSpeedKmh) : loco.TopSpeedKmh;
 
     /// <summary>La masse de la locomotive de ce train : celle du catalogue, ou celle du scénario à défaut.</summary>
     public static double LocomotiveTonnes(HaulageDef haulage, Train train)
@@ -214,11 +219,18 @@ public static class VehicleRules
         var def = world.Def.Vehicles;
         var loco = vehicle.Locomotive;
         double distance = train.Line.DistanceBetween(fromIndex, toIndex);
+        if (distance <= 0)
+        {
+            // Deux arrêts confondus : rien à parcourir, rien à ralentir.
+            vehicle.LegSpeedFactor = 1.0;
+            vehicle.LegPasses = 1;
+            return;
+        }
         double gradient = train.Line.LegClimbGradient(fromIndex, toIndex);
         double gross = GrossTonnes(world.Def.Haulage, train, train.LoadedUnits);
 
         var leg = TrainDynamics.Leg(Physics(def, world.Def.Haulage, train), gross, gradient, distance, def.Acceleration);
-        vehicle.LegSpeedFactor = Math.Min(1.0, distance / (leg.Hours * loco.TopSpeedKmh));
+        vehicle.LegSpeedFactor = Math.Min(1.0, distance / (leg.Hours * TopSpeedKmh(def, loco)));
         vehicle.LegPasses = leg.Passes;
         vehicle.LegsStarted++;
         if (leg.Passes > 1) vehicle.LegsDoubled++;
@@ -231,7 +243,7 @@ public static class VehicleRules
             LocomotiveTonnes: LocomotiveTonnes(haulage, train),
             TractiveEffortKn: loco.TractiveEffortKn,
             PowerKw: loco.PowerKw,
-            TopSpeedKmh: loco.TopSpeedKmh,
+            TopSpeedKmh: TopSpeedKmh(def, loco),
             RollingResistance: def.RollingResistance);
     }
 
@@ -266,6 +278,8 @@ public static class VehicleRules
             throw new InvalidDataException("vehicles.runningHoursPerTick doit être dans ]0, 24].");
         if (def.RollingResistance <= 0)
             throw new InvalidDataException("vehicles.rollingResistance doit être strictement positive.");
+        if (def.MaxTrainSpeedKmh < 0)
+            throw new InvalidDataException("vehicles.maxTrainSpeedKmh ne peut pas être négative (0 : pas de limite).");
 
         var cargoIds = s.Cargos.Select(c => c.Id).ToHashSet();
         foreach (var train in s.Trains)
@@ -322,7 +336,8 @@ public static class VehicleRules
                 if (maxGross <= physics.LocomotiveTonnes + Math.Min(wagons, 1.0))
                     throw new InvalidDataException(
                         $"La locomotive '{vehicle.Locomotive.Id}' du train '{train.Id}' ne peut pas gravir le tronçon " +
-                        $"{line.Stops[from].CityId} → {line.Stops[to].CityId} : son adhérence ne soulève pas même un wagon.");
+                        $"{line.Stops[from].CityId} → {line.Stops[to].CityId} : son adhérence ne démarre pas même " +
+                        "une tonne de wagons derrière elle, et aucun nombre de passes ne la ferait monter.");
             }
         }
     }

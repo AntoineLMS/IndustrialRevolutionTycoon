@@ -99,6 +99,18 @@ internal static class VehicleTests
                 consolidation.SpeedKmPerTick, 1e-12, "la Consolidation roule à sa propre vitesse");
             Check.Less(rates.FixedPerKm, TrainCost.Rates(other.Haulage, consolidation).FixedPerKm,
                 "une machine plus lourde alourdit la part fixe");
+
+            // La vitesse limite des wagons, quand le scénario en déclare une, borne
+            // celle du catalogue — et seulement quand elle est plus basse.
+            var capped = Vehicles();
+            capped.Vehicles.MaxTrainSpeedKmh = 50;
+            foreach (var t in capped.Trains) t.Locomotive = "prr_d5";
+            capped.Trains[1].Locomotive = "lv_consolidation";
+            var cappedTrains = new Simulation(capped).World.Trains;
+            Check.Near(50 * capped.Vehicles.RunningHoursPerTick, cappedTrains[0].SpeedKmPerTick, 1e-12,
+                "la D5 (72 km/h) bornée à 50 km/h");
+            Check.Near(40 * capped.Vehicles.RunningHoursPerTick, cappedTrains[1].SpeedKmPerTick, 1e-12,
+                "la Consolidation (40 km/h) sous la limite garde sa vitesse");
         });
 
         // -------------------------------------------------------------- l'achat
