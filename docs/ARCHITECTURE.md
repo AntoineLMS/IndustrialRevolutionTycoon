@@ -293,6 +293,11 @@ trace des marchés est identique au bit près que la montagne coûte 0, 0,03 ou 
 kilomètre par mètre. Le relief est un impôt sur le kilomètre-train, pas une
 géographie économique, et le devis n'est débité nulle part. Les options sont
 chiffrées dans [FINDINGS.md](FINDINGS.md), « Relief et économie ensemble ».
+C'est le modèle de coût par défaut (`haulage.costModel = "flat"`). Le modèle
+`"mass"`, opt-in par les données, rend le coût proportionnel à la masse remorquée
+et fait décider le transporteur sur le surcoût réel d'un chargement, par la même
+formule que la facture (`Transport/TrainCost.cs`) : là, le relief entre dans les
+décisions — mesuré dans « Le coût marginal réel ».
 
 ## La monnaie : `decimal` en finance, `double` partout ailleurs
 

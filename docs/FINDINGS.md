@@ -784,9 +784,17 @@ mention contraire.
      à 0,03 et une perte nette à 0,2 ; déplace les trois empreintes `terrain-*`.
    - *Coût marginal réel* : ne facturer le relief qu'en proportion de la masse
      remorquée (tare + chargement), et décider sur ce seul surcoût. C'est la seule
-     option où refuser un chargement économise vraiment ce qu'il coûte. Non
-     mesurée : elle demande un paramètre de tare dans les données et un
-     changement de `MoveTrain`, donc de toutes les traces sur relief.
+     option où refuser un chargement économise vraiment ce qu'il coûte.
+     *Mesurée le 30 septembre 2026 et livrée en opt-in* (`haulage.costModel =
+     "mass"`, `data/sierra-marginal.json`), sans déplacer aucune empreinte : voir
+     « Le coût marginal réel » plus bas. En bref, sur 40 réalisations et
+     entretien compris, elle fait mieux que le statu quo à toute traction et sous
+     les deux solveurs (178 919 ± 1 552 contre 148 590 ± 5 283 à 0,03, référence) ;
+     elle sépare deux bassins au-delà de 0,12 à 0,15 — la scierie de Cedarton
+     s'arrête, les planches valent 2,00 à l'est contre 1,13 à l'ouest à 0,2 — mais
+     presque rien à 0,03 ; et l'essentiel de son gain vient de ce qu'elle décide
+     au coût marginal plutôt qu'au coût moyen, pas du relief. Changer le défaut
+     reste une décision ouverte, chiffrée dans cette section.
    - *Des trains qui ne roulent pas à vide* : relève du module `dispatch`. Tant que
      les trains font la navette sans condition, aucun coût kilométrique n'est
      marginal, relief ou pas.
@@ -794,7 +802,9 @@ mention contraire.
    8,8 % de relief, 18 236 sur deux ans. À 0,2 (la lecture « une rampe de 1 %
    triple la résistance »), 58,6 % : le résultat tombe de 219 411 à 116 075, et
    deux trains font presque aussi bien que trois. Entre les deux, 0,09 : 26,4 % et
-   182 940.
+   182 940. *Sous le modèle de coût marginal, la question change de nature : c'est
+   elle qui décide s'il y a une géographie — aucune à 0,03, deux bassins à partir
+   de 0,15 ; les options sont chiffrées dans « Le coût marginal réel ».*
 3. **La rugosité doit-elle compter comme une rampe ?** Aujourd'hui la rugosité seule
    coûte 8 à 11 % sur 60 km, autant qu'un relief réel, et un tunnel ne fait rien
    gagner à l'exploitation. Options :
@@ -815,7 +825,9 @@ mention contraire.
    `expectedLoadFactor` : passer ce réglage de 0,6 à 2 fait démarrer Ironhill et
    Cedarton et rapporte 14 à 15 % de plus. Quel que soit ce choix, la règle de
    vente au premier acheteur continuera de borner les planches à la distance du
-   prochain client.
+   prochain client. *Le coût marginal réel donne ce rayon d'un coût physique : il
+   est fixé par le rapport tare / charge des wagons et, au-delà d'un seuil de
+   traction, par le col (« Le coût marginal réel »).*
 6. **Chaque scénario doit-il régler son anticipant ?** Le bloc de heartland divise
    le résultat de la sierra par deux. C'est soit une contrainte à documenter pour
    les auteurs de cartes, soit le signe d'un solveur trop sensible pour servir
@@ -852,13 +864,409 @@ tableau par nombre de trains aussi, puisque l'entretien ne dépend pas des
 trains), 8 640 ou 17 282 pour les cartes d'essai. `heartland`, `ironpeak` et
 leurs variantes n'ont pas de réseau déclaré et ne changent pas.
 
+*Corrigé le 30 septembre 2026, par la campagne du coût marginal.* La
+soustraction ne vaut que tant que la trésorerie reste positive. Sans module
+finance, une trésorerie négative interdit tout achat de fret, mais les trains
+continuent de rouler et de payer : l'entretien fait alors passer sous zéro des
+parties qui ne l'étaient pas, et elles s'effondrent. Six trains sur la sierra,
+référence : −452 503 au lieu des 47 819 − 72 723 = −24 904 annoncés, usines à
+22 %. Le relief imputé à 0,2 : −192 418 au lieu de −123 209. Sous l'anticipant,
+six trains s'effondrent dans une partie des réalisations voisines (11 596 ± 98 226
+de moyenne, médiane 32 952). Les lignes à trois trains et moins ne sont pas
+touchées, ni les quatre et cinq trains à 0,03 (128 168 et 61 602, la soustraction
+exacte) ; à 0,2, quatre trains le sont (−417 457). Voir « Le coût marginal réel »,
+observations, et sa décision 6.
+
 Ce que l'entretien ne fait pas encore : peser sur un choix. Un tracé plus long
 coûte plus cher à entretenir, mais aucun acteur de la simulation ne choisit de
 tracé — le réseau est donné par le scénario. Il pèsera sur les décisions le jour
 où la construction se fera en cours de partie (module `network`, « ce qui
 manque »), et c'est ce qui le distingue du relief : lui ne pèsera sur rien tant
 que les trains roulent à vide (voir la décision 1 et le chantier du coût
-marginal).
+marginal) — sauf sous le modèle `mass`, où il pèse sur chaque chargement (section
+suivante).
+
+## Le coût marginal réel : le relief fait une géographie, et la valeur vient d'ailleurs
+
+*Troisième campagne sur relief — 30 septembre 2026, scénarios `sierra` et
+`heartland`, 720 ticks, 90 de chauffe exclus, sous les deux solveurs, sur des
+ensembles de 40 trajectoires voisines.*
+
+### La question
+
+La décision 1 de « Relief et économie ensemble » laissait une option non mesurée :
+rendre une part du coût d'exploitation **réellement marginale** — proportionnelle à
+la masse remorquée, de sorte que le relief et la distance coûtent davantage à un
+train chargé qu'à un train vide — et faire décider le transporteur sur ce seul
+surcoût. C'est la seule option où refuser un chargement économise ce qu'il coûte.
+La question posée : **crée-t-elle une géographie économique — des bassins, un
+rayon qui dépend du relief, une industrie viable près de sa ressource — sans
+détruire de valeur ?**
+
+### Le modèle
+
+`haulage.costModel` choisit le modèle de coût, `flat` par défaut. Sous `mass`
+(`Transport/TrainCost.cs`), le coût kilométrique d'un train se décompose en une part
+fixe — locomotive, tender et wagons vides, dus plein ou vide — et une part par
+chargement, **les deux multipliées par le facteur de relief** du tronçon et du sens,
+parce qu'une rampe se gravit avec toute la masse du train :
+
+```
+tare         = locomotiveTonnes + capacité × wagonTareTonnes           (264 t)
+masse_calib  = tare + calibrationLoadFactor × capacité × tonnesPerLoad (456 t)
+FixedPerKm   = costPerKm × tare / masse_calib                           (0,463)
+PerLoadKm    = costPerKm × tonnesPerLoad / masse_calib                  (0,0158)
+facture      = Σ pas  km × relief × (FixedPerKm + PerLoadKm × charge)
+décision     = PerLoadKm × Σ tronçons jusqu'à la destination  km × relief
+```
+
+La décision est la **dérivée exacte** de la facture par rapport à la charge, et les
+deux sortent des mêmes tarifs et du même `LegCostFactor`. Un test le vérifie sur la
+simulation elle-même — un train, un tick, aucune transaction possible : dix
+chargements de plus coûtent à la facture dix fois ce que le transporteur leur a
+imputé, dans les deux sens du col, à 1e-9 près. `expectedLoadFactor` n'est pas lu :
+aucune part fixe n'est répartie sur une charge escomptée.
+
+Une réserve, qui tient à l'instrument et non au modèle : le transporteur chiffre le
+trajet jusqu'au **meilleur** acheteur en aval, mais vend au premier qui lui laisse
+10 % de marge (`SellHere`). Quand il vend plus tôt, le chargement lui a coûté moins
+que ce qu'il lui a imputé ; l'erreur est toujours dans le sens de la prudence.
+
+À titre d'ordre de grandeur, un chargement de grumes de Pinecrest à Cedarton
+(355 km, de l'autre côté du col) : le statu quo lui impute 19,7 quelle que soit la
+montagne ; le modèle `mass` 5,6 à relief nul, 6,1 à 0,03, 7,1 à 0,09 et 9,0 à 0,2.
+
+### Masses et calibration
+
+Masses d'un train de marchandises américain des années 1870, sources dans
+[SOURCES.md](SOURCES.md), « Masses du train » : locomotive et tender **48 t**
+(Pennsylvania Railroad classe D5, 1870-1873, 48,1 t documentées), wagon couvert de
+10 short tons de charge, **9 t**, pour **9 t** de tare [estimé]. Un train de 24
+wagons pèse 264 t à vide, 480 t plein. Le catalogue de locomotives ne porte pas de
+masse ; ces valeurs sont des paramètres de `haulage.massCost`, toutes dans les
+données.
+
+La calibration fixe le prix de la tonne-kilomètre : à `calibrationLoadFactor` de
+sa capacité, un train coûte exactement son `costPerKm`. Deux choix possibles, tous
+deux mesurés sur heartland, où il n'y a pas de relief pour brouiller le compte :
+
+| calibration | ce qu'elle mesure | remplissage obtenu | coût facturé aux trains | écart au statu quo |
+|---|---|---|---|---|
+| statu quo | — | 0,716 | 207 360 | — |
+| 0,72 | la charge moyenne du statu quo | 0,884 | 224 821 | +8,4 % |
+| **0,89** (retenue) | la charge moyenne que le modèle fait porter lui-même | 0,890 | 207 362 | **+0,001 %** |
+
+La première comparerait deux économies : le modèle fait remplir les trains davantage
+(de 72 % à 89 %), si bien que calibrer sur l'ancienne charge renchérit
+l'exploitation de 8 % et fait perdre 19 000 à la sierra sans rien dire des
+décisions. La seconde est le point fixe : à 0,89, le coût total facturé sur
+heartland est celui d'aujourd'hui à 2 près sur 207 360 (206 335 sous l'anticipant,
+−0,5 %), et sur la sierra à 0,1 % près (225 370 contre 225 596 à 0,03). On compare
+alors deux façons de **décider** sur une même économie.
+
+### Méthode
+
+**Des ensembles, jamais une partie.** Chaque configuration est jouée 41 fois : telle
+qu'écrite, puis 40 fois avec une seule demande d'une seule ville multipliée par
+1,001 ou 0,999 (dans l'ordre des villes et des marchandises du scénario), toute la
+partie durant — le choc du contrôle de la section « Événements ». La perturbation
+est la même pour toutes les variantes, si bien que les différences se lisent
+**appariées**, perturbation par perturbation : « ± » y est une erreur type (écart-type
+des 40 différences ÷ √40). Dans les tableaux de résultats, « ± » est l'écart-type
+entre réalisations, et la médiane suit entre parenthèses. Le contrôle tient : sur
+heartland sous la référence, l'ensemble donne 251 011 ± 5 521, comme le témoin des
+événements (252 ± 4 milliers).
+
+**Le banc mesure les scénarios, il ne les reconstruit pas.** Chaque variante est le
+scénario tel qu'écrit, une valeur changée en mémoire. Les parties non perturbées
+reproduisent les empreintes figées : `44876808B521C9E4` et `B80E7C2F7DFBD1A5` pour
+la sierra, `B966B86D3F0AF83C` et `29EE085518F1B2B0` pour heartland,
+`3A328BE0FBB30F59` et `64BC50252805D975` pour `sierra-marginal`. La variante
+« relief imputé » (la ligne de code de « Ce que ferait le relief… ») tourne sur une
+copie du transporteur hors dépôt, qui sans la ligne reproduit les empreintes au bit
+près. Toutes les autres se relisent dans le harnais par un filtre `jq` sur le
+scénario — par exemple `jq '.haulage.costModel = "mass" |
+.network.traction.climbEquivalentKm = 0.2' data/sierra.json`, ou
+`.cities[4].demand.food *= 1.001` pour une réalisation de l'ensemble.
+
+**Un témoin de plus : décider au même coût, sans voir le relief.** Le modèle `mass`
+change deux choses à la fois : il impute beaucoup moins (0,0158 par chargement et
+par kilomètre, contre 0,0556 pour le statu quo) et il fait entrer le relief. Pour
+les séparer, le **témoin 2,11** est le statu quo avec `expectedLoadFactor` = 2,11,
+qui impute le même 0,0158 sur le plat (à 0,1 % près) — et rien pour le relief. Il
+facture à la manière du statu quo : un train chargé y coûte ce que coûte un train
+vide. L'écart entre `mass` et le témoin mêle donc deux choses, le relief dans la
+décision et la facture à la masse ; la seconde se lit seule à relief nul.
+
+Les résultats incluent l'entretien des voies (72 723 sur la sierra). C'est une
+charge fixe qui ne change aucune décision tant que la trésorerie reste positive ; ce
+n'est plus vrai en dessous (voir l'observation plus bas).
+
+### Premier résultat : aucune destruction de valeur
+
+Sierra, trois trains, résultat net sur 40 réalisations :
+
+| traction | statu quo | relief imputé | coût marginal (`mass`) | `mass` − statu quo |
+|---|---|---|---|---|
+| *référence* | | | | |
+| 0 | 166 826 ± 5 283 (167 741) | = statu quo | 196 264 ± 2 279 (196 858) | +29 438 ± 965 |
+| **0,03** | 148 590 ± 5 283 (149 505) | 142 913 ± 5 061 (142 964) | **178 919 ± 1 552** (179 123) | +30 329 ± 832 |
+| 0,09 | 112 118 ± 5 283 (113 033) | 77 983 ± 22 286 (86 151) | 143 093 ± 1 749 (142 940) | +30 975 ± 843 |
+| 0,2 | 45 253 ± 5 283 (46 168) | −141 876 ± 66 465 (−126 919) | 79 573 ± 2 071 (79 931) | +34 320 ± 937 |
+| *anticipant* | | | | |
+| 0 | 178 923 ± 9 402 (181 633) | = statu quo | 195 238 ± 4 882 (196 504) | +16 315 ± 1 631 |
+| **0,03** | 160 687 ± 9 402 (163 398) | 159 958 ± 9 955 (161 798) | **175 232 ± 6 295** (174 717) | +14 545 ± 2 038 |
+| 0,09 | 124 215 ± 9 402 (126 926) | 98 206 ± 11 434 (97 063) | 141 126 ± 5 124 (141 926) | +16 911 ± 1 572 |
+| 0,2 | 57 350 ± 9 402 (60 061) | −59 414 ± 94 035 (−21 358) | 72 625 ± 7 717 (72 400) | +15 275 ± 2 297 |
+
+*Parties telles qu'écrites, à 0,03 : 146 689 (statu quo) et 175 856
+(`sierra-marginal`) sous la référence, 169 531 et 169 883 sous l'anticipant. Sous
+la référence, la partie de `sierra-marginal` n'a que 2 voisines sur 40 en dessous
+d'elle : c'est un tirage bas, pas le scénario — la leçon des 240 374 de heartland.*
+
+Le modèle `mass` fait mieux que le statu quo à toutes les tractions et sous les
+deux solveurs, de 9 à 76 %, avec une dispersion **deux à trois fois plus faible**
+sous la référence, une fois et demie sous l'anticipant : un transporteur qui décide
+sur un coût vrai est moins à la merci d'une perturbation de 0,1 %. Le relief
+imputé, lui, confirme la mesure précédente — une perte qui se creuse avec la
+traction —, en pire qu'annoncé à 0,2 pour une raison indépendante du relief (voir
+l'observation sur l'entretien).
+
+Sur heartland, sans relief, même sens : 276 564 ± 1 766 contre 251 011 ± 5 521
+sous la référence (+25 553 ± 904), 258 391 ± 5 864 contre 237 523 ± 10 190 sous
+l'anticipant (+20 868 ± 1 699). La scierie d'Ironhill démarre (21 % et 20 %).
+
+### Deuxième résultat : la valeur vient de la décision marginale, pas du relief
+
+| traction | témoin 2,11 (réf.) | `mass` − témoin (réf.) | témoin 2,11 (ant.) | `mass` − témoin (ant.) |
+|---|---|---|---|---|
+| 0 | 196 404 ± 2 318 | −140 ± 327 | 197 674 ± 5 165 | −2 437 ± 1 059 |
+| 0,03 | 178 168 ± 2 318 | +751 ± 436 | 179 439 ± 5 165 | −4 207 ± 1 529 |
+| 0,09 | 141 696 ± 2 318 | +1 397 ± 418 | 142 967 ± 5 165 | −1 841 ± 1 131 |
+| 0,2 | 74 832 ± 2 318 | **+4 742 ± 521** | 76 102 ± 5 165 | −3 477 ± 1 582 |
+
+Sur heartland : témoin 276 472 ± 2 168 contre `mass` 276 564 ± 1 766 (référence),
+257 008 ± 5 030 contre 258 391 ± 5 864 (anticipant) — indiscernables, ce qui est
+attendu sans relief.
+
+Le témoin retrouve **toute** la hausse : +29 578 sur la sierra, +25 461 sur
+heartland sous la référence. C'est ce que « Le rayon économique est un réglage de
+l'instrument » avait établi avec `expectedLoadFactor` = 2 : imputer moins rapporte,
+et démarre les scieries lointaines. Ce que le modèle `mass` ajoute n'est pas ce
+gain, c'est sa **justification** : 0,0158 n'est plus un réglage choisi parce qu'il
+rapporte, c'est ce qu'un chargement coûte vraiment à porter, et `expectedLoadFactor`
+ne sert plus.
+
+Ce que le relief ajoute se lit dans la colonne des différences. Sous la référence,
+décider sur le relief rapporte d'autant plus que le relief coûte : presque rien à
+0,03 (+751 ± 436, à moins de deux erreurs types de zéro), +1 % à 0,09, **+6 % à
+0,2**. Sous l'anticipant, l'écart est négatif, mais il l'est déjà à relief nul
+(−2 437 ± 1 059) et ne se creuse pas avec la traction (−1 841 à −4 207, à une ou
+deux erreurs types) : il ne vient pas du relief mais de la facture à la masse,
+seule différence à relief nul, que l'anticipant, plus bruité, paie un peu.
+**Le relief dans la décision ne détruit de valeur sous aucun des deux solveurs ;
+sous la référence, il en crée à forte traction.**
+
+### Troisième résultat : une géographie, au-delà d'un seuil de traction
+
+Référence, trois trains ; le témoin et le statu quo ont la même trace des marchés à
+toutes les tractions, puisque le relief n'entre pas dans leurs décisions :
+
+| modèle, traction | Cedarton (min–max sur 40) | planches ouest / est | écart planches | mobilité planches | charbon ouest / est |
+|---|---|---|---|---|---|
+| statu quo, toute traction | 0 % | 0,97 / 1,95 | ×4,74 | 0,737 | 0,46 / 1,10 |
+| témoin 2,11, toute traction | 22 % | 1,21 / 1,79 | ×3,32 | 0,591 | 0,47 / 1,15 |
+| `mass`, 0 | 22 % (13–33) | 1,21 / 1,78 | ×3,30 | 0,575 | 0,47 / 1,15 |
+| `mass`, **0,03** | 24 % (15–32) | 1,17 / 1,75 | ×3,43 | 0,593 | 0,49 / 1,15 |
+| `mass`, 0,09 | 28 % (19–41) | 1,11 / 1,69 | ×3,41 | 0,594 | 0,48 / 1,13 |
+| `mass`, 0,12 | 14 % (1–31) | 1,15 / 1,83 | ×3,49 | 0,542 | 0,49 / 1,12 |
+| `mass`, 0,15 | **0 %** (0–0) | 1,12 / 1,99 | ×3,76 | 0,448 | 0,51 / 1,10 |
+| `mass`, 0,2 | **0 %** (0–0) | 1,13 / **2,00** | ×3,73 | 0,458 | 0,50 / 1,09 |
+| relief imputé, 0,2 | 0 % | 0,79 / 2,14 | ×8,58 | 0,562 | 0,44 / 1,17 |
+
+*Prix moyens chez les acheteurs, × le prix de référence ; ouest = Westbrook,
+Fordham, Pinecrest ; est = d'Eastgate à Farport ; Coalpass, au col, n'est dans
+aucun des deux. Sous l'anticipant, même forme : Cedarton à 18, 19, 21, 13, 0 et 0 %
+de 0 à 0,2, planches à l'est de 1,84 à 2,01.*
+
+Là, le relief fait ce qu'on attendait de lui. **À 0,15 et au-delà, le col sépare
+deux bassins** : les grumes de Pinecrest ne le passent plus (à 0,2, leur prix à
+Cedarton revient à 1,55, celui d'un marché que personne ne livre), la scierie de
+Cedarton s'arrête dans les 40 réalisations sous les deux solveurs, les planches
+valent 2,00 × la référence à l'est contre 1,13 à l'ouest. L'industrie viable est
+celle qui est du bon côté de la montagne, près de sa ressource. En dessous, le
+rayon des grumes dépasse le col : à 0,09 la scierie tourne même un peu plus qu'à
+plat (28 % contre 22 %, dans des fourchettes qui se recouvrent), vraisemblablement
+parce que les planches de Pinecrest passent moins facilement vers l'est. Entre les
+deux, à 0,12, elle bascule d'une réalisation à l'autre (1 à 31 %) : c'est le
+seuil.
+
+Et la géographie n'est pas celle du relief imputé. Celui-ci fabriquait des bassins
+en refusant du fret que les trains portaient de toute façon : l'écart des planches
+doublait (×8,6), l'est payait 2,14, et la compagnie perdait 187 000. Le modèle
+`mass` les fabrique en refusant ce qui coûte vraiment : l'écart reste modéré
+(×3,7), et la compagnie gagne.
+
+Deux asymétries, toutes deux physiques. **Le charbon ne voit pas la montagne** : la
+mine est au col, tout son charbon descend, et une descente ne coûte presque rien
+(facteur 1,00 à 1,03) ; ses prix bougent de trois centièmes sur toute la gamme.
+Et **à 0,03, la géographie est à peine là** : Cedarton à 24 % contre 22 % à relief
+nul, les planches de l'est à 1,75 contre 1,78. La valeur actuelle de
+`climbEquivalentKm` rend le relief presque invisible aux décisions, marginales ou
+non.
+
+### Ce que le modèle change au reste
+
+**Le nombre de trains.** Mêmes ensembles, en ne changeant que le nombre de trains
+(au-delà de trois, copies du premier aux arrêts 7, 2, 6) :
+
+| trains | sierra 0,03, statu quo | sierra 0,03, `mass` | sierra 0,2, statu quo | sierra 0,2, `mass` | heartland, statu quo | heartland, `mass` |
+|---|---|---|---|---|---|---|
+| 1 | 10 522 ± 3 733 | 15 875 ± 4 161 | −23 943 ± 3 733 | −9 276 ± 3 633 | 89 038 ± 3 656 | 92 135 ± 3 579 |
+| 2 | 101 095 ± 5 758 | 122 856 ± 3 520 | 32 225 ± 5 758 | 56 189 ± 4 562 | 183 512 ± 6 704 | 211 673 ± 3 278 |
+| 3 | **148 590** ± 5 283 | **178 919** ± 1 552 | **45 253** ± 5 283 | **79 573** ± 2 071 | **251 011** ± 5 521 | 276 564 ± 1 766 |
+| 4 | 126 497 ± 5 528 | 176 952 ± 1 886 | −419 581 ± 4 931 | 43 245 ± 2 084 | 229 069 ± 4 891 | **280 215** ± 1 986 |
+| 5 | 55 338 ± 6 897 | 138 887 ± 2 588 | −577 979 ± 2 347 | −42 984 ± 70 481 | 161 723 ± 6 658 | 245 618 ± 2 561 |
+| 6 | −449 479 ± 5 729 | 98 627 ± 2 137 | −704 823 ± 1 466 | −411 534 ± 1 188 | 101 099 ± 6 465 | 210 176 ± 2 250 |
+
+*Référence. Usines desservies de 1 à 6 trains, heartland : 73 → 82 % (statu quo),
+75 → 92 % (`mass`) ; scierie lointaine sous `mass` : 6, 13, 21, 33, 44, 56 %.
+Sous l'anticipant, heartland `mass` culmine aussi à quatre trains (269 573 contre
+258 391 à trois). Les effondrements du statu quo de la sierra à 4-6 trains ne sont
+pas ceux de la première campagne : voir l'observation sur l'entretien.*
+
+Le rendement du capital s'inverse toujours — c'est la propriété qui fait le jeu —,
+mais **plus tard et plus doucement** : l'optimum passe de trois à trois-quatre
+trains, et six trains gardent 75 % du résultat de l'optimum sur heartland, contre
+40 % sous le statu quo. Le transporteur remplit mieux ses trains (89 % contre 72 %),
+donc la capacité ajoutée trouve plus longtemps à s'employer. Ce qui adoucit
+l'arbitrage entre profit et service : les usines desservies montent jusqu'à 92 %,
+le résultat avec elles jusqu'à quatre trains.
+
+**La rotation du fret.** Le charbon est livré 24 fois par chargement produit, contre
+8,9 sous le statu quo (la nourriture 73 fois contre 70). Le témoin 2,11 fait de
+même : c'est l'effet d'un coût décidé plus bas, pas du relief. Chaque revente paie
+sa marge — 10 % et 1,5 par chargement au moins — sur un vrai écart de prix ; ce
+n'est pas le lavage de fret, mais c'est la ligne « rotation très au-dessus de 1 »
+du tableau de diagnostic du README, à surveiller.
+
+**La mobilité.** Moyenne sur les marchandises, référence : 0,400 → 0,445 ; celle des
+planches baisse (0,737 → 0,593), celle du charbon monte (0,439 → 0,526). Sous
+l'anticipant, la moyenne baisse (0,560 → 0,465). La dispersion se referme là où le
+transporteur transporte davantage. Au regard du critère du contrat `economy` — une
+dispersion qui se déplace —, le modèle n'apporte donc rien de net : la mobilité
+moyenne monte sous la référence et baisse sous l'anticipant.
+
+### Sensibilité aux masses
+
+Sierra, référence, 40 réalisations, une variable à la fois, calibration laissée à
+0,89 :
+
+| variante | 0,03 : résultat | Cedarton | 0,2 : résultat | Cedarton |
+|---|---|---|---|---|
+| **telle qu'écrite** (48 t, wagon 9 t, charge 9 t, 0,89) | 178 919 ± 1 552 | 24 % | 79 573 ± 2 071 | 0 % |
+| calibration 0,72 | 159 727 ± 2 017 | 27 % | 51 512 ± 2 026 | 0 % |
+| calibration 1,0 | 189 655 ± 2 366 | 24 % | 94 523 ± 1 545 | 0 % |
+| locomotive 24 t | 179 373 ± 1 850 | 25 % | 80 377 ± 2 581 | 0 % |
+| locomotive 96 t | 178 520 ± 1 884 | 22 % | 78 464 ± 1 744 | 0 % |
+| wagon 4,5 t | 180 980 ± 1 568 | **0 %** | 83 198 ± 3 665 | 0 % |
+| wagon 18 t | 177 600 ± 2 365 | 22 % | 75 700 ± 1 638 | **26 %** |
+
+La calibration déplace le résultat — c'est le prix de la tonne, donc le niveau de
+toute la facture — et presque pas les décisions : c'est pourquoi elle se mesure, au
+point fixe, au lieu de se régler. La locomotive ne compte guère : 48 t sur 264. **La
+tare des wagons, elle, est le levier de la géographie** : plus un wagon vide pèse
+lourd, plus la part fixe domine, moins un chargement de plus coûte, et plus loin il
+voyage. À 4,5 t, Cedarton meurt dès 0,03 ; à 18 t, elle survit au col à 0,2. Le
+rapport tare / charge fait le rayon économique, et c'est le paramètre le moins bien
+sourcé des trois.
+
+### Deux observations en passant
+
+**La vente au premier acheteur porte l'instrument.** Pour voir son rôle, une
+variante de banc hors dépôt ne vend qu'à la meilleure destination en aval : −200 336
+± 8 668 sous le statu quo, −200 901 ± 2 241 sous `mass`, à 0,03, usines à 48 et
+35 %. Le fret s'entasse sur des destinations dont le prix s'effondre dès la première
+livraison. La règle n'est pas changée ; elle est, avec le coût décidé, ce qui fait
+tenir le transporteur de mesure, et le modèle `mass` n'y touche pas.
+
+**Sans finance, l'entretien n'est une charge fixe que tant que la trésorerie reste
+positive.** En dessous de zéro, le transporteur n'achète plus rien — pas de fret à
+crédit sans module finance — mais ses trains continuent de rouler et de payer. Six
+trains sur la sierra, statu quo, 0,03 : −452 503 avec l'entretien, contre −24 904
+annoncés « à une soustraction près » de 47 819 ; usines à 22 %. Même mécanisme pour
+le relief imputé à 0,2 : −192 418 contre −123 209. Aucune des mesures de trois
+trains du statu quo n'est touchée (vérifié : 116 075 sans entretien à 0,2, comme
+avant la décision) ; la section « Le réseau coûte » est corrigée en conséquence.
+
+### Conclusion
+
+**Oui : le coût marginal réel crée une géographie sans détruire de valeur — mais à
+deux conditions, et en changeant autre chose en passant.**
+
+1. *Sans destruction de valeur* : à toutes les tractions, sous les deux solveurs, il
+   fait mieux que le statu quo (+9 à +76 %) et que le relief imputé, avec une
+   dispersion moindre. Face au témoin qui décide au même coût sans
+   voir le relief, le relief rapporte sous la référence (+6 % à 0,2) et ne coûte rien
+   de discernable sous l'anticipant.
+2. *La géographie demande de la traction* : à 0,03, elle est à peine visible ; au-delà
+   de 0,12 à 0,15, le col sépare deux bassins, et la scierie de l'autre côté de la
+   montagne s'arrête. Le seuil lui-même dépend du rapport tare / charge des wagons.
+3. *La valeur vient de la décision marginale, pas du relief* : c'est l'abandon du coût
+   moyen imputé qui rapporte 20 % sur la sierra, 10 % sur heartland, et démarre
+   Ironhill et Cedarton. Le modèle `mass` rend ce gain légitime — un coût physique au
+   lieu d'un réglage de l'instrument — mais il n'en est pas la source.
+4. *Ce qu'il change en passant* : la tension du capital, adoucie (optimum à trois ou
+   quatre trains, six trains à 75 % de l'optimum sur heartland au lieu de 40 %), et
+   la rotation du charbon, multipliée par 2,7.
+
+### Décisions laissées à l'équipe
+
+Aucune n'est tranchée ici ; le modèle est livré en opt-in, sur la seule
+`data/sierra-marginal.json`.
+
+1. **Le modèle `mass` doit-il devenir le défaut ?**
+   - *a. Non (livré)* : opt-in par les données. Aucune empreinte ne bouge, tous les
+     chiffres de ce document restent valables.
+   - *b. Partout* : les onze empreintes existantes bougent — le défaut réintroduit
+     à la main (les masses lues sous `flat`) les fait toutes échouer —, et chaque
+     chiffre de ce document est à remesurer. Heartland +10 % (251 → 277 milliers en
+     moyenne), Ironhill à 21 %, optimum à quatre trains, six trains à 210 000 au lieu
+     de 101 000, charbon livré 24 fois par chargement produit au lieu de 8,7.
+     `heartland.json` cesserait d'être la référence de l'économie décrite plus haut.
+   - *c. Sur les scénarios à relief seulement* (sierra, `terrain-*`) : heartland
+     garde son rôle de référence ; la sierra passe de 148,6 à 178,9 milliers (les
+     cartes `terrain-*`, qui perdent de l'argent par construction, n'ont pas été
+     mesurées). Deux modèles de coût coexistent alors entre scénarios, ce qui rend
+     leurs chiffres incomparables.
+2. **Quelle valeur de `climbEquivalentKm` sous ce modèle ?** (sierra, référence)
+   - *0,03 (actuel)* : 178 919, relief à 8,8 % du coût, **pas de géographie**.
+   - *0,09* : 143 093, pas encore de bassins : Cedarton tourne davantage (28 %) et
+     les planches baissent des deux côtés du col (1,11 / 1,69 contre 1,21 / 1,78 à
+     plat).
+   - *0,12* : 125 152, **le seuil** : Cedarton bascule d'une partie à l'autre (1 à
+     31 %) — à éviter pour un scénario de régression.
+   - *0,15* : 108 312, deux bassins, Cedarton à l'arrêt partout.
+   - *0,2 (« une rampe de 1 % triple la résistance »)* : 79 573, deux bassins, le
+     relief coûte 118 000 sur deux ans ; l'optimum reste à trois trains.
+3. **Le rapport tare / charge des wagons est-il un paramètre physique ou un levier de
+   conception ?** Il décide du rayon : à 4,5 t de tare, pas de scierie lointaine
+   même à 0,03 ; à 18 t, pas de bassins même à 0,2. La valeur de 9 t est estimée, pas
+   documentée (voir SOURCES.md). S'il doit être physique, il faut une meilleure
+   source ; s'il est un levier, il faut le dire, et le régler par carte.
+4. **La calibration se remesure à chaque changement de défaut.** 0,89 est un point
+   fixe mesuré sur heartland sous la référence. Si le modèle devient le défaut, ou si
+   `costPerKm` ou les masses changent, il faut la remesurer — sinon on compare deux
+   économies (+8 % de coût à 0,72, −19 000 sur la sierra).
+5. **La rotation du charbon à ×24** mérite d'être regardée pour elle-même avant de
+   généraliser le modèle : légitime selon la règle actuelle, mais c'est la
+   signature que le tableau de diagnostic désigne comme suspecte.
+6. **Le plancher de trésorerie sans finance** (hors de ce chantier) : un scénario
+   dont la trésorerie passe sous zéro cesse d'acheter mais continue de payer ses
+   trains. Avec l'entretien, cela arrive à la sierra dès quatre trains à 0,2 et six
+   à 0,03. Soit on l'accepte comme la faillite d'un scénario sans finance, soit les
+   trains d'une compagnie sans trésorerie doivent s'arrêter comme sous
+   administration.
 
 ## Questions ouvertes pour l'équipe
 
@@ -877,6 +1285,10 @@ un chargement (`expectedLoadFactor`) et, pour les planches, par sa règle de ven
 au premier acheteur. Passer `expectedLoadFactor` de 0,6 à 2 fait démarrer Ironhill
 à 20 %. Et le relief, tel qu'il est câblé, ne le raccourcit pas du tout. La
 décision à prendre est donc d'abord de savoir *d'où* doit venir le rayon.
+*Une réponse est mesurée* (« Le coût marginal réel ») : sous le modèle `mass`, le
+rayon vient d'un coût physique — ce qu'un chargement ajoute à la facture —, Ironhill
+démarre à 21 %, et c'est le rapport tare / charge des wagons qui fixe la distance ;
+le relief ne le raccourcit qu'au-delà d'une traction de 0,12 à 0,15.
 
 **La nourriture est trop uniforme** (écart moyen ×1,4 sur dix acheteurs). Avec
 trois trains et un transporteur omniscient, le réseau nourrit tout le monde au

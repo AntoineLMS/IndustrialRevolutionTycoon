@@ -146,7 +146,9 @@ internal static class SierraTests
             // que la montagne coûte ou non. Si ce test échoue parce que le relief
             // entre désormais dans les décisions, c'est une bonne nouvelle : mettre
             // à jour docs/FINDINGS.md (« Relief et économie ensemble »), qui chiffre
-            // les options, et retirer ce test.
+            // les options, et retirer ce test. Le constat est celui du modèle de coût
+            // par défaut (« flat ») ; sous le modèle « mass », le relief entre dans
+            // les décisions, et MarginalCostTests vérifie le contraire.
             var scenario = ScenarioLoader.Load(SierraPath());
             var flat = ScenarioLoader.Load(SierraPath());
             flat.Network.Traction.ClimbEquivalentKm = 0;

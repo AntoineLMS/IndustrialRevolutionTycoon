@@ -199,8 +199,9 @@ internal static class MarginalCostTests
                 // des marchés dépend du coût du relief. Et ce qu'elle en fait est une
                 // géographie : la scierie de Cedarton, de l'autre côté du col, tourne
                 // tant que le col coûte peu, et s'arrête quand il coûte cher. Mesuré sur
-                // 40 trajectoires voisines (docs/FINDINGS.md, « Le coût marginal réel »)
-                // : de 13 à 41 % d'utilisation jusqu'à 0,09, 0 % dans les 40 à 0,2.
+                // 40 trajectoires voisines (docs/FINDINGS.md, « Le coût marginal réel ») :
+                // de 11 à 41 % d'utilisation jusqu'à 0,09 sous les deux solveurs, 0 % dans
+                // les 40 à 0,2.
                 double Cedarton(double? climb, out string markets)
                 {
                     var scenario = ScenarioLoader.Load(MarginalPath());
