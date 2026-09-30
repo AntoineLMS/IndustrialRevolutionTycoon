@@ -1,6 +1,6 @@
 # Vision du jeu
 
-*Quatrième jet, 30 septembre 2026. Ce document fixe le cap : ce qu'est le jeu, qui y
+*Cinquième jet, 30 septembre 2026. Ce document fixe le cap : ce qu'est le jeu, qui y
 joue, et ce que le joueur décide. [ARCHITECTURE.md](ARCHITECTURE.md) dit comment
 la simulation tient debout, [CONTRACTS.md](CONTRACTS.md) comment elle se découpe,
 [FINDINGS.md](FINDINGS.md) ce qu'elle fait quand on la mesure. Celui-ci dit
@@ -117,6 +117,33 @@ choses** :
 
 *Déjà en place* : le module finance émet des obligations et tient un découvert
 bancaire explicite, mais à des taux fixés par le scénario.
+
+### Le cycle économique
+
+**Décidé.** La partie a une **conjoncture** : une suite de phases (expansion,
+ralentissement, crise, reprise) aux durées tirées au sort dans des bornes fixées
+par les données, sur un flux aléatoire qui lui est propre. **Les événements la
+font bouger** : une panique historique déclenche une crise à sa date, et les
+événements aléatoires peuvent précipiter ou retarder un changement de phase.
+
+Ce qu'elle touche :
+
+- **les taux d'emprunt** : un taux de base selon la phase, plus une prime de risque
+  selon la compagnie, moins un bonus selon le score du dirigeant ;
+- **la bourse** : le multiple de valorisation monte en expansion et s'effondre en
+  crise ;
+- **les investisseurs** : ils apportent moins et patientent moins en crise ;
+- **la demande des villes**, modestement.
+
+Pourquoi un effet modeste sur la demande : un choc qui touche toutes les villes à la
+fois fait bouger tous les prix ensemble et ne crée aucun écart à exploiter
+(FINDINGS.md, section sur les événements). Le cycle donne surtout **un rythme
+financier** : emprunter pas cher en expansion, racheter un concurrent dont le cours
+s'est effondré, garder de la trésorerie avant la crise.
+
+**Écarté** : un cycle engendré par l'économie elle-même (l'activité nourrit la
+confiance, qui nourrit la demande). Plus réaliste, mais une telle boucle diverge
+ou oscille facilement, et elle est très difficile à équilibrer.
 
 **À décider** :
 
@@ -292,8 +319,8 @@ Ce qui distingue deux locomotives :
 
 **Décidé.**
 
-- **Le carburant s'achète en gare, au prix du marché.** Le coût du transport suit
-  donc les prix de l'économie qu'il dessert.
+- **Le carburant s'achète en gare, au prix du marché local**, celui de la ville de
+  la gare. Le coût du transport suit donc les prix de l'économie qu'il dessert.
 - **Le carburant n'a pas besoin d'être disponible là où le train fait le plein.**
   Pour l'instant, c'est un coût indexé sur le prix du marché, pas un prélèvement
   physique : il ne vide aucun stock, et une ville sans charbon ne bloque pas une
@@ -306,11 +333,11 @@ branché : la vitesse et le coût d'un train sont saisis à la main. Le modèle 
 « mass » (FINDINGS.md, « Le coût marginal réel ») connaît déjà la masse d'une
 locomotive et de ses wagons.
 
-**À décider** : **quel prix de marché**, puisque le carburant n'a pas besoin
-d'être en stock. Le prix local de la gare pose un problème : une ville sans charbon
-affiche le prix plafond (trois fois la référence), si bien que faire le plein là
-coûterait trois fois plus cher sans raison physique. Un prix moyen du carburant sur
-toute la carte, chez ses acheteurs, éviterait cet écueil.
+**Décidé, en connaissance de cause** : le prix local vaut même quand la ville n'a
+pas de carburant en stock. Une ville sans charbon affiche le prix plafond (trois
+fois la référence) : y faire le plein coûte donc cher, et c'est voulu. Où l'on fait
+le plein devient un choix d'itinéraire : une ligne à vapeur a intérêt à passer par
+une ville où le charbon abonde.
 
 ## Ce que le joueur décide
 
@@ -438,8 +465,7 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
 1. La courbe entre score et apport des investisseurs, les objectifs des
    investisseurs, et le barème des points.
 2. Ce qui suit une éviction : fonder une autre compagnie, ou fin de partie ?
-3. La formule du taux d'intérêt, et ce qu'est « la situation économique de la
-   partie » (un cycle économique est à l'étude).
+3. Les formules du cycle économique : durées des phases, taux par phase, force de
+   l'effet des événements (en cours de mesure).
 4. Le prix d'une industrie sans propriétaire.
 5. Les tailles de gare, leur rayon d'action et leur prix.
-6. Quel prix de marché pour le carburant : celui de la gare, ou un prix moyen ?
