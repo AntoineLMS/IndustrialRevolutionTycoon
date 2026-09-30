@@ -191,6 +191,9 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
     private void TradeAtStop(WorldState world, Train train)
     {
         var city = world.CityById(train.Line.Stops[train.StopIndex].CityId);
+        // Carnet de route : la gare est desservie, qu'on y échange ou non. Pure
+        // télémétrie, lue par le module objectives (« relier deux villes »).
+        world.Company.Freight.RecordArrival(train, city.Id);
         SellHere(world, train, city);
         BuyHere(world, train, city);
     }
@@ -220,6 +223,7 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
 
             double proceeds = MoveToMarket(world, market, cargoId, held);
             world.Company.Earn(proceeds);
+            world.Company.Freight.RecordSale(cargoId, city.Id, held);
             train.Cargo[cargoId] = 0;
             train.UnitCost[cargoId] = 0;
         }
@@ -272,6 +276,7 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
             if (bought <= 0) continue;
 
             world.Company.PayForCargo(cost);
+            world.Company.Freight.RecordPurchase(cargoId, city.Id, bought);
 
             double held = train.Cargo.TryGetValue(cargoId, out double h) ? h : 0;
             double prevUnit = train.UnitCost.TryGetValue(cargoId, out double u) ? u : 0;

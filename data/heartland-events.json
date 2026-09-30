@@ -151,6 +151,7 @@
   "//events": "Ce scénario existe pour éprouver le module events, et lui seul. L'économie est celle de heartland.json au caractère près (même bloc anticipating) — un test le vérifie — et seul le bloc events s'ajoute : heartland reste la trace de régression de l'économie, sans effets extérieurs. Toutes les mesures citées ici sont dans docs/FINDINGS.md, section « Événements historiques et aléatoires » : 40 réalisations du tirage aléatoire (events.randomSequence de 11 à 50), statistiques après 90 ticks de chauffe et chez les acheteurs seulement, comparées à un TÉMOIN — le même calendrier d'aléas à 0,1 % d'intensité — et non à heartland seul. La raison : un choc de 0,1 % suffit à déplacer le résultat net de heartland de ±4 %, donc une partie unique ne se compare à rien.",
 
   "//cycle": "Pas de conjoncture : ce scénario éprouve les événements seuls. Ses événements portent pourtant des attributs « cycle » — la panique de 1873 force la crise, quatre types aléatoires poussent la conjoncture — et ils sont inertes ici, c'est voulu : ce sont des données sur l'événement, que data/heartland-cycle.json reprend au caractère près et que le module cycle y lit. L'empreinte de référence de ce scénario n'a pas bougé en les recevant.",
+  "//objectives": "Pas d'objectifs : ce scénario éprouve les événements seuls, sans finance, donc sans fortune à lire. Les objectifs de fortune et de livraisons sont posés sur heartland-cycle, qui reprend ces événements au caractère près.",
 
   "events": {
     "enabled": true,

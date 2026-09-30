@@ -24,6 +24,7 @@
   "//events": "Pas d'événements, pour la même raison que sierra.json : un scénario éprouve une chose à la fois, et celui-ci éprouve le modèle de coût.",
 
   "//cycle": "Pas de conjoncture, pour la même raison que sierra.json : un scénario éprouve une chose à la fois, et celui-ci éprouve le coût marginal réel.",
+  "//objectives": "Pas d'objectifs : la liaison de part et d'autre du col est posée sur sierra.json. Celui-ci éprouve le coût marginal réel, et un test compare son économie à celle de sierra, bloc objectives mis à part — le module ne fait qu'observer.",
 
   "//finance": "Pas de finance, pour la même raison que sierra.json : le découvert et les intérêts entreraient dans les achats du transporteur et brouilleraient la mesure du coût d'exploitation.",
 

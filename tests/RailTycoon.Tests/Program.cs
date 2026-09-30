@@ -1069,6 +1069,11 @@ internal static class Program
         // coût décidé sortis d'une même formule, neutralité au réglage par défaut.
         MarginalCostTests.Register(runner);
 
+        // Les objectifs de scénario : observateur pur, fortune, livraisons (et la
+        // revente qui ne les gonfle pas), liaison, échéances, validation. Un seul
+        // point d'entrée ici.
+        ObjectiveTests.Register(runner);
+
         // ------------------------------------------------ traces de référence
         // En dernier : elles figent le comportement de tous les modules à la fois,
         // et un échec ici se lit mieux une fois les invariants de chacun passés.

@@ -112,7 +112,7 @@ internal static class ReferenceTraceTests
         runner.Add("scénarios — un bloc absent sans explication est signalé", () =>
         {
             var undeclared = ScenarioLoader.UndeclaredModuleBlocks(
-                """{ "id": "nu", "Network": {}, "//finance": "pas de finance ici", "//events": "ni d'événements", "//cycle": "ni de conjoncture" }""");
+                """{ "id": "nu", "Network": {}, "//finance": "pas de finance ici", "//events": "ni d'événements", "//cycle": "ni de conjoncture", "//objectives": "ni d'objectifs" }""");
             Check.Equal("anticipating", string.Join(",", undeclared),
                 "seul le bloc ni déclaré ni écarté doit être signalé, casse ignorée");
         });

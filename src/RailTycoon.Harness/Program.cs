@@ -103,10 +103,12 @@ internal static class Program
         recorder.WriteTo(opts.OutDir);
         CsvRecorder.WriteEvents(sim.World, opts.OutDir);
         CsvRecorder.WriteCycle(sim.World, opts.OutDir);
+        CsvRecorder.WriteObjectives(sim.World, opts.OutDir);
         Report.PrintBalance(scenario);
         Report.PrintRun(sim, opts, recorder, stats, cashHistory, rotation);
         Report.PrintEvents(sim);
         Report.PrintCycle(sim);
+        Report.PrintObjectives(sim);
         Report.PrintFinance(sim, worstResidual, worstResidualTick, worstFrontierGap);
 
         if (violations.Count > 0)
@@ -608,7 +610,9 @@ internal static class Report
     /// <summary>Date lisible d'un tick : calendrier de jeu (12 mois de 30 jours) si le scénario donne son année de départ.</summary>
     private static string Date(WorldState w, int tick)
     {
-        int startYear = w.Def.Events.StartYear;
+        // Un seul calendrier par scénario : celui des événements, ou à défaut celui
+        // des objectifs (le module objectives refuse qu'ils diffèrent).
+        int startYear = w.Def.Events.StartYear > 0 ? w.Def.Events.StartYear : w.Objectives.StartYear;
         var t = new RailTycoon.Sim.Core.SimTick(tick);
         if (startYear <= 0) return t.ToString();
         int month = t.DayOfYear / 30 + 1, day = t.DayOfYear % 30 + 1;
@@ -663,6 +667,64 @@ internal static class Report
 
     private static string Truncate(string text, int width)
         => text.Length <= width ? text : text[..(width - 1)] + "…";
+
+    /// <summary>
+    /// Les objectifs du scénario : pour chacun, sa mesure au dernier tick, et pour
+    /// chaque palier sa cible, son échéance et son état — atteint ou manqué avec sa
+    /// date, ou en cours. Le détail, jour par jour, est dans objectives.csv. Ce que
+    /// vaut un palier (victoire, médaille, défaite) n'est pas décidé : le harnais ne
+    /// l'interprète pas.
+    /// </summary>
+    public static void PrintObjectives(Simulation sim)
+    {
+        var w = sim.World;
+        var state = w.Objectives;
+        if (!state.Enabled)
+        {
+            Console.WriteLine("Objectifs   module inactif (aucun bloc « objectives » dans le scénario)");
+            return;
+        }
+
+        var tiers = state.Goals.SelectMany(g => g.Tiers).ToList();
+        int attained = tiers.Count(t => t.Status == RailTycoon.Sim.Objectives.TierStatus.Attained);
+        int missed = tiers.Count(t => t.Status == RailTycoon.Sim.Objectives.TierStatus.Missed);
+        Console.WriteLine($"Objectifs (module {sim.Objectives.Name}) : {state.Goals.Count} objectif(s), {tiers.Count} palier(s) — " +
+                          $"{attained} atteint(s), {missed} manqué(s), {tiers.Count - attained - missed} en cours");
+
+        string CityName(string id) => w.CityById(id).Def.Name;
+        foreach (var goal in state.Goals)
+        {
+            var d = goal.Def;
+            string name = d.Name.Length > 0 ? d.Name : d.Id;
+            string measure = d.Kind switch
+            {
+                RailTycoon.Sim.Objectives.ObjectiveKinds.Fortune =>
+                    $"fortune du magnat, {(d.AverageTicks == 1 ? "au jour le jour" : $"moyenne sur {d.AverageTicks} jours")} : " +
+                    (goal.Measure is double m ? m.ToString("N0", Ci) : "pas encore lisible"),
+                RailTycoon.Sim.Objectives.ObjectiveKinds.Deliveries =>
+                    $"livraisons ({w.Cargo(d.Cargo).Name.ToLowerInvariant()}, " +
+                    $"{(d.City.Length > 0 ? "à " + CityName(d.City) : "toutes villes")}, vendu moins racheté) : " +
+                    $"{(goal.Measure ?? 0).ToString("N0", Ci)} chargement(s)",
+                _ => $"liaison {CityName(d.Cities[0])} – {CityName(d.Cities[1])} : " +
+                     (goal.Measure == 1.0 ? $"faite (train {goal.Detail})" : "pas encore faite"),
+            };
+            Console.WriteLine($"  {name} — {measure}");
+            foreach (var tier in goal.Tiers)
+            {
+                string target = tier.Def.Target is decimal t ? t.ToString("N0", Ci) : "—";
+                string deadline = tier.DeadlineTick is int dl ? Date(w, dl) : "sans échéance";
+                string status = tier.Status switch
+                {
+                    RailTycoon.Sim.Objectives.TierStatus.Attained => $"atteint le {Date(w, tier.Tick)}",
+                    RailTycoon.Sim.Objectives.TierStatus.Missed => $"MANQUÉ le {Date(w, tier.Tick)}",
+                    _ => "en cours",
+                };
+                string tierName = tier.Def.Name.Length > 0 ? tier.Def.Name : tier.Def.Id;
+                Console.WriteLine($"    {Truncate(tierName, 44),-46}{target,12}   {deadline,-14}{status}");
+            }
+        }
+        Console.WriteLine();
+    }
 
     /// <summary>
     /// Plus grand écart de bilan, tous grands livres confondus. C'est le chiffre

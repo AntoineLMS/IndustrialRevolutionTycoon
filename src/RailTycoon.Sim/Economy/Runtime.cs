@@ -200,6 +200,14 @@ public sealed class Company
     /// <summary>Ce que la compagnie peut encore engager : sa caisse, plus le découvert qu'on lui accorde.</summary>
     public double SpendableCash => Cash + CreditLimit;
 
+    /// <summary>
+    /// Carnet de route des trains de la compagnie : chargements vendus et achetés par
+    /// ville, gares desservies par train. Écrit par le seul transport, lu par le
+    /// module <c>objectives</c> ; aucune règle de la simulation ne le lit pour
+    /// décider. Voir <see cref="Transport.FreightLedger"/>.
+    /// </summary>
+    public Transport.FreightLedger Freight { get; } = new();
+
     public void BeginTick()
     {
         RevenueThisTick = 0;

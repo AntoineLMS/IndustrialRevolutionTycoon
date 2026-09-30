@@ -59,6 +59,7 @@
   "//events": "Pas d'événements : ce scénario éprouve la finance, et un scénario éprouve une chose à la fois. Des événements déplaceraient le résultat d'exploitation, donc la trésorerie, les dividendes et la date de l'OPA, et un écart de bilan ne se lirait plus comme une fuite comptable. Les événements s'éprouvent sur data/heartland-events.json, la finance sur celui-ci ; les croiser sera un troisième scénario, pas une mutation de l'un des deux.",
 
   "//cycle": "Pas de conjoncture : ce scénario éprouve la finance seule. Un cycle déplacerait les taux d'emprunt, les cours et la demande, et un écart de bilan ne se lirait plus comme une fuite comptable. La conjoncture, qui touche surtout la finance, s'éprouve sur data/heartland-cycle.json : l'économie et la finance de ce scénario-ci au caractère près, les événements de heartland-events, et le seul bloc cycle en plus.",
+  "//objectives": "Pas d'objectifs : ce scénario éprouve la finance seule. Les objectifs de fortune et de livraisons sont posés sur heartland-cycle, qui reprend cette finance au caractère près.",
 
   "finance": {
     "enabled": true,

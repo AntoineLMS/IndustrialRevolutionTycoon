@@ -16,6 +16,7 @@
   "//events": "Pas d'événements : une carte d'essai du réseau éprouve le devis de construction, qui ne dépend d'aucun marché. Un événement n'y changerait pas un centime et déplacerait la trace de référence pour rien.",
 
   "//cycle": "Pas de conjoncture : une carte d'essai du réseau éprouve le devis de construction, qui ne dépend ni des taux ni de la demande.",
+  "//objectives": "Pas d'objectifs : une carte d'essai du réseau éprouve le devis de construction. Son unique train relierait ses villes au premier trajet ; un objectif n'y mesurerait rien.",
 
   "priceModel": { "coverageHorizonTicks": 15, "shape": 0.5, "minMultiplier": 0.12, "maxMultiplier": 3.0 },
 

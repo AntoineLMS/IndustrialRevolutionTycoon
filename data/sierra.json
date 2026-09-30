@@ -29,6 +29,24 @@
 
   "//cycle": "Pas de conjoncture, pour la même raison que la finance et les événements : un scénario éprouve une chose à la fois, et celui-ci éprouve le couplage relief ↔ économie. Sans finance, un cycle n'y toucherait que la demande, de quelques pour cent, dans toutes les villes à la fois.",
 
+  "//objectives": "Relier Pinecrest et Cedarton, de part et d'autre du col : un même train, sur une même ligne, s'est arrêté dans l'une et dans l'autre. Le réseau est donné par le scénario et les trains roulent sans qu'on décide de rien : t1, parti de Westbrook, fait la liaison au tick 4, dans toutes les parties et sous les deux solveurs. C'est l'horaire, pas un exploit — l'objectif éprouve la définition, et ne deviendra un choix qu'avec la construction en cours de partie (docs/FINDINGS.md, « Les objectifs »). startYear 1875 : le calendrier du scénario, qui n'a pas de bloc events pour en porter un. Le module est un observateur pur : l'empreinte de sierra n'a pas bougé, et le test qui compare ce scénario à sierra-marginal met ce bloc à part.",
+
+  "objectives": {
+    "enabled": true,
+    "startYear": 1875,
+    "goals": [
+      {
+        "id": "col",
+        "name": "Franchir la Sierra",
+        "kind": "connect",
+        "cities": ["pinecrest", "cedarton"],
+        "tiers": [
+          { "id": "premier-mois", "name": "Relier Pinecrest et Cedarton avant le 1er février 1875", "deadline": { "year": 1875, "month": 2, "day": 1 } }
+        ]
+      }
+    ]
+  },
+
   "//finance": "Pas de finance : un scénario éprouve une chose à la fois, et celui-ci éprouve le couplage réseau ↔ économie. Activer la finance ferait entrer le découvert et les intérêts dans la trésorerie du transporteur, donc dans ses achats, et brouillerait la mesure du coût du relief. Le devis du réseau (1 524 566, quinze fois la mise de départ) n'étant débité nulle part, la finance n'aurait de toute façon rien à financer ici.",
 
   "priceModel": {

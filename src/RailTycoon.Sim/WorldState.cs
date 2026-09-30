@@ -63,6 +63,14 @@ public sealed class WorldState
     /// </summary>
     public RailTycoon.Sim.Cycle.CycleState Cycle { get; } = new();
 
+    /// <summary>
+    /// Les objectifs du scénario : progression de chaque palier et journal public des
+    /// paliers atteints ou manqués. Vide et inactif tant qu'un scénario n'active pas
+    /// le module. Rempli par <see cref="RailTycoon.Sim.Objectives.IObjectiveSolver"/>,
+    /// qui ne fait qu'observer.
+    /// </summary>
+    public RailTycoon.Sim.Objectives.ObjectivesState Objectives { get; } = new();
+
     private readonly Dictionary<string, City> _citiesById = new();
     private readonly Dictionary<string, CargoDef> _cargosById = new();
     private readonly Dictionary<string, RecipeDef> _recipesById = new();

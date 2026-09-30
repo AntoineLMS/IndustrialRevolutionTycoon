@@ -3,6 +3,7 @@ using RailTycoon.Sim.Cycle;
 using RailTycoon.Sim.Economy;
 using RailTycoon.Sim.Events;
 using RailTycoon.Sim.Finance;
+using RailTycoon.Sim.Objectives;
 using RailTycoon.Sim.Transport;
 
 namespace RailTycoon.Sim;
@@ -25,9 +26,11 @@ public sealed class Simulation
     public IFinanceSolver Finance { get; }
     public IEventSolver Events { get; }
     public ICycleSolver Cycle { get; }
+    public IObjectiveSolver Objectives { get; }
 
     public Simulation(ScenarioDef scenario, IEconomySolver? economy = null, IHaulageSolver? haulage = null,
-        IFinanceSolver? finance = null, IEventSolver? events = null, ICycleSolver? cycle = null)
+        IFinanceSolver? finance = null, IEventSolver? events = null, ICycleSolver? cycle = null,
+        IObjectiveSolver? objectives = null)
     {
         var priceModel = new HyperbolicPriceModel(scenario.PriceModel);
 
@@ -37,6 +40,7 @@ public sealed class Simulation
         Finance = finance ?? new ReferenceFinanceSolver();
         Events = events ?? new ReferenceEventSolver();
         Cycle = cycle ?? new ReferenceCycleSolver();
+        Objectives = objectives ?? new ReferenceObjectiveSolver();
 
         // Les événements s'initialisent avant l'économie : ils valident leurs
         // cibles et ouvrent leur flux aléatoire, mais ne publient rien avant le
@@ -52,6 +56,9 @@ public sealed class Simulation
         // La finance ouvre ses comptes en dernier : elle reflète la trésorerie
         // d'exploitation, or le transporteur a déjà pu échanger à l'initialisation.
         Finance.Initialize(World);
+        // Les objectifs tout à la fin : ils vérifient qu'une fortune a un magnat à
+        // lire, donc une finance ouverte, et ne lisent rien avant le soir du tick 1.
+        Objectives.Initialize(World);
     }
 
     public void Step()
@@ -93,6 +100,12 @@ public sealed class Simulation
         // décider d'un dividende sur le résultat de la veille, et changerait le
         // résultat de toutes les parties existantes.
         Finance.Step(World, tick);
+
+        // Phase 7 — objectifs. Le soir, une fois tout constaté : fortune du magnat
+        // après la bourse, livraisons et gares desservies du jour. Observateur pur :
+        // ne touche à rien, ne tire rien ; placé en queue, il ne déplace aucune phase.
+        // Voir docs/ARCHITECTURE.md, tableau des phases.
+        Objectives.Step(World, tick);
     }
 
     public void Run(int ticks)

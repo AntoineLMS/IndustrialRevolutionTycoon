@@ -165,6 +165,40 @@ public sealed class CsvRecorder
     }
 
     /// <summary>
+    /// Le journal des objectifs en CSV, une ligne par palier atteint ou manqué, dans
+    /// l'ordre où c'est arrivé : le jour, la mesure ce jour-là, la cible, et pour une
+    /// liaison le train qui l'a faite. Mêmes règles que <see cref="EventsCsv"/> et
+    /// <see cref="CycleCsv"/> : écrit à part, toujours écrit, même vide, et hors de
+    /// <see cref="Fingerprint"/>. Les paliers encore en cours n'y figurent pas : le
+    /// journal dit ce qui est arrivé, le harnais affiche le reste.
+    /// </summary>
+    public static string ObjectivesCsv(WorldState world)
+    {
+        var ci = CultureInfo.InvariantCulture;
+        var sb = new StringBuilder("tick,objective,tier,kind,outcome,measure,target,detail\n");
+        var state = world.Objectives;
+        foreach (var r in state.Journal)
+        {
+            string kind = state.Goals.First(g => g.Def.Id == r.ObjectiveId).Def.Kind;
+            sb.Append(r.Tick.ToString(ci)).Append(',')
+              .Append(r.ObjectiveId).Append(',')
+              .Append(r.TierId).Append(',')
+              .Append(kind).Append(',')
+              .Append(r.Outcome == Objectives.TierStatus.Attained ? "attained" : "missed").Append(',')
+              .Append(r.Measure is double m ? F(m) : "").Append(',')
+              .Append(r.Target is decimal t ? t.ToString(ci) : "").Append(',')
+              .Append(r.Detail).Append('\n');
+        }
+        return sb.ToString();
+    }
+
+    public static void WriteObjectives(WorldState world, string directory)
+    {
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, "objectives.csv"), ObjectivesCsv(world));
+    }
+
+    /// <summary>
     /// Empreinte de la trace des marchés. Deux exécutions de la même version sur
     /// la même graine doivent produire la même empreinte : c'est le test de
     /// déterminisme le moins cher qui existe.

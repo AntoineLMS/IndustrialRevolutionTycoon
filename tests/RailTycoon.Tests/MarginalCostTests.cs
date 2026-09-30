@@ -38,7 +38,9 @@ internal static class MarginalCostTests
             // Même garde que heartland-finance et heartland-events : la comparaison
             // porte sur le contenu sérialisé, et seuls l'identité et le modèle de
             // coût ont le droit de différer. Sans elle, les écarts mesurés entre les
-            // deux scénarios ne diraient rien du modèle de coût.
+            // deux scénarios ne diraient rien du modèle de coût. Le bloc objectives de
+            // sierra est mis à part : un observateur pur, qui ne change rien à la
+            // partie (ObjectiveTests le vérifie).
             var sierra = ScenarioLoader.Load(SierraPath());
             var marginal = ScenarioLoader.Load(MarginalPath());
             Check.Equal(TrainCost.FlatModel, sierra.Haulage.CostModel, "sierra.json reste sous le modèle par défaut");
@@ -50,6 +52,7 @@ internal static class MarginalCostTests
                 scenario.Name = "";
                 scenario.Haulage.CostModel = TrainCost.FlatModel;
                 scenario.Haulage.MassCost = new MassCostDef();
+                scenario.Objectives = new RailTycoon.Sim.Objectives.ObjectivesDef();
                 return System.Text.Json.JsonSerializer.Serialize(scenario);
             }
 

@@ -331,6 +331,13 @@ public sealed class ScenarioDef
     /// par défaut, et neutre au bit près tant qu'elle l'est.
     /// </summary>
     public RailTycoon.Sim.Cycle.CycleDef Cycle { get; set; } = new();
+
+    /// <summary>
+    /// Les objectifs du scénario : fortune du magnat, livraisons, liaisons, avec leurs
+    /// paliers et leurs échéances. Voir <c>Objectives/ObjectiveDefinitions.cs</c> ;
+    /// inactif par défaut, et observateur pur quand il est actif.
+    /// </summary>
+    public RailTycoon.Sim.Objectives.ObjectivesDef Objectives { get; set; } = new();
     public List<CargoDef> Cargos { get; set; } = new();
     public List<RecipeDef> Recipes { get; set; } = new();
     public List<CityDef> Cities { get; set; } = new();

@@ -93,12 +93,15 @@ internal static class CycleTests
             // Seuls l'identité et le bloc cycle ont le droit de différer de la
             // réunion des deux scénarios d'épreuve. Comparaison du contenu sérialisé,
             // comme pour la finance et les événements : c'est ce qui a attrapé le bloc
-            // anticipating manquant de heartland-finance.
+            // anticipating manquant de heartland-finance. Le bloc objectives est mis à
+            // part lui aussi : c'est un observateur pur, qui ne change rien à la partie
+            // (ObjectiveTests le vérifie sur ce scénario même).
             string Content(ScenarioDef s)
             {
                 s.Id = "";
                 s.Name = "";
                 s.Cycle = new CycleDef();
+                s.Objectives = new RailTycoon.Sim.Objectives.ObjectivesDef();
                 return System.Text.Json.JsonSerializer.Serialize(s);
             }
 
@@ -609,12 +612,14 @@ internal static class CycleTests
     /// <summary>
     /// heartland-cycle sans trains ni finance : le calendrier de la conjoncture ne
     /// dépend ni de l'un ni de l'autre — il est exogène —, et les tests qui ne
-    /// regardent que lui tournent ainsi cinq fois plus vite.
+    /// regardent que lui tournent ainsi cinq fois plus vite. Sans objectifs non plus :
+    /// une fortune à amasser sans module finance est refusée au chargement.
     /// </summary>
     private static ScenarioDef Stripped(ScenarioDef scenario)
     {
         scenario.Trains.Clear();
         scenario.Finance = new FinanceDef();
+        scenario.Objectives = new RailTycoon.Sim.Objectives.ObjectivesDef();
         return scenario;
     }
 
