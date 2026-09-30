@@ -1,3 +1,4 @@
+using RailTycoon.Sim.Core;
 using RailTycoon.Sim;
 using RailTycoon.Sim.Economy;
 using RailTycoon.Sim.Finance;
@@ -455,6 +456,72 @@ internal static class VehicleTests
                     "carburant et entretien doivent avoir été payés");
             });
         }
+
+        // ------------------------------------------- le catalogue borné à l'époque
+        // Décision du 30 septembre 2026 : sans borne, les machines de 1910 écrasaient
+        // celles de 1870 (l'E6 faisait 3,4 fois la D5 sur la sierra de 1875), et
+        // choisir sa locomotive revenait à prendre la plus récente.
+
+        runner.Add("véhicules — une locomotive ne s'achète qu'à partir de son année de sortie", () =>
+        {
+            // sierra-vehicules commence en 1875 ; l'E6 Atlantic sort en 1910.
+            var scenario = Vehicles();
+            Check.Equal("1875", scenario.StartYear.ToString(), "année de départ de sierra-vehicules");
+            var e6 = scenario.Vehicles.Catalog!.Locomotives.Single(l => l.Id == "prr_e6_atlantic");
+            Check.Equal("1910", e6.Year.ToString(), "année de sortie de l'E6");
+
+            scenario.Trains[0].Locomotive = e6.Id;
+            Check.Throws<InvalidDataException>(() => new Simulation(scenario),
+                "une machine de 1910 achetée à l'ouverture d'une partie de 1875 doit être refusée");
+
+            // La veille de 1910 : toujours trop tôt. Le premier jour de 1910 : permis.
+            scenario.Trains[0].PurchaseTick = (1910 - 1875) * SimTick.TicksPerYear - 1;
+            Check.Throws<InvalidDataException>(() => new Simulation(scenario),
+                "achetée en 1909, l'E6 n'existe pas encore");
+            scenario.Trains[0].PurchaseTick = (1910 - 1875) * SimTick.TicksPerYear;
+            var sim = new Simulation(scenario);
+            Check.True(sim.World.Trains.Count == scenario.Trains.Count,
+                "achetée le premier jour de 1910, l'E6 est permise");
+        });
+
+        runner.Add("véhicules — sans année de départ, le module refuse de borner à l'aveugle", () =>
+        {
+            var scenario = Vehicles();
+            scenario.StartYear = 0;
+            scenario.Events.StartYear = 0;
+            scenario.Objectives.StartYear = 0;
+            Check.Throws<InvalidDataException>(() => new Simulation(scenario),
+                "un module vehicles actif sans startYear doit être refusé");
+        });
+
+        runner.Add("calendrier — un scénario n'a qu'une année de départ", () =>
+        {
+            // Les années des modules datés doivent confirmer celle du scénario...
+            // Vérifié sur le calendrier lui-même, et non au travers de la simulation :
+            // le module vehicles refuse aussi un scénario sans année retenue, et un test
+            // qui passerait par lui obtiendrait son exception pour une autre raison.
+            var contradicted = Vehicles();
+            contradicted.Events.StartYear = contradicted.StartYear + 1;
+            Check.Throws<InvalidDataException>(() => ScenarioCalendar.Resolve(contradicted),
+                "events.startYear contredisant startYear doit être refusé");
+            var objectives = Vehicles();
+            objectives.Objectives.StartYear = objectives.StartYear - 1;
+            Check.Throws<InvalidDataException>(() => ScenarioCalendar.Resolve(objectives),
+                "objectives.startYear contredisant startYear doit être refusé");
+
+            // ... et en héritent quand elles sont absentes.
+            var inherited = Vehicles();
+            Check.True(inherited.Events.StartYear == 0 && inherited.Objectives.StartYear == 0,
+                "sierra-vehicules ne déclare l'année qu'au niveau du scénario");
+            Check.Equal("1875", ScenarioCalendar.Resolve(inherited).ToString(), "année retenue");
+            Check.True(inherited.Events.StartYear == 1875 && inherited.Objectives.StartYear == 1875,
+                "les modules datés héritent de l'année du scénario");
+
+            var negative = Vehicles();
+            negative.StartYear = -1;
+            Check.Throws<InvalidDataException>(() => ScenarioCalendar.Resolve(negative),
+                "une année négative doit être refusée");
+        });
     }
 
     /// <summary>

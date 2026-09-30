@@ -305,6 +305,15 @@ public sealed class ScenarioDef
     public double StartingCash { get; set; } = 100_000;
 
     /// <summary>
+    /// Année calendaire du tick 0. 0 = non déclarée. Un scénario n'a qu'un
+    /// calendrier : <c>events.startYear</c> et <c>objectives.startYear</c>, s'ils
+    /// sont renseignés, doivent la confirmer, et ils en héritent s'ils ne le sont pas
+    /// (<see cref="ScenarioCalendar"/>). Le module vehicles l'exige : c'est elle qui
+    /// borne le catalogue à l'époque du scénario.
+    /// </summary>
+    public int StartYear { get; set; }
+
+    /// <summary>
     /// Couverture initiale appliquée aux marchés qui ne déclarent pas de stock
     /// explicite. 1 = chaque ville démarre au prix de référence. 0 désactive.
     /// </summary>

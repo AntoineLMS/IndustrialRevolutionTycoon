@@ -516,9 +516,13 @@ points fixes mesurés (même kilométrage, même coût par km que sierra-margina
 sous les deux solveurs. Les autres scénarios écartent le bloc par une clé
 `"//vehicles"`.
 
+**Époque** : le catalogue est borné à l'année du scénario (`startYear`, au niveau du
+scénario et partagé par tous les modules datés, voir `ScenarioCalendar`). Une
+locomotive ne s'achète qu'à partir de son année de sortie, à l'ouverture comme à un
+`purchaseTick` daté ; un module vehicles actif sans année de départ est refusé.
+
 **Ce qui manque** : une couche de décision (acheter, vendre, remplacer une machine —
-la flotte est déclarée par le scénario) ; un catalogue borné à l'époque du scénario ;
-une vitesse limite des wagons sourcée ; un amortissement par machine ; le plein comme
+la flotte est déclarée par le scénario) ; une vitesse limite des wagons sourcée ; un amortissement par machine ; le plein comme
 choix (une soute, une autonomie, des ordres de train) ; le temps dans la décision du
 transporteur (un train plus lourd est plus lent, et rien ne le lui dit) ; la rampe
 déterminante plutôt que la moyenne ; des wagons spécialisés. Les options sont chiffrées

@@ -339,6 +339,13 @@ Ce qui distingue deux locomotives :
   ligne à vapeur.
 - *Plus tard* : une mécanique pour influencer le cours du carburant.
 
+**Décidé.** **Le catalogue est borné à l'époque du scénario.** Une locomotive ne
+s'achète qu'à partir de son année de sortie : un train prévu dès l'ouverture exige
+une machine déjà sortie, et un achat daté ouvre les machines de l'année où il a
+lieu. Sans cette borne, les machines de 1910 écrasaient celles de 1870, et choisir
+sa locomotive revenait à prendre la plus récente. Un scénario déclare donc son
+année de départ (`startYear`), que tous les modules datés partagent.
+
 *Déjà en place* : un catalogue de 17 locomotives historiques, de 1829 à 1945, sourcé
 dans [SOURCES.md](SOURCES.md) — effort de traction, vitesse, puissance, masse,
 carburant, consommation, prix, entretien —, branché par le module `vehicles` (opt-in,
@@ -604,8 +611,8 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
    catalogue et amorties, carburant payé au prix local à chaque arrêt, entretien par
    tick, vitesse tirée de la puissance, de l'adhérence et de la masse du train. Il
    manque la **décision** : la flotte est déclarée par le scénario, et personne
-   n'achète, ne vend ni ne remplace une machine en cours de partie ; le catalogue
-   n'est pas borné à l'époque du scénario ; le plein n'est pas un choix tant que les
+   n'achète, ne vend ni ne remplace une machine en cours de partie ; le plein n'est
+   pas un choix tant que les
    trains s'arrêtent à toutes les gares (FINDINGS.md, « Les véhicules », décisions).
 5. **Des ordres de train** : une liste de gares, et des chargements forcés. Le
    transporteur automatique décide seul, sur des lignes fixes, en regardant tous les
@@ -644,7 +651,6 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
 6. Ce que vaut un palier d'objectif, comment les objectifs d'un scénario se combinent
    en une victoire, et si une fortune se lit au jour le jour ou en moyenne. *Mesuré,
    options chiffrées* dans FINDINGS.md, « Les objectifs ».
-7. Les véhicules : quelles machines un scénario propose (bornées à son époque ?), à
-   quel prix (converti au charbon, le prix ne pèse presque rien ; au quadruple, il
+7. Les véhicules : à quel prix (converti au charbon, le prix ne pèse presque rien ; au quadruple, il
    équilibre les deux machines de 1870 sur la sierra), et une vitesse limite des
    wagons. *Mesuré, options chiffrées* dans FINDINGS.md, « Les véhicules ».

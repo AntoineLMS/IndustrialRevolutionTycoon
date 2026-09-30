@@ -268,6 +268,7 @@ internal static class WorldBuilder
     /// </summary>
     private static void Validate(ScenarioDef s)
     {
+        ScenarioCalendar.Resolve(s);
         TrainCost.Validate(s.Haulage);
         VehicleRules.Validate(s);
 

@@ -281,6 +281,16 @@ public static class VehicleRules
         if (def.MaxTrainSpeedKmh < 0)
             throw new InvalidDataException("vehicles.maxTrainSpeedKmh ne peut pas être négative (0 : pas de limite).");
 
+        // Le catalogue est borné à l'époque du scénario (décision du 30 septembre
+        // 2026) : sans elle, les machines de 1910 écrasaient celles de 1870 et le choix
+        // de la locomotive se réduisait à prendre la plus récente. Il faut donc une
+        // année, et une machine ne s'achète qu'à partir de l'année où elle est sortie.
+        int startYear = ScenarioCalendar.Resolve(s);
+        if (startYear <= 0)
+            throw new InvalidDataException(
+                "Module vehicles actif sans startYear : le catalogue est borné à l'époque du scénario, " +
+                "il faut donc savoir en quelle année la partie commence.");
+
         var cargoIds = s.Cargos.Select(c => c.Id).ToHashSet();
         foreach (var train in s.Trains)
         {
@@ -299,6 +309,12 @@ public static class VehicleRules
                     $"vehicles.fuels.{loco.FuelType} désigne la marchandise inconnue '{fuelCargo}'.");
             if (train.PurchaseTick < 0)
                 throw new InvalidDataException($"Le train '{train.Id}' a un purchaseTick négatif.");
+
+            int purchaseYear = startYear + train.PurchaseTick / RailTycoon.Sim.Core.SimTick.TicksPerYear;
+            if (loco.Year > purchaseYear)
+                throw new InvalidDataException(
+                    $"La locomotive '{loco.Id}' du train '{train.Id}' sort en {loco.Year}, " +
+                    $"et le train l'achète en {purchaseYear} : elle n'existe pas encore.");
         }
     }
 

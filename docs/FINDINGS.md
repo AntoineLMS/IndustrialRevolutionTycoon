@@ -2179,7 +2179,10 @@ carte qui la pose, pas le catalogue.**
 Aucune n'est tranchée ici ; le module est livré en opt-in, sur la seule
 `data/sierra-vehicules.json`.
 
-1. **Le catalogue d'un scénario doit-il se borner à son époque ?** Sans cela, l'E6
+1. *Tranchée le 30 septembre 2026 : oui, par une date de disponibilité filtrée par
+   l'année du scénario (`startYear`). Une machine ne s'achète qu'à partir de son
+   année de sortie ; l'E6 ne peut plus rouler sur la sierra avant 1910.* **Le
+   catalogue d'un scénario doit-il se borner à son époque ?** Sans cela, l'E6
    (1910) fait 3,4 fois la D5 (1870) sur une sierra de 1875. Options : une date de
    disponibilité par machine, filtrée par l'année du scénario (à la manière de RT3),
    ou une liste de machines déclarée par le scénario.

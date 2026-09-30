@@ -2,6 +2,7 @@
   "id": "ironpeak",
   "name": "La Cordillère de fer — 1900",
   "seed": 19000601,
+  "startYear": 1900,
   "startingCash": 100000,
   "initialCoverage": 1.0,
 
@@ -25,7 +26,7 @@
 
   "//cycle": "Pas de conjoncture : ce scénario éprouve la chaîne acier du module content, sans finance ni événements. Un cycle déplacerait sa demande de quelques pour cent, et son empreinte de référence avec elle.",
   "//objectives": "Pas d'objectifs : ce scénario éprouve la chaîne acier du module content, sans finance, donc sans fortune à lire. Des livraisons d'acier vers une ville seraient un bon candidat le jour où il deviendra un scénario de jeu.",
-  "//vehicles": "Pas de véhicules : ses trains référencent la PRR E6 du catalogue à titre informatif seulement. Le module exige le modèle de coût mass, et ce scénario éprouve la chaîne acier du module content, une chose à la fois.",
+  "//vehicles": "Pas de véhicules : ses trains référencent la PRR D5 du catalogue à titre informatif seulement. Ils référençaient l'E6 de 1910, anachronique pour un scénario de 1900 ; le catalogue n'a aucune machine entre 1870 et 1910, d'où la D5. Le module exige le modèle de coût mass, et ce scénario éprouve la chaîne acier du module content, une chose à la fois.",
 
   "priceModel": {
     "coverageHorizonTicks": 15,
@@ -181,8 +182,8 @@
   ],
 
   "trains": [
-    { "id": "t1", "line": "cordillera", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 0, "locomotive": "prr_e6_atlantic" },
-    { "id": "t2", "line": "cordillera", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 6, "locomotive": "prr_e6_atlantic" },
-    { "id": "t3", "line": "cordillera", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 11, "locomotive": "prr_e6_atlantic" }
+    { "id": "t1", "line": "cordillera", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 0, "locomotive": "prr_d5" },
+    { "id": "t2", "line": "cordillera", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 6, "locomotive": "prr_d5" },
+    { "id": "t3", "line": "cordillera", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 11, "locomotive": "prr_d5" }
   ]
 }

@@ -2,6 +2,7 @@
   "id": "sierra-vehicules",
   "name": "La Sierra — 1875, véhicules",
   "seed": 18750412,
+  "startYear": 1875,
   "startingCash": 100000,
   "initialCoverage": 1.0,
 
