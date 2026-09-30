@@ -1,6 +1,6 @@
 # Vision du jeu
 
-*Troisième jet, 30 septembre 2026. Ce document fixe le cap : ce qu'est le jeu, qui y
+*Quatrième jet, 30 septembre 2026. Ce document fixe le cap : ce qu'est le jeu, qui y
 joue, et ce que le joueur décide. [ARCHITECTURE.md](ARCHITECTURE.md) dit comment
 la simulation tient debout, [CONTRACTS.md](CONTRACTS.md) comment elle se découpe,
 [FINDINGS.md](FINDINGS.md) ce qu'elle fait quand on la mesure. Celui-ci dit
@@ -55,9 +55,12 @@ fondant une compagnie :
 1. Le joueur met de l'argent personnel sur la table.
 2. Des investisseurs y ajoutent le leur. **Plus le joueur apporte, plus les
    investisseurs apportent**, et son **score de dirigeant** augmente encore leur
-   mise.
+   mise, **jusqu'à dix fois l'apport du joueur**.
 3. **Les actions sont réparties au prorata de l'argent apporté.** Un joueur qui
    apporte 30 % du capital détient 30 % des actions.
+
+Au maximum, le joueur détient donc environ 9 % de sa compagnie (1 part pour 10) :
+il démarre avec beaucoup plus d'argent, mais beaucoup moins de contrôle.
 
 Ce qui en découle : fonder est un pari de levier. Apporter peu donne peu de capital
 et peu de poids ; apporter beaucoup donne une grosse compagnie, mais expose une
@@ -70,9 +73,15 @@ réussi lève plus d'argent que sa mise ne le justifie.
 
 - Il suit **les résultats de la compagnie** : une compagnie très rentable fait
   monter le score de son PDG.
-- Un bon score **fait tenir plus longtemps** quand la rentabilité se dégrade : les
-  investisseurs patientent davantage avant de voter contre un dirigeant qui a fait
-  ses preuves.
+- Un bon score **fait tenir plus longtemps** quand la rentabilité se dégrade : il
+  y a davantage de points à perdre avant la sanction.
+- **Les investisseurs fixent des objectifs.** Un objectif non atteint fait perdre
+  des points.
+- **Une perte se sanctionne à proportion de ce qu'elle pèse.** Perdre 2 000 sur
+  l'année quand la compagnie vaut 2 millions ne coûte presque rien ; une perte
+  annuelle qui représente un gros morceau de la valeur de la compagnie coûte une
+  lourde sanction. La mesure est donc la perte **rapportée à la valeur de la
+  compagnie** (cours × nombre d'actions), pas la perte en valeur absolue.
 - **Se faire évincer ruine la réputation.** Le score en sort durablement abîmé, et
   la prochaine levée de fonds s'en ressent.
 
@@ -80,10 +89,17 @@ réussi lève plus d'argent que sa mise ne le justifie.
 
 **Décidé.**
 
-- Si la compagnie n'est pas rentable, les actionnaires peuvent démettre le PDG.
 - **Il faut réunir 50 % des voix plus une.** Une action, une voix.
 - **Un PDG qui détient plus de la moitié des actions ne peut pas être évincé** :
   il vote contre, et il gagne.
+- **Un score à zéro déclenche le vote.**
+
+*Lecture retenue, à confirmer.* Un score à zéro ne vaut pas éviction à lui seul :
+il fait voter contre le PDG tous les actionnaires autres que lui. L'éviction a lieu
+s'ils détiennent plus de la moitié des actions, ce qui garde intacte la protection
+du PDG majoritaire. Et comme l'apport des investisseurs peut aller jusqu'à dix fois
+celui du joueur, un joueur qui a levé au maximum ne détient qu'environ 9 % : un
+score à zéro le renvoie à coup sûr.
 
 Ce qui en découle : la majorité absolue est une assurance. Un joueur prudent la
 garde ; un joueur ambitieux la dilue pour lever davantage, et accepte de pouvoir
@@ -104,12 +120,13 @@ bancaire explicite, mais à des taux fixés par le scénario.
 
 **À décider** :
 
-- **La formule de l'apport des investisseurs** : un multiple de l'apport du joueur,
-  modulé par le score ? Plafonné ?
-- **Le calcul du score** : sur quelle période se mesure la rentabilité, et de
-  combien une éviction le fait-elle chuter ?
-- **Le critère qui fait voter les investisseurs** : pertes sur combien de temps,
-  cours en baisse, découvert ? Et comment le score en décale le seuil ?
+- **La courbe entre score et apport** : à quel score les investisseurs apportent-ils
+  dix fois la mise du joueur, et combien à un score faible ?
+- **Les objectifs des investisseurs** : résultat annuel, dividende, cours de
+  l'action ? Qui les fixe, et à quelle fréquence ?
+- **Le barème** : combien de points gagne une année rentable, combien coûte un
+  objectif manqué, et selon quelle courbe une perte rapportée à la valeur de la
+  compagnie devient-elle une lourde sanction ?
 - **Après l'éviction** : le joueur garde ses actions, donc sa fortune, mais perd la
   direction. Peut-il fonder une autre compagnie ? Est-ce la fin de la partie ?
 - **La formule du taux d'intérêt**, et ce que veut dire « la situation économique
@@ -139,12 +156,11 @@ compagnie** : ses trains, ses industries et ses dettes lui reviennent.
 *Déjà en place* : le module finance sait prendre des participations, lancer une
 OPA avec une prime sur le cours et fusionner une compagnie absorbée.
 
-**À décider** : **le joueur qui vend ses propres actions à sa propre compagnie.**
-Si le joueur détient des actions de la cible, sa compagnie les lui rachète au prix
-qu'il a lui-même fixé. Rien ne l'empêche alors de proposer un prix très élevé pour
-faire passer l'argent de sa compagnie dans sa poche, aux dépens des autres
-actionnaires. Faut-il l'interdire, plafonner le prix par rapport au cours, ou en
-faire un risque (une chute du score de dirigeant, une révolte des actionnaires) ?
+**Décidé : le prix offert est plafonné à deux fois le cours.** Si le joueur détient
+des actions de la cible, sa compagnie peut les lui racheter au prix qu'il a
+lui-même fixé, et donc faire passer de l'argent de sa compagnie dans sa poche aux
+dépens des autres actionnaires. **C'est voulu** : c'est une manœuvre d'homme
+d'affaires, et le plafond de deux fois le cours en borne l'ampleur.
 
 ## Ressources de base et produits finis
 
@@ -179,16 +195,15 @@ Le joueur ne gagne pas en produisant plus de ressources, mais en choisissant
   Elle ne stocke pas, ne spécule pas, et ne transporte pas pour le compte d'un
   tiers. (Le carburant, acheté pour être brûlé, est la seule exception : voir
   « Les véhicules ».)
-- *Piste pour plus tard* : donner à la compagnie qui produit une ressource la
-  **primauté du transport** sur la production de ses propres industries.
+- **Une compagnie peut racheter une industrie** qui n'appartient à personne.
+- **Primauté du transport, sous forme de priorité d'achat** (piste pour plus tard) :
+  la production d'une industrie va sur le marché comme toute autre ; les trains de
+  la compagnie qui la possède se servent en premier et paient le prix du marché,
+  donc se paient eux-mêmes. Les concurrents se servent dans ce qui reste. La
+  production n'est jamais réservée.
 
-**À décider** :
-
-- Une compagnie peut-elle **racheter une industrie** qui n'appartient à personne ?
-- La primauté du transport, le jour où on l'introduit : **priorité d'achat** (la
-  production va sur le marché, les trains du propriétaire se servent en premier et
-  paient le prix du marché, donc se paient eux-mêmes) ou **production réservée**
-  (elle ne passe pas par le marché, et les concurrents n'y ont pas accès) ?
+**À décider** : **le prix d'une industrie** sans propriétaire. Sa valeur de
+construction, un multiple de ce qu'elle rapporte, ou un prix fixé par le scénario ?
 
 ## La compagnie transporte : acheter au départ, revendre à destination
 
@@ -248,13 +263,16 @@ Deux écarts avec le moteur actuel (`OpportunisticHaulageSolver`) :
   et plus myope : un train ne charge pas pour un arrêt lointain s'il ne gagne rien
   au suivant.
 
-**À décider** :
+**Décidé.**
 
-- **Le rayon d'action** : une distance fixe, ou qui dépend de la taille de la
-  gare ?
-- **Un chargement forcé** se charge-t-il même à perte ?
-- **Le prix au prochain arrêt** que le moteur utilise : le prix du moment, ou le
-  dernier prix connu du joueur ?
+- **Le rayon d'action dépend de la taille de la gare.** Une petite gare ne dessert
+  qu'une industrie à proximité ; une grande gare peut englober toute une grande
+  ville.
+- **Rien ne se charge à perte**, même un chargement forcé : forcer un type de
+  marchandise restreint le choix du moteur, sans l'obliger à perdre de l'argent.
+- **Le moteur utilise le prix du moment** au prochain arrêt.
+
+**À décider** : les tailles de gare, leur rayon et leur prix de construction.
 
 ## Les véhicules
 
@@ -272,10 +290,15 @@ Ce qui distingue deux locomotives :
 | **Coût du carburant** | le coût d'exploitation au kilomètre |
 | **Coût de maintenance** | le coût fixe de la posséder, qu'elle roule ou non |
 
-**Décidé.** **Le carburant s'achète au prix du marché.** Une locomotive à charbon
-crée donc une vraie demande de charbon, et le coût du transport dépend de
-l'économie qu'il dessert. *Plus tard* : une mécanique pour influencer le cours du
-carburant.
+**Décidé.**
+
+- **Le carburant s'achète en gare, au prix du marché.** Le coût du transport suit
+  donc les prix de l'économie qu'il dessert.
+- **Le carburant n'a pas besoin d'être disponible là où le train fait le plein.**
+  Pour l'instant, c'est un coût indexé sur le prix du marché, pas un prélèvement
+  physique : il ne vide aucun stock, et une ville sans charbon ne bloque pas une
+  ligne à vapeur.
+- *Plus tard* : une mécanique pour influencer le cours du carburant.
 
 *Déjà en place* : un catalogue de 15 locomotives historiques, de 1829 à 1945, sourcé
 dans [SOURCES.md](SOURCES.md), avec leur effort de traction. Il n'est pas encore
@@ -283,9 +306,11 @@ branché : la vitesse et le coût d'un train sont saisis à la main. Le modèle 
 « mass » (FINDINGS.md, « Le coût marginal réel ») connaît déjà la masse d'une
 locomotive et de ses wagons.
 
-**À décider** : **où** la locomotive fait le plein. À chaque arrêt, au prix local ?
-Seulement dans certaines gares ? Une ville sans charbon peut-elle arrêter une ligne
-à vapeur ?
+**À décider** : **quel prix de marché**, puisque le carburant n'a pas besoin
+d'être en stock. Le prix local de la gare pose un problème : une ville sans charbon
+affiche le prix plafond (trois fois la référence), si bien que faire le plein là
+coûterait trois fois plus cher sans raison physique. Un prix moyen du carburant sur
+toute la carte, chez ses acheteurs, éviterait cet écueil.
 
 ## Ce que le joueur décide
 
@@ -410,14 +435,11 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
 
 ## Questions ouvertes, en un coup d'œil
 
-1. La formule de l'apport des investisseurs, et le calcul du score de dirigeant.
-2. Le critère qui fait voter les investisseurs, et ce qui suit une éviction.
+1. La courbe entre score et apport des investisseurs, les objectifs des
+   investisseurs, et le barème des points.
+2. Ce qui suit une éviction : fonder une autre compagnie, ou fin de partie ?
 3. La formule du taux d'intérêt, et ce qu'est « la situation économique de la
-   partie ».
-4. Le joueur qui vend ses propres actions à sa propre compagnie : l'interdire, le
-   plafonner, ou en faire un risque ?
-5. Une compagnie peut-elle racheter une industrie qui n'appartient à personne ?
-6. La primauté du transport : priorité d'achat, ou production réservée ?
-7. Le rayon d'action d'une gare ; un chargement forcé se charge-t-il à perte ; quel
-   prix le moteur connaît-il au prochain arrêt ?
-8. Où une locomotive fait-elle le plein ?
+   partie » (un cycle économique est à l'étude).
+4. Le prix d'une industrie sans propriétaire.
+5. Les tailles de gare, leur rayon d'action et leur prix.
+6. Quel prix de marché pour le carburant : celui de la gare, ou un prix moyen ?
