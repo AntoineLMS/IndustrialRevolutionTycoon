@@ -130,7 +130,8 @@ data/                      scénarios et cartes (données de conception, modifia
 docs/                      architecture et contrats entre modules
 ```
 
-Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) pour les règles non
+Voir [docs/VISION.md](docs/VISION.md) pour ce qu'est le jeu et ce que le joueur
+y décide, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) pour les règles non
 négociables, [docs/CONTRACTS.md](docs/CONTRACTS.md) pour la répartition des
 modules, et [docs/FINDINGS.md](docs/FINDINGS.md) pour les résultats de la première
 campagne de mesure — y compris les quatre bugs qui laissaient tous la simulation
