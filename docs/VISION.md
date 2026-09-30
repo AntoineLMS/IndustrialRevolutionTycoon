@@ -407,6 +407,106 @@ voies, fondent des industries et jouent en bourse.
 *Déjà en place* : des concurrents qui ne sont que des bilans animés par des données,
 assez pour éprouver la bourse et les OPA, mais sans réseau.
 
+## Le monde autour de la compagnie
+
+*Décidé le 30 septembre 2026 dans le principe ; chaque mécanique reste à concevoir
+et à mesurer avant d'être codée.* Ces cinq mécaniques font vivre le monde autour du
+joueur : des villes qui grandissent, des marchandises qui circulent sans lui, un État
+qui fixe les règles, des salariés et des actionnaires qui réagissent.
+
+### Des villes qui grandissent quand elles sont desservies
+
+**Décidé.** Une ville grandit quand elle est **bien desservie** : trains qui s'y
+arrêtent, marchandises qui y sont livrées, industries et liaisons. En grandissant,
+elle consomme et produit davantage.
+
+Pourquoi ce signal-là : la croissance déjà codée dans le solveur anticipant fait
+grandir une ville parce qu'elle est **bon marché**, et la mesure a montré qu'elle
+comprime la dispersion des prix au lieu de la déplacer (FINDINGS.md,
+`growthRatePerTick` laissé à 0 dans heartland). La desserte est un autre signal : elle
+récompense le joueur qui investit dans une petite ville aujourd'hui pour en faire une
+grande dans dix ans. C'est la décision à long terme qui manque au jeu.
+
+**À décider** : ce qui compte comme desserte, le rythme de croissance, et si une ville
+abandonnée décline.
+
+### Le flux naturel des marchandises
+
+**Décidé.** Les marchandises **circulent d'elles-mêmes, lentement**, le long des
+**rivières et des routes existantes**, des zones où elles sont bon marché vers les zones
+où elles sont chères. **Le joueur cherche à capter ce flux** pour le porter plus vite
+vers les zones chères.
+
+Ce qui en découle :
+
+- Le monde a une logistique **avant** le chemin de fer. Le rail ne crée pas le
+  commerce : il le remplace là où il est plus rapide. C'est la vraie histoire du rail
+  américain face aux canaux et aux routes.
+- **Capter le flux** : quand les trains du joueur réduisent l'écart de prix entre deux
+  villes, le flux naturel entre elles se tarit, puisque c'est l'écart qui le pousse. Le
+  joueur prend donc la place du flux naturel sur les liaisons qu'il dessert.
+- Le relief devient une géographie : les rivières suivent les vallées, et une ville
+  sans rivière ni route n'est approvisionnée que par le rail.
+- Le flux est un transfert, pas une création : il déplace des marchandises d'un
+  marché à l'autre, sans en créer ni en détruire (règle 2 de CONTRACTS.md).
+
+Le risque, à mesurer : un flux trop rapide referme tout seul les écarts dont vit le
+joueur. Il doit rester **lent**, et c'est sa vitesse qui fixe l'avantage du rail.
+
+**À décider** : la vitesse du flux par rivière et par route, sa capacité, ce qu'il
+coûte en valeur (une marchandise arrive moins chère ou abîmée ?), la saisonnalité
+(rivières gelées l'hiver), et la façon de représenter rivières et routes sur la carte.
+
+### Le scandale
+
+**Décidé.** Racheter ses propres actions à sa compagnie jusqu'à deux fois le cours est
+permis, et voulu. Mais chaque abus de ce genre fait monter un **risque de scandale**.
+Quand un scandale éclate, **le score de dirigeant s'effondre** et les actionnaires
+peuvent se retourner contre le PDG.
+
+Ce qui en découle : l'abus n'est plus une astuce gratuite, c'est un pari. Précédent
+historique : le scandale du Crédit Mobilier, révélé en 1872, portait exactement sur des
+dirigeants qui faisaient payer leur propre société au profit de leur poche.
+
+**À décider** : ce qui compte comme abus (le rachat au-dessus du cours, mais aussi un
+dividende versé à perte ?), comment le risque s'accumule et s'efface, et ce que coûte
+le scandale au-delà du score.
+
+### L'État
+
+**Décidé.** L'État fixe des règles qui **changent au fil de la partie**. Trois leviers
+historiques :
+
+- **Les concessions de terres** : pour relier deux villes, la compagnie reçoit des
+  terres ou une subvention le long de la voie (Pacific Railway Acts, 1862). Se branche
+  naturellement sur l'objectif « relier deux villes avant une date ».
+- **La régulation des tarifs** (Interstate Commerce Act, 1887).
+- **Les lois anti-trust** (Sherman Antitrust Act, 1890), qui bornent les rachats et les
+  fusions.
+
+Ce qui en découle : l'homme d'affaires doit s'adapter aux règles, et les anticiper.
+Une OPA possible en 1885 peut ne plus l'être en 1891.
+
+**À décider** : ce que veut dire « réguler les tarifs » dans un jeu où la compagnie
+n'est pas payée par un tarif mais par l'écart entre deux prix (un plafond sur la marge
+captée ?) ; le seuil de l'anti-trust (une part de marché, un nombre de compagnies
+absorbées ?) ; ce qu'on reçoit en échange d'une concession.
+
+### Les salaires et les grèves
+
+**Décidé.** La compagnie paie ses cheminots. **Verser de gros dividendes en rognant
+les salaires fait monter le risque de grève**, et une grève arrête les trains.
+Précédent historique : la grande grève des chemins de fer de 1877, partie d'une baisse
+de salaires, a paralysé une bonne partie du réseau américain.
+
+Ce qui en découle : un arbitrage de plus entre la poche du joueur et sa compagnie.
+Techniquement, le module `events` sait déjà déclencher des événements ; il faudra qu'un
+événement puisse viser **une compagnie**, et pas seulement un marché.
+
+**À décider** : les salaires sont-ils un levier du joueur ou un coût automatique ? Ce
+qui fait monter le risque (le rapport dividendes / salaires, les pertes, la
+conjoncture) ; la durée et le coût d'une grève.
+
 ## Ce qui fait la profondeur
 
 1. **L'occasion qui se referme.** Chaque train rentable détruit une partie de ce qui
