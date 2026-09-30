@@ -210,8 +210,80 @@ public sealed class HaulageDef
     /// répartir le coût sur une capacité théoriquement pleine sous-estime
     /// systématiquement le coût réel et fait paraître rentables des trajets qui ne
     /// le sont pas.
+    /// <para>
+    /// Lu par le seul modèle de coût <c>flat</c>. C'est lui, et non la distance,
+    /// qui fabrique le rayon économique de ce modèle (docs/FINDINGS.md, « Le rayon
+    /// économique est un réglage de l'instrument ») ; le modèle <c>mass</c> ne le
+    /// lit pas, parce qu'il ne répartit aucun coût : il décide sur ce qu'un
+    /// chargement ajoute réellement à la facture.
+    /// </para>
     /// </summary>
     public double ExpectedLoadFactor { get; set; } = 0.6;
+
+    /// <summary>
+    /// Modèle de coût d'exploitation des trains : <c>flat</c> (défaut) ou
+    /// <c>mass</c>. Voir <c>Transport/TrainCost.cs</c>.
+    /// <para>
+    /// <c>flat</c> — le train paie <c>costPerKm</c> par kilomètre, relief compris,
+    /// qu'il soit plein ou vide, et le transporteur impute à un chargement ce coût
+    /// réparti sur <see cref="ExpectedLoadFactor"/> de sa capacité, sur la distance
+    /// à plat. C'est le modèle de toutes les empreintes de référence.
+    /// </para>
+    /// <para>
+    /// <c>mass</c> — le coût kilométrique est proportionnel à la masse remorquée
+    /// (tare + chargement), multiplié par le facteur de relief du tronçon et du
+    /// sens. Le transporteur décide d'acheter sur le seul surcoût qu'un chargement
+    /// ajoute à cette facture, relief compris : refuser un chargement économise
+    /// exactement ce qu'il aurait coûté. Opt-in par les données ; voir
+    /// docs/FINDINGS.md, « Le coût marginal réel ».
+    /// </para>
+    /// </summary>
+    public string CostModel { get; set; } = "flat";
+
+    /// <summary>Masses du modèle <c>mass</c>. Ignorées par le modèle <c>flat</c>.</summary>
+    public MassCostDef MassCost { get; set; } = new();
+}
+
+/// <summary>
+/// Masses du modèle de coût <c>mass</c> (<see cref="HaulageDef.CostModel"/>), et
+/// la calibration qui relie le coût à la tonne au <c>costPerKm</c> de chaque train.
+/// <para>
+/// Un chargement est un wagon : un train de capacité 24 remorque 24 wagons, vides
+/// ou pleins, et leur tare est due dans les deux cas. Les valeurs par défaut sont
+/// celles d'un train de marchandises américain des années 1870 ; sources et
+/// estimations dans docs/SOURCES.md, « Masses du train ».
+/// </para>
+/// </summary>
+public sealed class MassCostDef
+{
+    /// <summary>Locomotive et tender, en tonnes. Dus que le train soit plein ou vide.</summary>
+    public double LocomotiveTonnes { get; set; } = 48;
+
+    /// <summary>Tare d'un wagon, en tonnes, par chargement de capacité.</summary>
+    public double WagonTareTonnes { get; set; } = 9;
+
+    /// <summary>Masse d'un chargement, en tonnes.</summary>
+    public double TonnesPerLoad { get; set; } = 9;
+
+    /// <summary>
+    /// Remplissage, en fraction de la capacité, auquel le train coûte exactement son
+    /// <c>costPerKm</c>. C'est une conversion d'unité : elle fixe le prix de la
+    /// tonne-kilomètre pour qu'à la charge moyenne mesurée le train coûte ce qu'il
+    /// coûtait dans le modèle <c>flat</c>, et qu'on compare deux façons de décider
+    /// sur une même économie. Plus elle est haute, moins la tonne coûte : le train
+    /// vide et chaque chargement paient moins.
+    /// <para>
+    /// Elle n'a pas le rôle de <see cref="HaulageDef.ExpectedLoadFactor"/>. Celui-là
+    /// divise tout le coût du train, part fixe comprise, par une charge escomptée pour
+    /// en imputer une part à chaque chargement : c'est un coût moyen, et refuser un
+    /// chargement n'économise pas ce qu'on lui a imputé. Celle-ci ne fait que fixer
+    /// le prix de la tonne ; la décision lit la dérivée de la facture par rapport à
+    /// la charge, qui dépend de ce prix — donc de cette calibration — mais d'aucune
+    /// charge escomptée au moment de décider. Elle se mesure une fois, elle ne se
+    /// règle pas (docs/FINDINGS.md, « Le coût marginal réel », calibration).
+    /// </para>
+    /// </summary>
+    public double CalibrationLoadFactor { get; set; } = 0.89;
 }
 
 public sealed class ScenarioDef

@@ -438,7 +438,15 @@ internal static class Report
         // transporteur (docs/FINDINGS.md, « Relief et économie ensemble »).
         // L'entretien des voies est retiré avant : il est dû que les trains roulent
         // ou non, et n'a rien à voir avec le relief.
-        double flatCost = w.Trains.Sum(t => t.TotalKmTravelled * t.CostPerKm);
+        // Sous le modèle de coût « mass », les mêmes kilomètres à plat se paient avec
+        // la charge réellement portée : la part fixe sur les kilomètres, la part par
+        // chargement sur les chargements-kilomètres. Sous « flat », la seconde est
+        // nulle et la formule est celle d'avant.
+        double flatCost = w.Trains.Sum(t =>
+        {
+            var rates = RailTycoon.Sim.Transport.TrainCost.Rates(w.Def.Haulage, t);
+            return t.TotalKmTravelled * rates.FixedPerKm + t.TotalLoadKm * rates.PerLoadKm;
+        });
         double trainCost = co.TotalOperatingCost - co.TotalTrackUpkeep;
         if (w.Network is not null && flatCost > 0)
             Console.WriteLine($"    dont relief       -{(trainCost - flatCost).ToString("N0", Ci),12}" +
@@ -447,6 +455,13 @@ internal static class Report
             Console.WriteLine($"    dont entretien    -{co.TotalTrackUpkeep.ToString("N0", Ci),12}" +
                               $"   ({w.Network!.TrackKm.ToString("N0", Ci)} km de voie, " +
                               $"{w.Network.UpkeepPerTick.ToString("0.##", Ci)} par tick)");
+        // Le modèle de coût et la charge moyenne portée : ce qui calibre le modèle
+        // « mass » (docs/FINDINGS.md, « Le coût marginal réel »).
+        double loadKm = w.Trains.Sum(t => t.TotalLoadKm);
+        double capacityKm = w.Trains.Sum(t => t.TotalKmTravelled * t.Capacity);
+        if (capacityKm > 0)
+            Console.WriteLine($"    modèle de coût    {w.Def.Haulage.CostModel,13}   (remplissage moyen " +
+                              $"{(loadKm / capacityKm * 100).ToString("0.0", Ci)} % de la capacité)");
         Console.WriteLine($"  Résultat net         {co.NetProfit.ToString("N0", Ci),12}");
         // Quatrième flux de bilan-tresorerie. Négatif = la finance a prélevé au
         // transporteur ; c'est de l'argent qui n'est plus disponible pour le fret.

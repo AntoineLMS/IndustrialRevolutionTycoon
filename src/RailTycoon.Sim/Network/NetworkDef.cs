@@ -220,8 +220,10 @@ public sealed class TractionDef
     /// et économie ensemble ».
     /// </para>
     /// <para>
-    /// Le coût est facturé au transporteur, mais n'entre aujourd'hui dans aucune de
-    /// ses décisions : voir <c>RailLine.LegCostFactor</c>.
+    /// Sous le modèle de coût par défaut (<c>haulage.costModel = flat</c>), le coût
+    /// est facturé au transporteur mais n'entre dans aucune de ses décisions : voir
+    /// <c>RailLine.LegCostFactor</c>. Sous le modèle <c>mass</c>, il entre dans les
+    /// deux par la même formule (<c>Transport/TrainCost.cs</c>).
     /// </para>
     /// </summary>
     public double ClimbEquivalentKm { get; set; } = 0.03;

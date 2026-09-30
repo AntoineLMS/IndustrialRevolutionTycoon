@@ -230,6 +230,8 @@ internal static class WorldBuilder
     /// </summary>
     private static void Validate(ScenarioDef s)
     {
+        TrainCost.Validate(s.Haulage);
+
         if (s.Cargos.Count == 0)
             throw new InvalidDataException("Le scénario ne déclare aucune marchandise.");
 

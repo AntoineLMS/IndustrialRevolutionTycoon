@@ -1061,6 +1061,10 @@ internal static class Program
         // finance — un seul point d'entrée ici.
         SierraTests.Register(runner);
 
+        // Le modèle de coût « mass » et data/sierra-marginal.json : coût facturé et
+        // coût décidé sortis d'une même formule, neutralité au réglage par défaut.
+        MarginalCostTests.Register(runner);
+
         // ------------------------------------------------ traces de référence
         // En dernier : elles figent le comportement de tous les modules à la fois,
         // et un échec ici se lit mieux une fois les invariants de chacun passés.

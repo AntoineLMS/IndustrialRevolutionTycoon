@@ -61,6 +61,10 @@ internal static class ReferenceTraceTests
         new("terrain-pass.json", "reference", "597B843F8505881B"),
         new("sierra.json", "reference", "44876808B521C9E4"),
         new("sierra.json", "anticipating", "B80E7C2F7DFBD1A5"),
+        // La même sierra sous le modèle de coût « mass » : le relief y entre dans les
+        // décisions, donc chaque solveur y joue sa propre partie.
+        new("sierra-marginal.json", "reference", "3A328BE0FBB30F59"),
+        new("sierra-marginal.json", "anticipating", "64BC50252805D975"),
     ];
 
     public static void Register(TestRunner runner)
