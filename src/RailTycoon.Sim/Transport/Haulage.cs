@@ -11,6 +11,16 @@ public sealed class Train
     public required double SpeedKmPerTick { get; init; }
     public required double CostPerKm { get; init; }
 
+    /// <summary>
+    /// La locomotive du catalogue, sous le module <c>vehicles</c> ; nulle sinon, et
+    /// le train roule alors sur sa vitesse et son coût déclarés, comme avant le
+    /// module. Voir <see cref="VehicleRules"/>.
+    /// </summary>
+    public Vehicle? Vehicle { get; init; }
+
+    /// <summary>Faux tant que la locomotive d'un achat daté n'a pas été achetée : le train n'existe pas encore.</summary>
+    public bool InService => Vehicle is null || Vehicle.InService;
+
     /// <summary>Index du dernier arrêt atteint.</summary>
     public int StopIndex;
 
@@ -83,10 +93,16 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
 
     public void Initialize(WorldState world)
     {
+        // Module vehicles : les locomotives achetées à l'ouverture le sont avant tout
+        // échange — un train qu'on n'a pas encore payé ne charge rien. Sans module,
+        // aucun train n'a de véhicule et cette boucle ne fait rien.
+        foreach (var train in world.Trains)
+            if (train.Vehicle is { PurchaseTick: 0 }) VehicleRules.Purchase(world, train);
+
         // Premier échange au point de départ, pour que les trains ne parcourent
         // pas leur premier tronçon à vide sans raison.
         foreach (var train in world.Trains)
-            TradeAtStop(world, train);
+            if (train.InService) TradeAtStop(world, train);
     }
 
     public void Step(WorldState world, SimTick tick)
@@ -102,6 +118,12 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
             if (upkeep > 0) world.Company.PayTrackUpkeep(upkeep);
         }
 
+        // L'entretien des locomotives, même logique que celui des voies : dû avant
+        // la porte, qu'elles roulent ou non — une machine immobilisée par
+        // l'administration judiciaire se graisse quand même. Ne fait rien sans
+        // module vehicles.
+        VehicleRules.PayMaintenance(world);
+
         // Une compagnie sous administration ne fait pas rouler ses trains. Sans
         // cette porte, plus elle roulait plus elle creusait : les coûts
         // kilométriques étaient prélevés sans condition alors que les achats de
@@ -110,7 +132,19 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
         if (world.Company.Grounded) return;
 
         foreach (var train in world.Trains)
+        {
+            // Achat daté : le train entre en service à son arrêt de départ, y échange
+            // comme à l'ouverture, et roule dès le lendemain. Une compagnie sous
+            // administration n'achète rien — l'achat attend qu'elle en sorte.
+            if (train.Vehicle is { InService: false } vehicle)
+            {
+                if (tick.Index < vehicle.PurchaseTick) continue;
+                VehicleRules.Purchase(world, train);
+                TradeAtStop(world, train);
+                continue;
+            }
             MoveTrain(world, train);
+        }
     }
 
     private void MoveTrain(WorldState world, Train train)
@@ -131,6 +165,11 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
         // l'arrivée : un pas se paie avec ce qu'on a porté pendant ce pas.
         double chargeableLoadKm = 0;
 
+        // Module vehicles : le carburant brûlé, en chargements de la marchandise
+        // carburant, par kilomètre facturable — part fixe (tare) et part de chaque
+        // chargement. Nuls sans locomotive du catalogue.
+        var (fuelFixedPerKm, fuelPerLoadKm) = VehicleRules.FuelRates(world.Def.Haulage, train);
+
         // Garde-fou : un train très rapide sur une ligne très courte pourrait
         // enchaîner un grand nombre d'arrêts dans un seul tick. On borne pour ne
         // pas boucler indéfiniment sur une ligne dégénérée.
@@ -148,17 +187,32 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
             }
 
             if (train.DistanceToNextStop <= 0)
+            {
                 train.DistanceToNextStop = train.Line.DistanceBetween(train.StopIndex, next);
+                // Module vehicles : la vitesse du tronçon, pour la charge qui part.
+                VehicleRules.StartLeg(world, train, train.StopIndex, next);
+            }
 
-            double step = Math.Min(budget, train.DistanceToNextStop);
+            // Le budget du tick est compté en kilomètres à la vitesse nominale ; un
+            // tronçon plus lent en consomme davantage par kilomètre parcouru. Sans
+            // locomotive du catalogue, le facteur vaut 1 et « × 1 », « ÷ 1 » ne
+            // changent aucun bit : la boucle est celle d'avant le module.
+            double speedFactor = train.Vehicle?.LegSpeedFactor ?? 1.0;
+            double step = Math.Min(budget * speedFactor, train.DistanceToNextStop);
             train.DistanceToNextStop -= step;
-            budget -= step;
+            budget -= step / speedFactor;
             kmThisTick += step;
             double chargeableStep = step * train.Line.LegCostFactor(train.StopIndex, next);
             chargeableKm += chargeableStep;
             double load = train.LoadedUnits;
             chargeableLoadKm += chargeableStep * load;
             loadKmThisTick += step * load;
+            if (train.Vehicle is { } vehicle)
+            {
+                double burned = chargeableStep * (fuelFixedPerKm + fuelPerLoadKm * load);
+                vehicle.FuelOwedLoads += burned;
+                vehicle.FuelLoadsBurned += burned;
+            }
 
             if (train.DistanceToNextStop <= 1e-9)
             {
@@ -194,6 +248,11 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
         // Carnet de route : la gare est desservie, qu'on y échange ou non. Pure
         // télémétrie, lue par le module objectives (« relier deux villes »).
         world.Company.Freight.RecordArrival(train, city.Id);
+
+        // Module vehicles : le plein d'abord, au prix que la gare affiche à
+        // l'arrivée du train, avant que ses propres échanges ne le déplacent. Rien
+        // sans locomotive du catalogue, ni sans carburant brûlé.
+        VehicleRules.Refuel(world, train, city);
         SellHere(world, train, city);
         BuyHere(world, train, city);
     }
@@ -352,9 +411,14 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
         // facture d'ici à la destination visée, relief compris — la dérivée de ce
         // que MoveTrain prélèvera. Rien n'y est réparti sur une charge escomptée :
         // la part fixe du train est due quoi qu'on achète, elle ne décide de rien.
+        // Sous le module vehicles, s'y ajoute le carburant qu'un chargement de plus
+        // fera brûler, payé à chaque gare du trajet au prix qu'elle affiche
+        // aujourd'hui ; nul pour un train sans locomotive du catalogue, et 0,0 ajouté
+        // à un nombre fini ne change aucun bit.
         if (TrainCost.IsMassModel(world.Def.Haulage))
             return TrainCost.MarginalCostPerLoad(
-                TrainCost.Rates(world.Def.Haulage, train), train.Line, train.StopIndex, bestIndex);
+                       TrainCost.Rates(world.Def.Haulage, train), train.Line, train.StopIndex, bestIndex)
+                   + VehicleRules.MarginalFuelCost(world, train, train.StopIndex, bestIndex);
 
         double km = train.Line.DistanceBetween(train.StopIndex, bestIndex);
         // Le coût est réparti sur la charge réellement escomptée, pas sur la

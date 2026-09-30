@@ -249,6 +249,50 @@ public sealed class Company
     }
 
     /// <summary>
+    /// Part de <see cref="TotalOperatingCost"/> qui paie le carburant des
+    /// locomotives, au prix du marché local de chaque gare (module <c>vehicles</c>).
+    /// Charge d'exploitation, lue à part comme l'entretien des voies.
+    /// </summary>
+    public double TotalFuel;
+
+    public void PayFuel(double amount)
+    {
+        PayOperating(amount);
+        TotalFuel += amount;
+    }
+
+    /// <summary>
+    /// Part de <see cref="TotalOperatingCost"/> qui paie l'entretien des
+    /// locomotives, dû par tick qu'elles roulent ou non (module <c>vehicles</c>).
+    /// </summary>
+    public double TotalVehicleMaintenance;
+
+    public void PayVehicleMaintenance(double amount)
+    {
+        PayOperating(amount);
+        TotalVehicleMaintenance += amount;
+    }
+
+    /// <summary>
+    /// Achats de locomotives, au prix du catalogue (module <c>vehicles</c>).
+    /// <para>
+    /// Un investissement, pas une charge : il sort de la caisse mais pas de
+    /// <see cref="NetProfit"/>, comme un emprunt y entre sans être une recette. La
+    /// charge, c'est l'amortissement, que le module finance constate quand il est
+    /// actif ; sans lui, le harnais affiche le résultat avant et après achats.
+    /// C'est le cinquième terme de <c>bilan-tresorerie</c> : sans lui, une
+    /// locomotive achetée serait de l'argent disparu.
+    /// </para>
+    /// </summary>
+    public double TotalVehiclePurchases;
+
+    public void PayForVehicle(double amount)
+    {
+        Cash -= amount;
+        TotalVehiclePurchases += amount;
+    }
+
+    /// <summary>
     /// Cumul net des mouvements financiers passés en trésorerie : positif si la
     /// finance a apporté de l'argent (emprunt, apport en capital, cession de
     /// titres), négatif si elle en a prélevé (intérêts, dividende, achat de

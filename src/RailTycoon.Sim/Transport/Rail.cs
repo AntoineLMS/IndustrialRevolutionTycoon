@@ -42,6 +42,17 @@ public sealed class RailSegment
     /// <summary>Coût kilométrique relatif dans le sens des arrêts décroissants.</summary>
     public required double ReverseCostFactor { get; init; }
 
+    /// <summary>
+    /// Dénivelé positif cumulé, en mètres, dans le sens des arrêts croissants : les
+    /// mètres que le train gravit, rugosité comprise. Le facteur de coût en est tiré
+    /// (<c>climbEquivalentKm</c>) ; la dynamique des véhicules en tire la rampe
+    /// moyenne, qui ralentit un train lourd (<see cref="RailLine.LegClimbGradient"/>).
+    /// </summary>
+    public double ForwardClimbM { get; init; }
+
+    /// <summary>Dénivelé positif cumulé dans le sens des arrêts décroissants.</summary>
+    public double ReverseClimbM { get; init; }
+
     public required IReadOnlyList<RouteLeg> Legs { get; init; }
 }
 
@@ -128,5 +139,37 @@ public sealed class RailLine
             total += segment.LengthKm;
         }
         return total <= 0 ? 1.0 : weighted / total;
+    }
+
+    /// <summary>
+    /// Rampe moyenne gravie entre deux arrêts, dans le sens du parcours, sans
+    /// dimension (0,01 = 1 %) : les mètres gravis divisés par la longueur. 0 sur le
+    /// plat et en mode de compatibilité.
+    /// <para>
+    /// C'est la rampe que lit la dynamique des véhicules (<see cref="TrainDynamics"/>),
+    /// et c'est une moyenne, pas la rampe déterminante : un train franchit une bosse
+    /// courte sur son élan, et le temps d'un trajet limité par la puissance ne dépend
+    /// que du travail total à fournir, donc des mètres gravis. Le géomètre publie
+    /// aussi la rampe déterminante (<c>TrackProfile.RulingGradePercent</c>) ; elle ne
+    /// sert pas ici — voir docs/FINDINGS.md, « Les véhicules ».
+    /// </para>
+    /// </summary>
+    public double LegClimbGradient(int fromIndex, int toIndex)
+    {
+        if (Segments.Count == 0 || fromIndex == toIndex) return 0.0;
+
+        bool forward = toIndex > fromIndex;
+        int low = Math.Min(fromIndex, toIndex);
+        int high = Math.Max(fromIndex, toIndex);
+
+        double climb = 0;
+        double total = 0;
+        for (int i = low; i < high && i < Segments.Count; i++)
+        {
+            var segment = Segments[i];
+            climb += forward ? segment.ForwardClimbM : segment.ReverseClimbM;
+            total += segment.LengthKm;
+        }
+        return total <= 0 ? 0.0 : climb / (total * 1000.0);
     }
 }

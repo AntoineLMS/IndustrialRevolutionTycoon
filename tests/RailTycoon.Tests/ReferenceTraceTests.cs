@@ -65,6 +65,11 @@ internal static class ReferenceTraceTests
         // décisions, donc chaque solveur y joue sa propre partie.
         new("sierra-marginal.json", "reference", "3A328BE0FBB30F59"),
         new("sierra-marginal.json", "anticipating", "64BC50252805D975"),
+        // La même sierra, tirée par des locomotives du catalogue (module vehicles) :
+        // vitesse par tronçon selon la puissance et la masse, carburant au prix local
+        // qui entre dans les décisions. Chaque solveur y joue sa partie.
+        new("sierra-vehicules.json", "reference", "B84E4027ECD872F4"),
+        new("sierra-vehicules.json", "anticipating", "3235115C5B85C201"),
         // Le scénario du module cycle, sous les deux solveurs, sur six années de jeu
         // et non deux : il faut contenir la panique de 1873 (tick 1 337), qui force la
         // crise, et au moins un cycle complet. L'empreinte porte aussi le journal de
@@ -112,7 +117,7 @@ internal static class ReferenceTraceTests
         runner.Add("scénarios — un bloc absent sans explication est signalé", () =>
         {
             var undeclared = ScenarioLoader.UndeclaredModuleBlocks(
-                """{ "id": "nu", "Network": {}, "//finance": "pas de finance ici", "//events": "ni d'événements", "//cycle": "ni de conjoncture", "//objectives": "ni d'objectifs" }""");
+                """{ "id": "nu", "Network": {}, "//finance": "pas de finance ici", "//events": "ni d'événements", "//cycle": "ni de conjoncture", "//objectives": "ni d'objectifs", "//vehicles": "ni de véhicules" }""");
             Check.Equal("anticipating", string.Join(",", undeclared),
                 "seul le bloc ni déclaré ni écarté doit être signalé, casse ignorée");
         });

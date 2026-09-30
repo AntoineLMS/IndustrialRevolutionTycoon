@@ -317,6 +317,8 @@ public static class NetworkBuilder
                     LengthKm = pendingLength,
                     ForwardCostFactor = Factor(pendingLength, pendingClimbForward),
                     ReverseCostFactor = Factor(pendingLength, pendingClimbReverse),
+                    ForwardClimbM = pendingClimbForward,
+                    ReverseClimbM = pendingClimbReverse,
                     Legs = pending.ToList(),
                 });
             }

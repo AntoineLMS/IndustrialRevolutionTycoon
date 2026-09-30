@@ -201,17 +201,27 @@ internal static class WorldBuilder
                     $"Le train '{trainDef.Id}' référence la ligne inconnue '{trainDef.Line}'.");
 
             int startStop = Math.Clamp(trainDef.StartStop, 0, line.Stops.Count - 1);
-            world.Trains.Add(new Train
+
+            // Module vehicles : la locomotive du catalogue remplace la vitesse et le
+            // coût kilométrique déclarés (Transport/VehicleDefinitions.cs). Sans
+            // module, le train est celui du scénario, champ pour champ.
+            var vehicle = VehicleRules.Build(scenario, trainDef);
+            var train = new Train
             {
                 Id = trainDef.Id,
                 Line = line,
                 Capacity = trainDef.Capacity,
-                SpeedKmPerTick = trainDef.SpeedKmPerTick,
-                CostPerKm = trainDef.CostPerKm,
+                SpeedKmPerTick = vehicle is null
+                    ? trainDef.SpeedKmPerTick
+                    : vehicle.Locomotive.TopSpeedKmh * scenario.Vehicles.RunningHoursPerTick,
+                CostPerKm = vehicle is null ? trainDef.CostPerKm : scenario.Vehicles.OtherCostPerKm,
+                Vehicle = vehicle,
                 StopIndex = startStop,
                 // Au terminus on ne peut que revenir.
                 Direction = startStop >= line.Stops.Count - 1 ? -1 : 1,
-            });
+            };
+            VehicleRules.CheckClimbable(world, train);
+            world.Trains.Add(train);
         }
 
         return world;
@@ -259,6 +269,7 @@ internal static class WorldBuilder
     private static void Validate(ScenarioDef s)
     {
         TrainCost.Validate(s.Haulage);
+        VehicleRules.Validate(s);
 
         if (s.Cargos.Count == 0)
             throw new InvalidDataException("Le scénario ne déclare aucune marchandise.");

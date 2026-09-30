@@ -53,6 +53,7 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
     public string Name => "reference";
 
     private decimal _depreciationPerTick;
+    private decimal _fixedAssetsAtStart;
 
     public void Initialize(WorldState world)
     {
@@ -95,8 +96,16 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
         state.Player = player;
         state.Companies.Add(player);
 
+        _fixedAssetsAtStart = fixedAssets;
         _depreciationPerTick = Money.Round(
             fixedAssets * def.DepreciationAnnualPercent / 100m / SimTick.TicksPerYear);
+
+        // Module vehicles : les locomotives achetées à l'ouverture sont déjà payées
+        // quand la finance ouvre ses comptes. Elles entrent à l'actif, et la caisse
+        // qui les a payées en sort ; le résultat n'y est pour rien. Sans véhicules,
+        // aucune écriture, et le bilan d'ouverture est celui d'avant le module.
+        if (PostVehiclePurchases(state, world, player, def))
+            SweepOverdraft(player);
 
         foreach (var rivalDef in def.Rivals)
         {
@@ -195,6 +204,10 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
             player.Book.Post("résultat d'exploitation",
                 new Leg(Accounts.Cash, operating),
                 new Leg(Accounts.RetainedEarnings, -operating));
+
+        // 1b — le matériel acheté par le transporteur (module vehicles) : à l'actif,
+        // hors résultat. Rien sans véhicules.
+        PostVehiclePurchases(state, world, player, def);
 
         // 2 — amortissement du matériel. Une compagnie qui ne l'amortit pas
         // affiche un actif qui ne se dégrade jamais, et donc un cours qui ne
@@ -346,7 +359,10 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
 
         // L'exploitation est la seule part que la finance ne décide pas : tout
         // l'écart avec elle est, par construction, d'origine financière.
-        decimal financeNet = balanceSheet - state.ReflectedOperatingCash;
+        // Les achats de locomotives sont, comme l'exploitation, décidés par le
+        // transporteur et déjà sortis de sa caisse : ils ne sont pas un flux
+        // financier. Nuls sans module vehicles.
+        decimal financeNet = balanceSheet - state.ReflectedOperatingCash + state.ReflectedVehiclePurchases;
 
         world.Company.ApplyFinanceFlow(
             Money.ToDouble(financeNet) - world.Company.TotalFinanceFlow);
@@ -496,6 +512,25 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
         if (pay <= 0m) return 0m;
         book.Post(label, payable, Accounts.Cash, pay);
         return pay;
+    }
+
+    /// <summary>
+    /// Porte à l'actif les locomotives achetées depuis la dernière clôture, et
+    /// recalcule l'amortissement : le taux du scénario s'applique à la valeur
+    /// d'origine de tout le matériel, celui de départ et celui acheté. Renvoie vrai
+    /// si une écriture a été passée ; sans module vehicles, jamais, et
+    /// l'amortissement reste au centime celui d'avant le module.
+    /// </summary>
+    private bool PostVehiclePurchases(FinanceState state, WorldState world, FinanceCompany player, FinanceDef def)
+    {
+        decimal bought = state.PostVehiclePurchases(world.Company.TotalVehiclePurchases);
+        if (bought == 0m) return false;
+
+        player.Book.Post("achat de matériel roulant", Accounts.FixedAssets, Accounts.Cash, bought);
+        _depreciationPerTick = Money.Round(
+            (_fixedAssetsAtStart + state.ReflectedVehiclePurchases)
+            * def.DepreciationAnnualPercent / 100m / SimTick.TicksPerYear);
+        return true;
     }
 
     private void Depreciate(FinanceCompany company)

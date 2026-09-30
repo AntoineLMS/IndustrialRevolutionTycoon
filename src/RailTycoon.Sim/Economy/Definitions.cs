@@ -108,15 +108,26 @@ public sealed class TrainDef
     public int StartStop { get; set; }
 
     /// <summary>
-    /// Identifiant optionnel d'une locomotive du catalogue (data/locomotives.json,
-    /// voir <see cref="LocomotiveDef"/>). Purement informatif pour l'instant : la
-    /// simulation continue de lire <see cref="SpeedKmPerTick"/> et
-    /// <see cref="CostPerKm"/> directement sur le train, quelle que soit la
-    /// locomotive référencée. Ce champ est additif et n'est pas validé au
-    /// chargement du scénario — un futur module pourra s'en servir pour dériver
-    /// vitesse et coût automatiquement.
+    /// Identifiant d'une locomotive du catalogue (data/locomotives.json, voir
+    /// <see cref="LocomotiveDef"/>).
+    /// <para>
+    /// Sans module <c>vehicles</c> actif, purement informatif : la simulation lit
+    /// <see cref="SpeedKmPerTick"/> et <see cref="CostPerKm"/> sur le train, et le
+    /// champ n'est pas validé — c'est ce qui laisse ironpeak, qui en déclare, au bit
+    /// près. Avec le module actif, il est obligatoire et le train tire de la machine
+    /// sa vitesse, sa puissance, sa masse, son carburant et ses coûts
+    /// (<c>Transport/VehicleDefinitions.cs</c>).
+    /// </para>
     /// </summary>
     public string? Locomotive { get; set; }
+
+    /// <summary>
+    /// Tick d'achat de la locomotive, sous le module <c>vehicles</c> : le train
+    /// n'existe pas avant — ni échange, ni carburant, ni entretien — et il est
+    /// acheté ce jour-là, à son arrêt de départ. 0 (défaut) : acheté à l'ouverture de
+    /// la partie. Refusé hors du module, où il serait silencieusement inerte.
+    /// </summary>
+    public int PurchaseTick { get; set; }
 }
 
 /// <summary>Paramètres du modèle de prix. Le cœur de l'équilibrage.</summary>
@@ -338,6 +349,14 @@ public sealed class ScenarioDef
     /// inactif par défaut, et observateur pur quand il est actif.
     /// </summary>
     public RailTycoon.Sim.Objectives.ObjectivesDef Objectives { get; set; } = new();
+
+    /// <summary>
+    /// Les véhicules : locomotives du catalogue achetées, carburant payé en gare au
+    /// prix local, entretien par tick, vitesse tirée de la puissance. Voir
+    /// <c>Transport/VehicleDefinitions.cs</c> ; inactif par défaut, et neutre au bit
+    /// près tant qu'il l'est.
+    /// </summary>
+    public RailTycoon.Sim.Transport.VehiclesDef Vehicles { get; set; } = new();
     public List<CargoDef> Cargos { get; set; } = new();
     public List<RecipeDef> Recipes { get; set; } = new();
     public List<CityDef> Cities { get; set; } = new();

@@ -15,7 +15,18 @@ public static class ScenarioLoader
     public static ScenarioDef Load(string path)
     {
         string json = File.ReadAllText(path);
-        return Parse(json, path);
+        var scenario = Parse(json, path);
+
+        // Le catalogue de locomotives n'est pas recopié dans chaque scénario : il est
+        // commun, et un scénario ne doit pas pouvoir redéfinir une machine historique
+        // en douce. Il n'est lu que si le module vehicles est actif — un scénario
+        // sans véhicules ne dépend d'aucun autre fichier.
+        if (scenario.Vehicles.Enabled)
+        {
+            string directory = Path.GetDirectoryName(Path.GetFullPath(path)) ?? ".";
+            scenario.Vehicles.Catalog = LocomotiveLoader.Load(Path.Combine(directory, scenario.Vehicles.CatalogPath));
+        }
+        return scenario;
     }
 
     public static ScenarioDef Parse(string json, string origin = "<inline>")
@@ -37,7 +48,7 @@ public static class ScenarioLoader
     /// tourne sur ses défauts et personne ne le voit. Passer ironpeak au solveur
     /// anticipant ne changeait rien, au bit près, pour cette seule raison.
     /// </summary>
-    public static IReadOnlyList<string> ModuleBlocks { get; } = ["anticipating", "network", "finance", "events", "cycle", "objectives"];
+    public static IReadOnlyList<string> ModuleBlocks { get; } = ["anticipating", "network", "finance", "events", "cycle", "objectives", "vehicles"];
 
     /// <summary>
     /// Blocs de module ni déclarés, ni écartés explicitement. Un scénario peut

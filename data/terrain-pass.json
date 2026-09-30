@@ -17,6 +17,7 @@
 
   "//cycle": "Pas de conjoncture : une carte d'essai du réseau éprouve le devis de construction, qui ne dépend ni des taux ni de la demande.",
   "//objectives": "Pas d'objectifs : une carte d'essai du réseau éprouve le devis de construction. Son unique train relierait ses villes au premier trajet ; un objectif n'y mesurerait rien.",
+  "//vehicles": "Pas de véhicules : une carte d'essai du réseau éprouve le devis de construction, pas l'exploitation.",
 
   "priceModel": { "coverageHorizonTicks": 15, "shape": 0.5, "minMultiplier": 0.12, "maxMultiplier": 3.0 },
 

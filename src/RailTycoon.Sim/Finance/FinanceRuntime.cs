@@ -430,4 +430,25 @@ public sealed class FinanceState
         OperatingResultThisTick = delta;
         return delta;
     }
+
+    /// <summary>
+    /// Achats de locomotives déjà portés à l'actif, arrondis au centime (module
+    /// <c>vehicles</c>). Zéro sans véhicules, et aucune écriture n'est alors passée.
+    /// </summary>
+    public decimal ReflectedVehiclePurchases { get; private set; }
+
+    /// <summary>
+    /// Second point de passage du monde en <c>double</c> vers la comptabilité, sur le
+    /// modèle exact de <see cref="PostOperatingResult"/> : on convertit le
+    /// <em>cumul</em> des achats de locomotives et on écrit la différence. Un achat
+    /// sort de la caisse et entre à l'actif ; il ne touche pas le résultat, que seul
+    /// l'amortissement charge ensuite.
+    /// </summary>
+    internal decimal PostVehiclePurchases(double cumulativePurchases)
+    {
+        decimal target = Money.FromDouble(cumulativePurchases);
+        decimal delta = target - ReflectedVehiclePurchases;
+        ReflectedVehiclePurchases = target;
+        return delta;
+    }
 }

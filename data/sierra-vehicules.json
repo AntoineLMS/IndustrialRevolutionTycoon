@@ -1,6 +1,6 @@
 {
-  "id": "sierra-marginal",
-  "name": "La Sierra — 1875, coût marginal",
+  "id": "sierra-vehicules",
+  "name": "La Sierra — 1875, véhicules",
   "seed": 18750412,
   "startingCash": 100000,
   "initialCoverage": 1.0,
@@ -24,8 +24,6 @@
   "//events": "Pas d'événements, pour la même raison que sierra.json : un scénario éprouve une chose à la fois, et celui-ci éprouve le modèle de coût.",
 
   "//cycle": "Pas de conjoncture, pour la même raison que sierra.json : un scénario éprouve une chose à la fois, et celui-ci éprouve le coût marginal réel.",
-  "//objectives": "Pas d'objectifs : la liaison de part et d'autre du col est posée sur sierra.json. Celui-ci éprouve le coût marginal réel, et un test compare son économie à celle de sierra, bloc objectives mis à part — le module ne fait qu'observer.",
-  "//vehicles": "Pas de véhicules : ce scénario isole le modèle de coût mass. data/sierra-vehicules.json en reprend tout au caractère près et y branche les locomotives du catalogue.",
 
   "//finance": "Pas de finance, pour la même raison que sierra.json : le découvert et les intérêts entreraient dans les achats du transporteur et brouilleraient la mesure du coût d'exploitation.",
 
@@ -246,9 +244,19 @@
     ]
   },
 
+  "vehicles": {
+    "enabled": true,
+    "catalogPath": "locomotives.json",
+    "fuels": { "coal": "coal", "wood": "logs" },
+    "otherCostPerKm": 0.75,
+    "runningHoursPerTick": 4.0,
+    "rollingResistance": 0.004,
+    "acceleration": true
+  },
+
   "trains": [
-    { "id": "t1", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 0 },
-    { "id": "t2", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 4 },
-    { "id": "t3", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 9 }
+    { "id": "t1", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 0, "locomotive": "prr_d5" },
+    { "id": "t2", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 4, "locomotive": "prr_d5" },
+    { "id": "t3", "line": "main", "capacity": 24, "speedKmPerTick": 120, "costPerKm": 0.8, "startStop": 9, "locomotive": "prr_d5" }
   ]
 }

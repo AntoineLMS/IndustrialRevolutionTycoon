@@ -6,11 +6,15 @@ namespace RailTycoon.Sim;
 /// <summary>
 /// Chargement du catalogue de locomotives (data/locomotives.json). Séparé de
 /// <see cref="ScenarioLoader"/> parce que le catalogue n'est pas un scénario :
-/// aucune partie ne le charge pour jouer, c'est une référence que le module
-/// contenu (et plus tard l'interface) consulte.
+/// c'est une référence commune à toutes les cartes, que
+/// <see cref="ScenarioLoader.Load"/> charge pour un scénario qui active le module
+/// <c>vehicles</c> (clé <c>vehicles.catalog</c>).
 /// </summary>
 public static class LocomotiveLoader
 {
+    /// <summary>Les carburants que le catalogue connaît. Le scénario dit à quelle marchandise chacun correspond.</summary>
+    public static IReadOnlyList<string> FuelTypes { get; } = ["wood", "coal", "oil"];
+
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -62,14 +66,20 @@ public static class LocomotiveLoader
                 throw new InvalidDataException($"La locomotive '{loco.Id}' a un effort de traction nul ou négatif ({origin}).");
             if (loco.TopSpeedKmh <= 0)
                 throw new InvalidDataException($"La locomotive '{loco.Id}' a une vitesse nulle ou négative ({origin}).");
-            if (loco.FuelConsumptionKgPerKm <= 0)
+            if (loco.PowerKw <= 0)
+                throw new InvalidDataException($"La locomotive '{loco.Id}' a une puissance nulle ou négative ({origin}).");
+            if (loco.MassTonnes <= 0)
+                throw new InvalidDataException($"La locomotive '{loco.Id}' a une masse nulle ou négative ({origin}).");
+            if (loco.FuelKgPer1000TonneKm <= 0)
                 throw new InvalidDataException($"La locomotive '{loco.Id}' a une consommation nulle ou négative ({origin}).");
             if (loco.PurchaseCost <= 0)
-                throw new InvalidDataException($"La locomotive '{loco.Id}' a un coût d'achat nul ou négatif ({origin}).");
-            if (loco.MaintenanceCostPerKm <= 0)
-                throw new InvalidDataException($"La locomotive '{loco.Id}' a un coût d'entretien nul ou négatif ({origin}).");
-            if (loco.FuelType != "coal" && loco.FuelType != "diesel")
-                throw new InvalidDataException($"La locomotive '{loco.Id}' a un type de combustible inconnu : '{loco.FuelType}' ({origin}).");
+                throw new InvalidDataException($"La locomotive '{loco.Id}' a un prix d'achat nul ou négatif ({origin}).");
+            if (loco.MaintenancePerTick < 0)
+                throw new InvalidDataException($"La locomotive '{loco.Id}' a un entretien négatif ({origin}).");
+            if (!FuelTypes.Contains(loco.FuelType))
+                throw new InvalidDataException(
+                    $"La locomotive '{loco.Id}' a un carburant inconnu : '{loco.FuelType}' " +
+                    $"(attendu : {string.Join(", ", FuelTypes)}) ({origin}).");
         }
     }
 }

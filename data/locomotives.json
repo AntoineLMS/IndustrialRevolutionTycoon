@@ -1,5 +1,5 @@
 {
-  "//": "Catalogue de locomotives historiques, 1829-1945. Chaque caractéristique physique (année, effort de traction, vitesse) est sourcée dans docs/SOURCES.md, qui précise aussi ce qui est documenté contre ce qui est estimé. Coût d'achat, coût d'entretien et consommation sont TOUJOURS des estimations d'équilibrage : la conversion en unités monétaires du jeu n'est pas une donnée historique, voir la formule dans SOURCES.md.",
+  "//": "Catalogue de locomotives historiques, 1829-1945. Les caractéristiques physiques (année, effort de traction, vitesse, masse, et la puissance quand elle est publiée) sont sourcées dans docs/SOURCES.md, qui dit machine par machine ce qui est documenté et ce qui est estimé. Puissance non publiée, consommation, prix et entretien sont estimés par des formules uniformes, écrites dans SOURCES.md (« Note de méthode ») : puissance 10 kW par tonne de locomotive, prix 132 par tonne de locomotive (0,20 $ de 1870 la livre, convertis au prix du charbon du jeu), entretien 15 % du prix par an (8 % pour le diesel), consommation par époque en kg pour mille tonnes-kilomètres brutes. Le module vehicles lit ce fichier (vehicles.catalog) ; sans lui, il reste descriptif.",
 
   "locomotives": [
     {
@@ -8,10 +8,12 @@
       "year": 1829,
       "tractiveEffortKn": 3.7,
       "topSpeedKmh": 48,
+      "powerKw": 43,
+      "massTonnes": 6.9,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 0.6,
-      "purchaseCost": 200,
-      "maintenanceCostPerKm": 0.11
+      "fuelKgPer1000TonneKm": 90,
+      "purchaseCost": 570,
+      "maintenancePerTick": 0.24
     },
     {
       "id": "stourbridge_lion",
@@ -19,10 +21,12 @@
       "year": 1829,
       "tractiveEffortKn": 10.2,
       "topSpeedKmh": 24,
+      "powerKw": 64,
+      "massTonnes": 10.2,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 1.5,
-      "purchaseCost": 200,
-      "maintenanceCostPerKm": 0.31
+      "fuelKgPer1000TonneKm": 90,
+      "purchaseCost": 845,
+      "maintenancePerTick": 0.35
     },
     {
       "id": "planet",
@@ -30,10 +34,12 @@
       "year": 1830,
       "tractiveEffortKn": 6.1,
       "topSpeedKmh": 48,
+      "powerKw": 43,
+      "massTonnes": 6.9,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 0.9,
-      "purchaseCost": 200,
-      "maintenanceCostPerKm": 0.18
+      "fuelKgPer1000TonneKm": 90,
+      "purchaseCost": 570,
+      "maintenancePerTick": 0.24
     },
     {
       "id": "john_bull",
@@ -41,10 +47,12 @@
       "year": 1831,
       "tractiveEffortKn": 5.7,
       "topSpeedKmh": 48,
+      "powerKw": 91,
+      "massTonnes": 14.6,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 0.9,
-      "purchaseCost": 200,
-      "maintenanceCostPerKm": 0.17
+      "fuelKgPer1000TonneKm": 90,
+      "purchaseCost": 1200,
+      "maintenancePerTick": 0.50
     },
     {
       "id": "lafayette",
@@ -52,10 +60,12 @@
       "year": 1837,
       "tractiveEffortKn": 10.3,
       "topSpeedKmh": 40,
+      "powerKw": 100,
+      "massTonnes": 16.0,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 1.5,
-      "purchaseCost": 210,
-      "maintenanceCostPerKm": 0.31
+      "fuelKgPer1000TonneKm": 75,
+      "purchaseCost": 1320,
+      "maintenancePerTick": 0.55
     },
     {
       "id": "gwr_firefly",
@@ -63,10 +73,12 @@
       "year": 1840,
       "tractiveEffortKn": 9.1,
       "topSpeedKmh": 97,
+      "powerKw": 242,
+      "massTonnes": 38.7,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 1.4,
-      "purchaseCost": 440,
-      "maintenanceCostPerKm": 0.27
+      "fuelKgPer1000TonneKm": 75,
+      "purchaseCost": 3190,
+      "maintenancePerTick": 1.33
     },
     {
       "id": "gwr_iron_duke",
@@ -74,10 +86,12 @@
       "year": 1847,
       "tractiveEffortKn": 36.0,
       "topSpeedKmh": 126,
+      "powerKw": 361,
+      "massTonnes": 57.8,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 5.4,
-      "purchaseCost": 2270,
-      "maintenanceCostPerKm": 1.08
+      "fuelKgPer1000TonneKm": 75,
+      "purchaseCost": 4770,
+      "maintenancePerTick": 1.99
     },
     {
       "id": "crampton_continent",
@@ -85,10 +99,12 @@
       "year": 1852,
       "tractiveEffortKn": 18.0,
       "topSpeedKmh": 120,
+      "powerKw": 295,
+      "massTonnes": 50.5,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 2.7,
-      "purchaseCost": 1080,
-      "maintenanceCostPerKm": 0.54
+      "fuelKgPer1000TonneKm": 75,
+      "purchaseCost": 4170,
+      "maintenancePerTick": 1.74
     },
     {
       "id": "general_wa",
@@ -96,10 +112,38 @@
       "year": 1855,
       "tractiveEffortKn": 31.8,
       "topSpeedKmh": 64,
+      "powerKw": 228,
+      "massTonnes": 36.5,
+      "fuelType": "wood",
+      "fuelKgPer1000TonneKm": 175,
+      "purchaseCost": 3010,
+      "maintenancePerTick": 1.25
+    },
+    {
+      "id": "lv_consolidation",
+      "name": "Consolidation (Baldwin / Lehigh & Mahanoy, première 2-8-0, États-Unis)",
+      "year": 1866,
+      "tractiveEffortKn": 89.0,
+      "topSpeedKmh": 40,
+      "powerKw": 408,
+      "massTonnes": 65.3,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 4.8,
-      "purchaseCost": 1020,
-      "maintenanceCostPerKm": 0.95
+      "fuelKgPer1000TonneKm": 70,
+      "purchaseCost": 5390,
+      "maintenancePerTick": 2.25
+    },
+    {
+      "id": "prr_d5",
+      "name": "Pennsylvania Railroad classe D5 (4-4-0, Altoona, États-Unis)",
+      "year": 1870,
+      "tractiveEffortKn": 48.0,
+      "topSpeedKmh": 72,
+      "powerKw": 296,
+      "massTonnes": 48.1,
+      "fuelType": "coal",
+      "fuelKgPer1000TonneKm": 70,
+      "purchaseCost": 3910,
+      "maintenancePerTick": 1.63
     },
     {
       "id": "prr_e6_atlantic",
@@ -107,10 +151,12 @@
       "year": 1910,
       "tractiveEffortKn": 142.3,
       "topSpeedKmh": 161,
+      "powerKw": 1105,
+      "massTonnes": 176.8,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 21.3,
-      "purchaseCost": 11460,
-      "maintenanceCostPerKm": 4.27
+      "fuelKgPer1000TonneKm": 58,
+      "purchaseCost": 14590,
+      "maintenancePerTick": 6.08
     },
     {
       "id": "lner_a1_flying_scotsman",
@@ -118,10 +164,12 @@
       "year": 1923,
       "tractiveEffortKn": 132.7,
       "topSpeedKmh": 161,
+      "powerKw": 978,
+      "massTonnes": 156.5,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 19.9,
-      "purchaseCost": 10680,
-      "maintenanceCostPerKm": 3.98
+      "fuelKgPer1000TonneKm": 48,
+      "purchaseCost": 12910,
+      "maintenancePerTick": 5.38
     },
     {
       "id": "drg_05",
@@ -129,10 +177,12 @@
       "year": 1935,
       "tractiveEffortKn": 148.3,
       "topSpeedKmh": 200,
+      "powerKw": 1240,
+      "massTonnes": 198.4,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 22.2,
-      "purchaseCost": 14830,
-      "maintenanceCostPerKm": 4.45
+      "fuelKgPer1000TonneKm": 38,
+      "purchaseCost": 16370,
+      "maintenancePerTick": 6.82
     },
     {
       "id": "lner_a4_mallard",
@@ -140,10 +190,12 @@
       "year": 1938,
       "tractiveEffortKn": 157.7,
       "topSpeedKmh": 203,
+      "powerKw": 1046,
+      "massTonnes": 167.4,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 23.7,
-      "purchaseCost": 16010,
-      "maintenanceCostPerKm": 4.73
+      "fuelKgPer1000TonneKm": 37,
+      "purchaseCost": 13810,
+      "maintenancePerTick": 5.75
     },
     {
       "id": "up_big_boy",
@@ -151,10 +203,12 @@
       "year": 1941,
       "tractiveEffortKn": 602.0,
       "topSpeedKmh": 129,
+      "powerKw": 3456,
+      "massTonnes": 539.5,
       "fuelType": "coal",
-      "fuelConsumptionKgPerKm": 90.3,
-      "purchaseCost": 38830,
-      "maintenanceCostPerKm": 18.06
+      "fuelKgPer1000TonneKm": 36,
+      "purchaseCost": 45620,
+      "maintenancePerTick": 19.01
     },
     {
       "id": "emd_f3",
@@ -162,10 +216,12 @@
       "year": 1945,
       "tractiveEffortKn": 245.0,
       "topSpeedKmh": 104,
-      "fuelType": "diesel",
-      "fuelConsumptionKgPerKm": 7.0,
-      "purchaseCost": 12740,
-      "maintenanceCostPerKm": 7.35
+      "powerKw": 1119,
+      "massTonnes": 104.0,
+      "fuelType": "oil",
+      "fuelKgPer1000TonneKm": 6,
+      "purchaseCost": 26080,
+      "maintenancePerTick": 5.80
     }
   ]
 }

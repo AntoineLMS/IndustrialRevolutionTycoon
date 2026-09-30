@@ -87,13 +87,18 @@ public static class Invariants
         // même argent. Les deux bilans s'équilibraient au centime et la fuite était
         // pourtant réelle — la signature exacte du lavage de fret. Avec ce terme,
         // il n'existe plus de mouvement d'argent que personne ne compte.
+        //
+        // Le cinquième flux — les achats de locomotives du module vehicles — sort de
+        // la caisse sans passer par le résultat : c'est un investissement, que
+        // l'amortissement charge ensuite. Nul sans module, et x − 0,0 vaut x au bit
+        // près.
         var co = world.Company;
-        double expectedCash = world.Def.StartingCash + co.NetProfit + co.TotalFinanceFlow;
+        double expectedCash = world.Def.StartingCash + co.NetProfit + co.TotalFinanceFlow - co.TotalVehiclePurchases;
         if (Math.Abs(co.Cash - expectedCash) > Math.Max(1e-4, Math.Abs(expectedCash) * 1e-9))
             violations.Add(new("bilan-tresorerie",
                 $"caisse {co.Cash:0.##}, attendu {expectedCash:0.##}"));
 
-        CheckFinance(world, violations, expectedCash);
+        CheckFinance(world, violations);
 
         return violations;
     }
@@ -106,7 +111,7 @@ public static class Invariants
     /// reviendrait à autoriser la fuite qu'on cherche à interdire — une demi-unité
     /// par tick fait une fortune sur deux années de jeu.
     /// </summary>
-    private static void CheckFinance(WorldState world, List<Violation> violations, double expectedOperatingCash)
+    private static void CheckFinance(WorldState world, List<Violation> violations)
     {
         var finance = world.Finance;
         if (!finance.Enabled) return;
@@ -273,10 +278,19 @@ public static class Invariants
         }
 
         double reflected = Money.ToDouble(finance.ReflectedOperatingCash);
-        double operatingOnly = expectedOperatingCash - world.Company.TotalFinanceFlow;
+        double operatingOnly = world.Def.StartingCash + world.Company.NetProfit;
         if (Math.Abs(reflected - operatingOnly) > 0.005 + 1e-9)
             violations.Add(new("frontiere-tresorerie",
                 $"exploitation reflétée {reflected:0.####}, résultat d'exploitation {operatingOnly:0.####}"));
+
+        // Le matériel acheté par le transporteur doit être à l'actif, au demi-centime
+        // près : une locomotive payée mais absente du bilan serait de l'argent
+        // disparu, une locomotive au bilan mais jamais payée, de l'argent créé.
+        double vehicles = Money.ToDouble(finance.ReflectedVehiclePurchases);
+        if (Math.Abs(vehicles - world.Company.TotalVehiclePurchases) > 0.005 + 1e-9)
+            violations.Add(new("frontiere-tresorerie",
+                $"matériel porté à l'actif {vehicles:0.####}, achats du transporteur " +
+                $"{world.Company.TotalVehiclePurchases:0.####}"));
     }
 
     /// <summary>

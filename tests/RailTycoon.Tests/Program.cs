@@ -1074,6 +1074,10 @@ internal static class Program
         // point d'entrée ici.
         ObjectiveTests.Register(runner);
 
+        // Le module vehicles et data/sierra-vehicules.json : achat, carburant au prix
+        // local, entretien, puissance et accélération. Un seul point d'entrée ici.
+        VehicleTests.Register(runner);
+
         // ------------------------------------------------ traces de référence
         // En dernier : elles figent le comportement de tous les modules à la fois,
         // et un échec ici se lit mieux une fois les invariants de chacun passés.

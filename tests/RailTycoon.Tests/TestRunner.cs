@@ -7,7 +7,19 @@ public sealed class TestRunner
 {
     private readonly List<(string Name, Action Body)> _tests = new();
 
-    public void Add(string name, Action body) => _tests.Add((name, body));
+    /// <summary>
+    /// Filtre facultatif, par la variable d'environnement <c>RAILTYCOON_TESTS</c> :
+    /// seuls les tests dont le nom la contient sont enregistrés. Sert à la
+    /// vérification par mutation, qui rejoue un test dix fois ; la suite complète
+    /// reste la seule qui compte.
+    /// </summary>
+    private static readonly string? Filter = Environment.GetEnvironmentVariable("RAILTYCOON_TESTS");
+
+    public void Add(string name, Action body)
+    {
+        if (!string.IsNullOrEmpty(Filter) && !name.Contains(Filter, StringComparison.Ordinal)) return;
+        _tests.Add((name, body));
+    }
 
     public int Run()
     {

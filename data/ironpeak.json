@@ -25,6 +25,7 @@
 
   "//cycle": "Pas de conjoncture : ce scénario éprouve la chaîne acier du module content, sans finance ni événements. Un cycle déplacerait sa demande de quelques pour cent, et son empreinte de référence avec elle.",
   "//objectives": "Pas d'objectifs : ce scénario éprouve la chaîne acier du module content, sans finance, donc sans fortune à lire. Des livraisons d'acier vers une ville seraient un bon candidat le jour où il deviendra un scénario de jeu.",
+  "//vehicles": "Pas de véhicules : ses trains référencent la PRR E6 du catalogue à titre informatif seulement. Le module exige le modèle de coût mass, et ce scénario éprouve la chaîne acier du module content, une chose à la fois.",
 
   "priceModel": {
     "coverageHorizonTicks": 15,

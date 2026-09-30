@@ -152,6 +152,7 @@
 
   "//cycle": "Pas de conjoncture : ce scénario éprouve les événements seuls. Ses événements portent pourtant des attributs « cycle » — la panique de 1873 force la crise, quatre types aléatoires poussent la conjoncture — et ils sont inertes ici, c'est voulu : ce sont des données sur l'événement, que data/heartland-cycle.json reprend au caractère près et que le module cycle y lit. L'empreinte de référence de ce scénario n'a pas bougé en les recevant.",
   "//objectives": "Pas d'objectifs : ce scénario éprouve les événements seuls, sans finance, donc sans fortune à lire. Les objectifs de fortune et de livraisons sont posés sur heartland-cycle, qui reprend ces événements au caractère près.",
+  "//vehicles": "Pas de véhicules : ce scénario reste sous le modèle de coût flat, que le module vehicles refuse (le carburant est proportionnel à la masse remorquée, le module exige mass). Ses trains roulent sur leur vitesse et leur coût déclarés ; le module s'éprouve sur data/sierra-vehicules.json.",
 
   "events": {
     "enabled": true,

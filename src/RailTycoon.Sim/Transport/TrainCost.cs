@@ -62,7 +62,9 @@ public static class TrainCost
         if (!IsMassModel(def)) return new TrainCostRates(train.CostPerKm, 0);
 
         var mass = def.MassCost;
-        double tare = mass.LocomotiveTonnes + train.Capacity * mass.WagonTareTonnes;
+        // La locomotive du catalogue, sous le module vehicles ; celle du scénario
+        // sinon — le même nombre qu'avant le module, donc les mêmes bits.
+        double tare = VehicleRules.LocomotiveTonnes(def, train) + train.Capacity * mass.WagonTareTonnes;
         double calibrationMass = tare + mass.CalibrationLoadFactor * train.Capacity * mass.TonnesPerLoad;
         return new TrainCostRates(
             train.CostPerKm * tare / calibrationMass,

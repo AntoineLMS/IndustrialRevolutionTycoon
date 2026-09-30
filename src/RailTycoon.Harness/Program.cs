@@ -495,7 +495,10 @@ internal static class Report
             var rates = RailTycoon.Sim.Transport.TrainCost.Rates(w.Def.Haulage, t);
             return t.TotalKmTravelled * rates.FixedPerKm + t.TotalLoadKm * rates.PerLoadKm;
         });
-        double trainCost = co.TotalOperatingCost - co.TotalTrackUpkeep;
+        // Le carburant et l'entretien des locomotives (module vehicles) sont retirés
+        // aussi : ils se lisent sur leurs propres lignes, et le « coût à plat »
+        // ci-dessus ne porte que la part kilométrique (otherCostPerKm).
+        double trainCost = co.TotalOperatingCost - co.TotalTrackUpkeep - co.TotalFuel - co.TotalVehicleMaintenance;
         if (w.Network is not null && flatCost > 0)
             Console.WriteLine($"    dont relief       -{(trainCost - flatCost).ToString("N0", Ci),12}" +
                               $"   ({((trainCost / flatCost - 1) * 100).ToString("0.0", Ci)} % du coût à plat)");
@@ -503,6 +506,10 @@ internal static class Report
             Console.WriteLine($"    dont entretien    -{co.TotalTrackUpkeep.ToString("N0", Ci),12}" +
                               $"   ({w.Network!.TrackKm.ToString("N0", Ci)} km de voie, " +
                               $"{w.Network.UpkeepPerTick.ToString("0.##", Ci)} par tick)");
+        if (co.TotalFuel > 0)
+            Console.WriteLine($"    dont carburant    -{co.TotalFuel.ToString("N0", Ci),12}   (payé en gare, au prix local)");
+        if (co.TotalVehicleMaintenance > 0)
+            Console.WriteLine($"    dont locomotives  -{co.TotalVehicleMaintenance.ToString("N0", Ci),12}   (entretien, dû chaque tick)");
         // Le modèle de coût et la charge moyenne portée : ce qui calibre le modèle
         // « mass » (docs/FINDINGS.md, « Le coût marginal réel »).
         double loadKm = w.Trains.Sum(t => t.TotalLoadKm);
@@ -511,6 +518,14 @@ internal static class Report
             Console.WriteLine($"    modèle de coût    {w.Def.Haulage.CostModel,13}   (remplissage moyen " +
                               $"{(loadKm / capacityKm * 100).ToString("0.0", Ci)} % de la capacité)");
         Console.WriteLine($"  Résultat net         {co.NetProfit.ToString("N0", Ci),12}");
+        // Un achat de locomotive n'est pas une charge : il sort de la caisse, pas du
+        // résultat (la finance, quand elle est active, l'amortit). Les deux lectures
+        // se donnent ici, pour qu'aucune ne passe pour l'autre.
+        if (co.TotalVehiclePurchases > 0)
+        {
+            Console.WriteLine($"  Achats de matériel  -{co.TotalVehiclePurchases.ToString("N0", Ci),12}   (actif, hors résultat)");
+            Console.WriteLine($"  Résultat − achats    {(co.NetProfit - co.TotalVehiclePurchases).ToString("N0", Ci),12}");
+        }
         // Quatrième flux de bilan-tresorerie. Négatif = la finance a prélevé au
         // transporteur ; c'est de l'argent qui n'est plus disponible pour le fret.
         if (Math.Abs(co.TotalFinanceFlow) > 0.005)
@@ -521,8 +536,58 @@ internal static class Report
             Console.WriteLine($"  Marge au kilomètre   {(co.NetProfit / totalKm).ToString("0.00", Ci),12}");
         Console.WriteLine();
 
+        PrintVehicles(w, opts.Ticks);
+
         Console.WriteLine($"Trésorerie  {Sparkline(cashHistory)}");
         Console.WriteLine($"CSV         {Path.GetFullPath(opts.OutDir)}");
+    }
+
+    /// <summary>
+    /// Le parc du module vehicles : ce que chaque locomotive a coûté, combien elle a
+    /// roulé, combien de rampes l'ont obligée à couper son train, et où les trains ont
+    /// fait le plein — le carburant se paie au prix local, et c'est la géographie des
+    /// prix qui décide de la facture. Rien sans module.
+    /// </summary>
+    public static void PrintVehicles(RailTycoon.Sim.WorldState w, int ticks)
+    {
+        if (!w.Def.Vehicles.Enabled) return;
+
+        Console.WriteLine("Véhicules (module vehicles)");
+        Console.WriteLine($"  {"Train",-6}{"locomotive",-18}{"carburant",-10}{"achat",9}{"km/tick",9}" +
+                          $"{"vitesse",9}{"coupés",8}{"brûlé",9}{"carburant",11}{"entretien",11}");
+        foreach (var train in w.Trains)
+        {
+            if (train.Vehicle is not { } v) continue;
+            int days = Math.Max(1, ticks - Math.Max(0, v.PurchaseTick));
+            double kmPerTick = train.TotalKmTravelled / days;
+            Console.WriteLine(
+                $"  {train.Id,-6}{v.Locomotive.Id,-18}{v.FuelCargoId,-10}" +
+                $"{v.Locomotive.PurchaseCost.ToString("N0", Ci),9}" +
+                $"{kmPerTick.ToString("0.0", Ci),9}" +
+                $"{(kmPerTick / train.SpeedKmPerTick * 100).ToString("0", Ci) + " %",9}" +
+                $"{(v.LegsStarted > 0 ? (double)v.LegsDoubled / v.LegsStarted * 100 : 0).ToString("0", Ci) + " %",8}" +
+                $"{v.FuelLoadsBurned.ToString("0.0", Ci),9}" +
+                $"{v.FuelPaid.ToString("N0", Ci),11}{v.MaintenancePaid.ToString("N0", Ci),11}");
+        }
+        Console.WriteLine("  (vitesse : km/tick rapportés à la vitesse nominale topSpeedKmh × runningHoursPerTick ;");
+        Console.WriteLine("   coupés : part des tronçons montés en plusieurs passes faute d'adhérence)");
+
+        Console.WriteLine();
+        Console.WriteLine("  Où les trains font le plein (tous trains, chargements de carburant et prix moyen payé)");
+        foreach (var city in w.Cities)
+        {
+            double loads = 0, paid = 0;
+            foreach (var train in w.Trains)
+            {
+                if (train.Vehicle is not { } v) continue;
+                loads += v.FuelLoadsByCity.GetValueOrDefault(city.Id);
+                paid += v.FuelPaidByCity.GetValueOrDefault(city.Id);
+            }
+            if (loads <= 0) continue;
+            Console.WriteLine($"    {city.Def.Name,-12}{loads.ToString("0.0", Ci),9} ch.{paid.ToString("N0", Ci),10}" +
+                              $"   à {(paid / loads).ToString("0.00", Ci)} le chargement");
+        }
+        Console.WriteLine();
     }
 
     /// <summary>
