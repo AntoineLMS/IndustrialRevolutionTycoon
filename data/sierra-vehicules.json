@@ -28,6 +28,8 @@
   "//calibration": "Deux points fixes mesurés sur 40 réalisations (référence), pas des réglages : runningHoursPerTick 4,0 donne aux trois D5 le kilométrage moyen de sierra-marginal (258 044 km contre 259 200) ; otherCostPerKm 0,75 donne le même coût d'exploitation des trains par km (0,816 autres + 0,044 carburant + 0,014 entretien = 0,873 contre 0,870). On compare alors deux façons de rouler sur une même économie. Le charbon se paie au prix de chaque gare : 3,2 à Coalpass, où la mine en déborde sans acheteur, 20,6 à Farport. Le bois (fuels.wood = logs) ne sert qu'aux machines qui en brûlent, comme la General de 1855.",
   "//mesure-vehicules": "40 réalisations, trois trains : 170 367 ± 2 466 sous la référence (sierra-marginal : 178 919 ± 1 552), 176 179 ± 3 073 sous l'anticipant (175 232 ± 6 295) ; carburant 11 250, entretien 3 521, achats 11 730 hors résultat ; 11 % des tronçons montés en deux passes, tous au col. Les mêmes trains tirés par la Consolidation de 1866 font +24 263 ± 595 (erreur type appariée) sur la sierra, et −114 023 ± 625 sur la même carte sans relief : le choix dépend de la géographie. Chiffres complets dans docs/FINDINGS.md.",
 
+  "//objectives": "Pas d'objectifs : ce scénario éprouve les véhicules et reprend sierra-marginal au caractère près. La liaison de part et d'autre du col se lit sur sierra.json.",
+
   "//finance": "Pas de finance, pour la même raison que sierra.json : le découvert et les intérêts entreraient dans les achats du transporteur et brouilleraient la mesure du coût d'exploitation.",
 
   "priceModel": {

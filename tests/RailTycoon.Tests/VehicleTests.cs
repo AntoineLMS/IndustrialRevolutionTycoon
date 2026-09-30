@@ -376,8 +376,10 @@ internal static class VehicleTests
             // Et dans la simulation : un train vide sur un relief nul roule à sa
             // vitesse nominale, au temps de mise en vitesse près.
             var scenario = Emptied(Vehicles());
-            scenario.Network.Terrain.Features.Clear();
-            scenario.Network.Terrain.Noise = null;
+            var terrain = scenario.Network.Terrain
+                ?? throw new InvalidOperationException("sierra-vehicules doit déclarer un relief");
+            terrain.Features.Clear();
+            terrain.Noise = null;
             scenario.Vehicles.Acceleration = false;
             foreach (var t in scenario.Trains) t.Capacity = 0.001;
             var sim = new Simulation(scenario);
