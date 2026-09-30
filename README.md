@@ -74,6 +74,19 @@ plafond de prix à jamais. Sur un scénario à événements, il affiche aussi le
 attendu du catalogue aléatoire : un catalogue qui ne frappe que dans un sens est
 un déséquilibre structurel du même genre.
 
+Pour la sierra — l'économie de heartland posée sur un relief, `data/sierra.json` —
+sous le modèle de coût « mass », où le coût kilométrique suit la masse remorquée et
+où le transporteur décide sur ce qu'un chargement ajoute vraiment à la facture,
+relief compris :
+
+```bash
+dotnet run --project src/RailTycoon.Harness -- --scenario data/sierra-marginal.json
+```
+
+Même économie que `sierra.json`, au caractère près ; seul le modèle de coût change.
+Ce qu'il fait au relief et au résultat est dans [docs/FINDINGS.md](docs/FINDINGS.md),
+« Le coût marginal réel ».
+
 Pour un scénario posé sur un relief, le devis de construction se lit de la même
 façon, sans rien simuler :
 
@@ -126,6 +139,7 @@ data/                      scénarios et cartes (données de conception, modifia
   ironpeak.json            chaîne minerai → fonte → acier
   terrain-*.json           cartes d'essai du réseau : plaine, vallée, col
   sierra.json              économie de heartland sur une sierra : relief et économie ensemble
+  sierra-marginal.json     même sierra, coût d'exploitation proportionnel à la masse (coût marginal réel)
   locomotives.json         catalogue historique, sources dans docs/SOURCES.md
 docs/                      architecture et contrats entre modules
 ```

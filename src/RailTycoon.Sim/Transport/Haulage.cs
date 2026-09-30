@@ -32,6 +32,14 @@ public sealed class Train
 
     public double TotalKmTravelled;
 
+    /// <summary>
+    /// Chargements × kilomètres parcourus, à plat : la charge portée sur chaque pas,
+    /// multipliée par sa longueur. Télémétrie seulement — divisée par
+    /// <see cref="TotalKmTravelled"/>, c'est la charge moyenne du train, celle qui
+    /// calibre le modèle de coût <c>mass</c> (voir <see cref="TrainCost"/>).
+    /// </summary>
+    public double TotalLoadKm;
+
     public double LoadedUnits
     {
         get
@@ -83,6 +91,17 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
 
     public void Step(WorldState world, SimTick tick)
     {
+        // L'entretien des voies est dû avant la porte ci-dessous, et c'est voulu :
+        // une compagnie sous administration arrête ses trains, pas son réseau. Une
+        // voie posée coûte ce qu'elle coûte, qu'on y roule ou non. Nul sans réseau
+        // déclaré, donc heartland et les scénarios à lignes saisies à la main ne
+        // voient rien changer.
+        if (world.Network is { } network)
+        {
+            double upkeep = network.UpkeepPerTick;
+            if (upkeep > 0) world.Company.PayTrackUpkeep(upkeep);
+        }
+
         // Une compagnie sous administration ne fait pas rouler ses trains. Sans
         // cette porte, plus elle roulait plus elle creusait : les coûts
         // kilométriques étaient prélevés sans condition alors que les achats de
@@ -101,10 +120,16 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
 
         double budget = train.SpeedKmPerTick;
         double kmThisTick = 0;
+        double loadKmThisTick = 0;
         // Kilomètres facturés : les kilomètres parcourus, pondérés par ce que le
         // réseau dit du relief du tronçon. Vaut kmThisTick sur une ligne plate ou
         // sans relief déclaré.
         double chargeableKm = 0;
+        // Les mêmes, pondérés en plus par la charge portée sur chaque pas : la part
+        // de la facture qui dépend de ce que le train transporte (modèle « mass »).
+        // La charge est celle d'avant l'arrêt, puisque l'échange se fait à
+        // l'arrivée : un pas se paie avec ce qu'on a porté pendant ce pas.
+        double chargeableLoadKm = 0;
 
         // Garde-fou : un train très rapide sur une ligne très courte pourrait
         // enchaîner un grand nombre d'arrêts dans un seul tick. On borne pour ne
@@ -129,7 +154,11 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
             train.DistanceToNextStop -= step;
             budget -= step;
             kmThisTick += step;
-            chargeableKm += step * train.Line.LegCostFactor(train.StopIndex, next);
+            double chargeableStep = step * train.Line.LegCostFactor(train.StopIndex, next);
+            chargeableKm += chargeableStep;
+            double load = train.LoadedUnits;
+            chargeableLoadKm += chargeableStep * load;
+            loadKmThisTick += step * load;
 
             if (train.DistanceToNextStop <= 1e-9)
             {
@@ -152,7 +181,11 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
         }
 
         train.TotalKmTravelled += kmThisTick;
-        world.Company.PayOperating(chargeableKm * train.CostPerKm);
+        train.TotalLoadKm += loadKmThisTick;
+        // Une seule formule pour la facture et pour la décision : voir TrainCost.
+        // Sous le modèle « flat », elle vaut chargeableKm × costPerKm au bit près.
+        var rates = TrainCost.Rates(world.Def.Haulage, train);
+        world.Company.PayOperating(TrainCost.Charge(rates, chargeableKm, chargeableLoadKm));
     }
 
     private void TradeAtStop(WorldState world, Train train)
@@ -283,7 +316,20 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
         return best;
     }
 
-    private double HaulCostPerUnitAhead(WorldState world, Train train, string cargoId)
+    /// <summary>
+    /// Le coût que le transporteur impute à un chargement de <paramref name="cargoId"/>
+    /// s'il l'achète là où se trouve le train, pour le porter jusqu'au meilleur
+    /// acheteur en aval. C'est ce nombre, et lui seul, que <c>BuyHere</c> retranche
+    /// du gain espéré.
+    /// <para>
+    /// Public parce que c'est une promesse vérifiable : sous le modèle de coût
+    /// <c>mass</c>, il doit valoir exactement ce qu'un chargement de plus ajoute à la
+    /// facture de <c>MoveTrain</c> sur ce trajet, et un test le vérifie
+    /// (MarginalCostTests). Sous le modèle <c>flat</c>, il ne le vaut pas : il répartit
+    /// le coût du train sur une charge escomptée, à plat.
+    /// </para>
+    /// </summary>
+    public double HaulCostPerUnitAhead(WorldState world, Train train, string cargoId)
     {
         var stops = train.Line.Stops;
         int bestIndex = -1;
@@ -296,6 +342,14 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
             if (price > best) { best = price; bestIndex = i; }
         }
         if (bestIndex < 0) return 0;
+
+        // Modèle « mass » : ce qu'un chargement de plus ajoutera réellement à la
+        // facture d'ici à la destination visée, relief compris — la dérivée de ce
+        // que MoveTrain prélèvera. Rien n'y est réparti sur une charge escomptée :
+        // la part fixe du train est due quoi qu'on achète, elle ne décide de rien.
+        if (TrainCost.IsMassModel(world.Def.Haulage))
+            return TrainCost.MarginalCostPerLoad(
+                TrainCost.Rates(world.Def.Haulage, train), train.Line, train.StopIndex, bestIndex);
 
         double km = train.Line.DistanceBetween(train.StopIndex, bestIndex);
         // Le coût est réparti sur la charge réellement escomptée, pas sur la

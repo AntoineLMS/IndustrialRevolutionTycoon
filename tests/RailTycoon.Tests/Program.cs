@@ -878,6 +878,62 @@ internal static class Program
                 "la plaine doit coûter moins cher au kilomètre que le col");
         });
 
+        runner.Add("réseau — l'entretien se paie par kilomètre de voie, que les trains roulent ou non", () =>
+        {
+            // Décision du 30 septembre 2026 : 0,2 par kilomètre de voie et par tick.
+            // Une double voie compte double, et une compagnie sans train paie quand
+            // même : c'est le réseau qu'on entretient, pas les trains.
+            ScenarioDef Scenario(int trackCount, double rate)
+            {
+                var s = Fixtures.NetworkScenario();
+                s.Network.Edges[0].TrackCount = trackCount;
+                s.Network.Costs.UpkeepPerTrackKmPerTick = rate;
+                return s;
+            }
+
+            var single = new Simulation(Scenario(1, 0.2));
+            double trackKm = single.World.Network!.TrackKm;
+            Check.Near(single.World.Network.Graph.Edges[0].LengthKm, trackKm, 1e-9, "voie unique : un km par km de tracé");
+            single.Run(50);
+            Check.True(single.World.Trains.Count == 0, "le cas mesuré n'a aucun train");
+            Check.Near(50 * 0.2 * trackKm, single.World.Company.TotalTrackUpkeep, 1e-6,
+                "entretien de 50 ticks sans aucun train");
+            Check.Near(single.World.Company.TotalTrackUpkeep, single.World.Company.TotalOperatingCost, 1e-9,
+                "sans train, l'exploitation n'est que l'entretien");
+
+            var twin = new Simulation(Scenario(2, 0.2));
+            Check.Near(2 * trackKm, twin.World.Network!.TrackKm, 1e-9, "une double voie compte double");
+        });
+
+        runner.Add("réseau — l'entretien ne change ni un prix ni un chargement", () =>
+        {
+            // Une charge fixe ne doit peser sur aucune décision du transporteur : la
+            // trace des marchés de la sierra est la même avec et sans entretien, et
+            // le résultat baisse exactement du montant prélevé. C'est ce qui permet
+            // de relire les chiffres de FINDINGS mesurés avant la décision.
+            (string Markets, double Profit, double Upkeep) Run(double rate)
+            {
+                var scenario = ScenarioLoader.Load(Path.Combine(Fixtures.RepoRoot(), "data", "sierra.json"));
+                scenario.Network.Costs.UpkeepPerTrackKmPerTick = rate;
+                var sim = new Simulation(scenario);
+                var recorder = new CsvRecorder();
+                recorder.Record(sim.World);
+                for (int i = 0; i < 240; i++)
+                {
+                    sim.Step();
+                    recorder.Record(sim.World);
+                }
+                return (recorder.Fingerprint(), sim.World.Company.NetProfit, sim.World.Company.TotalTrackUpkeep);
+            }
+
+            var free = Run(0);
+            var paid = Run(0.2);
+            Check.Equal(free.Markets, paid.Markets, "trace des marchés avec et sans entretien");
+            Check.True(free.Upkeep == 0 && paid.Upkeep > 0, "l'entretien n'est prélevé que s'il a un tarif");
+            Check.Near(free.Profit - paid.Upkeep, paid.Profit, 1e-6,
+                "le résultat baisse exactement de l'entretien prélevé");
+        });
+
         runner.Add("compatibilité — le scénario de référence ignore le module réseau", () =>
         {
             // heartland reste sur ses distances saisies à la main. C'est la voie de
@@ -1004,6 +1060,10 @@ internal static class Program
         // Relief et économie ensemble : data/sierra.json. Même raison que pour la
         // finance — un seul point d'entrée ici.
         SierraTests.Register(runner);
+
+        // Le modèle de coût « mass » et data/sierra-marginal.json : coût facturé et
+        // coût décidé sortis d'une même formule, neutralité au réglage par défaut.
+        MarginalCostTests.Register(runner);
 
         // ------------------------------------------------ traces de référence
         // En dernier : elles figent le comportement de tous les modules à la fois,

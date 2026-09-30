@@ -5,7 +5,9 @@ Ce document couvre les deux livrables du module `content` :
 [`data/ironpeak.json`](../data/ironpeak.json) (second scénario, chaîne acier) ;
 et les événements historiques du module `events`, déclarés dans
 [`data/heartland-events.json`](../data/heartland-events.json) — voir la
-[dernière section](#evenements).
+[dernière section](#evenements) ; et les masses du train du modèle de coût `mass`
+([`data/sierra-marginal.json`](../data/sierra-marginal.json)) — voir
+[« Masses du train »](#masses-du-train).
 
 Principe suivi partout : une caractéristique **physique** (année, effort de
 traction, vitesse, masse) est documentée quand une source le permet, et
@@ -190,6 +192,66 @@ dont la doc XML renvoie ici.
   hypothèse (50 psi, ou 140 psi documentée pour le General), pas mesuré.
 - La vitesse de Lafayette et du General n'a pas de source directe et est
   estimée par comparaison avec des machines contemporaines documentées.
+
+<a id="masses-du-train"></a>
+## Masses du train — modèle de coût `mass` (`haulage.massCost`)
+
+Le modèle de coût `mass` (voir [FINDINGS.md](FINDINGS.md), « Le coût marginal
+réel ») a besoin de trois masses : la locomotive avec son tender, la tare d'un
+wagon, la charge d'un wagon — un chargement du jeu est un wagon. Le catalogue
+`data/locomotives.json` ne porte pas de masse (les masses documentées plus haut
+ne sont pas dans le fichier) ; les trois valeurs sont donc des paramètres du
+scénario, et c'est ici qu'elles se justifient.
+
+Recherches effectuées via WebSearch le 30 septembre 2026. Même limite que pour
+les événements : les pages n'ont pas pu être ouvertes depuis l'environnement de
+travail (search.library.wisc.edu est bloqué par le proxy sortant, les autres
+n'ont été lues que par les extraits du moteur de recherche).
+
+### Locomotive et tender — 48 t, documenté
+
+- **Documenté** : Pennsylvania Railroad classe D5, 4-4-0 construites de 1870 à
+  1873 — locomotive 65 200 lb (29,6 t), tender 40 800 lb (18,5 t), ensemble
+  106 000 lb (**48,1 t**). Deux 4-4-0 contemporaines, de construction ou de
+  dessin américains, encadrent la valeur : Victorian Railways classe H (1877),
+  49,3 t avec tender ; classe D (1876, Rogers), 58,3 t.
+- Le General (1855), au catalogue, pèse 22,8 t **sans** tender : l'ordre de
+  grandeur de la locomotive seule d'une machine plus ancienne, cohérent.
+- Sources : [Wikipédia — Pennsylvania Railroad class D5](https://en.wikipedia.org/wiki/Pennsylvania_Railroad_class_D5) ;
+  [Wikipédia — Victorian Railways H class (1877)](https://en.wikipedia.org/wiki/Victorian_Railways_H_class_(1877)) ;
+  [Wikipédia — Victorian Railways D class (1876)](https://en.wikipedia.org/wiki/Victorian_Railways_D_class_(1876)).
+
+### Wagon — 9 t de charge, 9 t de tare, estimés
+
+- **Estimé** : un wagon couvert américain des années 1870 porte 10 short tons
+  (20 000 lb, **9,07 t**, retenu 9 t) et pèse à vide du même ordre (retenu
+  **9 t**, rapport tare / charge de 1).
+- Ce que les extraits donnent : une comparaison d'époque entre voie étroite et
+  voie normale indique qu'un wagon couvert de voie normale « pesait environ vingt
+  mille livres » (page non ouverte, extrait seulement) ; les wagons couverts de
+  voie étroite du Denver & Rio Grande, 1878-1883, portaient 10 tonnes, et un
+  relevé de marquage des années 1880 donne 20 000 lb de charge pour 8 350 lb de
+  tare (rapport 0,42 — plus léger, en voie étroite, et de source secondaire).
+  Aucune source trouvée ne documente directement la tare d'un wagon de voie
+  normale de 1875.
+- **C'est le paramètre qui compte** : le rapport tare / charge fixe la part
+  marginale du coût, donc le rayon économique. À 4,5 t de tare, la scierie de
+  Cedarton ne démarre pas même à relief faible ; à 18 t, elle survit au col à
+  forte traction (FINDINGS, « Sensibilité aux masses »). Une meilleure source est
+  la prochaine étape avant de s'y fier.
+- Sources : [search.library.wisc.edu — comparaison voie étroite / voie normale](https://search.library.wisc.edu/digital/AJ4LAFP5BKIPLA8D/text/AFCTLVPW5EYVFQ8X) (extrait) ;
+  [largescalecentral.com — wooden box car info](https://largescalecentral.com/t/wooden-box-car-info/73392) (D&RG, 1880s) ;
+  J. H. White Jr., *The American Railroad Freight Car: From the Wood-Car Era to the
+  Coming of Steel*, Johns Hopkins University Press, 1993 — la référence à consulter,
+  non lue.
+
+### Calibration — 0,89, mesurée, pas documentée
+
+`calibrationLoadFactor` n'est pas une donnée historique : c'est la charge moyenne
+que le modèle fait porter lui-même aux trains de heartland (89 % de la capacité,
+solveur de référence, 40 réalisations). Elle fixe le prix de la tonne-kilomètre
+pour que le coût facturé sur heartland reste celui du modèle `flat` ; le calcul est
+dans FINDINGS.md.
 
 ## Second scénario — `data/ironpeak.json`
 

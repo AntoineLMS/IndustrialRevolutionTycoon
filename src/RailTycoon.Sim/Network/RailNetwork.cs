@@ -58,6 +58,18 @@ public interface IRailNetwork
     double BuiltCost { get; }
 
     /// <summary>
+    /// Kilomètres de voie posée : longueur réelle de chaque tronçon, multipliée
+    /// par son nombre de voies.
+    /// </summary>
+    double TrackKm { get; }
+
+    /// <summary>
+    /// Entretien du réseau pour un tick : <see cref="TrackKm"/> au tarif
+    /// <c>costs.upkeepPerTrackKmPerTick</c>. Dû que les trains roulent ou non.
+    /// </summary>
+    double UpkeepPerTick { get; }
+
+    /// <summary>
     /// Kilomètres de plat équivalents à un mètre gagné en altitude. C'est la
     /// conversion qui permet de résumer un profil en un coût kilométrique.
     /// </summary>
@@ -85,6 +97,8 @@ public sealed class TerrainRailNetwork : IRailNetwork
     public TrackGraph Graph { get; } = new();
     public IReadOnlyList<TrackRoute> Routes => _routes;
     public double BuiltCost { get; private set; }
+    public double TrackKm { get; private set; }
+    public double UpkeepPerTick => TrackKm * _def.Costs.UpkeepPerTrackKmPerTick;
     public double ClimbEquivalentKm => _def.Traction.ClimbEquivalentKm;
 
     internal TerrainRailNetwork(RailNetworkDef def, HeightField terrain)
@@ -127,6 +141,8 @@ public sealed class TerrainRailNetwork : IRailNetwork
     }
 
     internal void AddBuiltCost(double cost) => BuiltCost += cost;
+
+    internal void AddTrack(double km) => TrackKm += km;
 }
 
 /// <summary>
@@ -237,6 +253,7 @@ public static class NetworkBuilder
                 ControlPoints = controlPoints,
             });
             network.AddBuiltCost(estimate.TotalCost);
+            network.AddTrack(estimate.LengthKm * edgeDef.TrackCount);
         }
     }
 

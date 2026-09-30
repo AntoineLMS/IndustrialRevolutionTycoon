@@ -63,14 +63,39 @@ kilométriques.
 courbe, coût de déblai et de remblai calculé sur le terrain, ponts, tunnels,
 aiguillages.
 
+**Coût du réseau** : l'entretien des voies, 0,2 par kilomètre de voie et par tick
+(`costs.upkeepPerTrackKmPerTick`), prélevé au transporteur en tête de la phase
+transport, que les trains roulent ou non. Le devis de construction lui-même n'est
+toujours débité nulle part.
+
+**Ce que le relief coûte à l'exploitation** : le réseau ne publie qu'un scalaire,
+`LegCostFactor` (1 + mètres gravis × `traction.climbEquivalentKm` ÷ longueur, par
+tronçon et par sens) ; ce que le transport en fait dépend du modèle de coût choisi
+dans `haulage.costModel` (`Transport/TrainCost.cs`) :
+
+- `flat` (défaut, toutes les empreintes) : le facteur multiplie le coût kilométrique
+  facturé, plein ou vide, mais la décision d'achat impute un coût moyen, à plat. Le
+  relief est un impôt, pas une géographie.
+- `mass` (opt-in, `data/sierra-marginal.json`) : le coût kilométrique est
+  proportionnel à la masse remorquée — tare fixe, chargements variables, masses dans
+  `haulage.massCost` —, le facteur multiplie les deux parts, et le transporteur
+  décide sur le seul surcoût d'un chargement. **Facture et décision sortent de la
+  même formule** : un test vérifie que dix chargements de plus coûtent à la facture
+  dix fois le coût décidé, dans les deux sens du col. Le relief y fait une
+  géographie au-delà d'une traction de 0,12 à 0,15.
+
+Un module qui touche à `LegCostFactor`, à `MoveTrain` ou à `HaulCostPerUnitAhead`
+doit garder cette égalité sous `mass`, et la neutralité au bit près sous `flat`.
+
 **Ce qui manque** : les aiguillages comme objets (une bifurcation est pour l'instant
 un nœud sans contrainte de géométrie), la recherche automatique d'un tracé — le
 géomètre chiffre celui qu'on lui donne —, le terrassement à flanc de coteau, la
 construction en cours de partie (tout est calculé au chargement), le passage de
 `heartland` lui-même sur un relief — son économie tourne désormais sur relief dans
-`data/sierra.json` —, et surtout un relief qui pèse sur les décisions du
-transport : aujourd'hui il n'est que facturé (voir FINDINGS.md, « Relief et
-économie ensemble »).
+`data/sierra.json` —, et la décision de l'équipe sur le modèle de coût par défaut :
+sous `flat`, le relief n'est que facturé ; sous `mass`, il pèse sur les décisions,
+mais en changeant aussi le niveau de résultat, la tension du capital et la rotation
+du fret (voir FINDINGS.md, « Le coût marginal réel », décisions 1 et 2).
 
 **Critère de réussite** : le coût de construction d'un tracé donné doit être
 reproductible et correspondre aux valeurs de référence sur les cartes de test.

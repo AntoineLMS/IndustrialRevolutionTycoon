@@ -102,6 +102,13 @@ public sealed class RailLine
     /// impôt sur le kilomètre-train, pas une géographie. Les options et leurs
     /// chiffres sont dans docs/FINDINGS.md, « Relief et économie ensemble ».
     /// </para>
+    /// <para>
+    /// <b>Sous le modèle de coût <c>mass</c></b> (<c>haulage.costModel</c>, opt-in),
+    /// ce même facteur entre dans la facture <em>et</em> dans la décision, par une
+    /// seule formule (<see cref="TrainCost"/>) : il multiplie la part fixe du train et
+    /// la part de chaque chargement, et le transporteur décide sur la seconde. Là, il
+    /// fait une géographie — docs/FINDINGS.md, « Le coût marginal réel ».
+    /// </para>
     /// </summary>
     public double LegCostFactor(int fromIndex, int toIndex)
     {

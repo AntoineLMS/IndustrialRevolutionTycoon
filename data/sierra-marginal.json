@@ -1,33 +1,29 @@
 {
-  "id": "sierra",
-  "name": "La Sierra — 1875",
+  "id": "sierra-marginal",
+  "name": "La Sierra — 1875, coût marginal",
   "seed": 18750412,
   "startingCash": 100000,
   "initialCoverage": 1.0,
 
-  "//": "Premier scénario où relief et économie tournent ensemble (point 1 de « Le prix du développement en parallèle », docs/FINDINGS.md). Une ligne de 505 km traverse une sierra : plaine de l'ouest à 150 m, plateau forestier de Pinecrest à 378 m, col de Coalpass à 1 112 m, plaine de l'est à 150 m. Le scénario existe pour une seule question — que fait le relief aux écarts de prix et au rayon économique ? — et la réponse mesurée est dans FINDINGS.md, section « Relief et économie ensemble ».",
+  "//": "La sierra de data/sierra.json, au caractère près, sous le modèle de coût d'exploitation « mass » (haulage.costModel) : le coût kilométrique d'un train est proportionnel à la masse remorquée — tare fixe, chargements variables —, relief compris, et le transporteur décide d'acheter sur le seul surcoût qu'un chargement ajoute à la facture. C'est l'option « coût marginal réel » de la décision 1 de « Relief et économie ensemble » (docs/FINDINGS.md), mesurée dans « Le coût marginal réel ». Un test compare le contenu sérialisé des deux scénarios : seuls l'identité et haulage.costModel / haulage.massCost ont le droit de différer.",
 
-  "//economie": "L'économie est celle de heartland, table pour table : mêmes marchandises, mêmes recettes (chaque maillon ≈ +70 %), mêmes demandes par ville, mêmes capacités, dans le même ordre le long de la ligne. C'est délibéré : ces tables sont calibrées (--balance : chaque marchandise entre 1,10 et 1,14, « équilibré »), et les reprendre isole la seule variable neuve, la géographie. Les villes sont renommées parce qu'elles ne sont pas au même endroit : les distances diffèrent (505 km contre 500, l'ordre des écarts change), et la montagne s'intercale entre la forêt (Pinecrest) et les boulangeries de l'est. Deux acheteurs par marchandise intermédiaire : deux moulins (Fordham à l'ouest, Ashvale à l'est), deux boulangeries (Eastgate, Baymouth), deux scieries (Pinecrest sur sa forêt, Cedarton à 355 km de l'autre côté du col).",
+  "//mesure": "Sur 40 réalisations voisines (une demande d'une ville × 1,001 ou 0,999), trois trains, climbEquivalentKm = 0,03 : 178 919 ± 1 552 de résultat sous la référence contre 148 590 ± 5 283 pour sierra.json, 175 232 ± 6 295 sous l'anticipant contre 160 687 ± 9 402. La partie telle qu'écrite (sans perturbation) fait 175 856 et 169 883. Le coût facturé aux trains est celui de sierra.json à 0,1 % près (225 370 contre 225 596) : on compare deux façons de décider sur une même économie. La scierie de Cedarton tourne à 24 % (19 % sous l'anticipant) ; elle est à 0 % dans sierra.json.",
 
-  "//relief": "Une crête nord-sud de 1 350 m, abaissée en selle par une cuvette de même portée : le long de la ligne, le relief est une cloche de 950 m centrée sur le col, dont la pente culmine à 2,3 % — sous la rampe maximale de 2,5 %. Le tracé suit donc le sol, et le devis (--survey) est à 99 % de la pose de voie : 1 524 566, dont 9 510 de terrassement sur les deux rampes du col, aucun pont, aucun tunnel. Rampe déterminante 2,49 % à l'aller, 2,50 % au retour. Un col plus haut ou plus étroit aurait coûté des ouvrages, mais le devis n'est débité nulle part (voir FINDINGS) : le choisir plus cher n'aurait rien mesuré de plus. La rugosité (20 m, 8 km) est volontairement plus douce que celle des cartes d'essai (25 m, 4 km) : sur ces dernières, elle coûte à elle seule 8 à 11 % sur 60 km, presque autant que la montagne du col (13 %).",
+  "//geographie": "Le relief entre dans les décisions : la trace des marchés change avec climbEquivalentKm, contrairement à sierra.json. À 0,2, la scierie de Cedarton s'arrête (0 % sous les deux solveurs, contre 22 % à relief nul) et les planches coûtent 2,00 × la référence à l'est du col contre 1,13 à l'ouest (1,78 / 1,21 à relief nul) : deux bassins. Le résultat reste au-dessus du statu quo à toute traction (79 573 contre 45 253 à 0,2), et, sous la référence, au-dessus d'un témoin qui décide au même coût marginal mais sans voir le relief (+4 742 ± 521 à 0,2).",
 
-  "//traction": "climbEquivalentKm reste à 0,03, la valeur des trois cartes d'essai, pour que les chiffres soient comparables. Mesuré sur 720 ticks à trois trains : le relief ajoute 8,8 % au coût d'exploitation (225 596 contre 207 360 à 0). La montagne seule (rugosité retirée) en coûte 5,9 %, la rugosité seule (montagne retirée) 4,3 % : les deux ne s'additionnent pas, et la seconde pèse presque autant que la première. La valeur elle-même est une décision ouverte : le commentaire de TractionDef la justifiait par « une rampe de 1 % triple la résistance », ce qui correspondrait à environ 0,2 ; à 0,03, une rampe de 1 % ne coûte que 30 % de plus.",
+  "//masses": "Masses d'un train de marchandises américain des années 1870, sources dans docs/SOURCES.md, « Masses du train » : locomotive et tender 48 t (Pennsylvania Railroad classe D5, 1870-1873, 48,1 t documentées), wagon couvert de 10 short tons de charge (9 t) pour 9 t de tare [estimé]. Un train de 24 wagons pèse 264 t à vide et 480 t plein. calibrationLoadFactor 0,89 est la charge moyenne que le modèle lui-même fait porter sur heartland sous la référence : à ce remplissage, un train coûte exactement son costPerKm, et le coût facturé sur heartland vaut 207 362 contre 207 360 sous le modèle flat. Tarifs qui en découlent : 0,463 par kilomètre à vide, 0,0158 par chargement et par kilomètre, chacun multiplié par le facteur de relief du tronçon et du sens.",
 
-  "//geographie": "Le constat principal, figé par un test : le relief se paie, mais n'entre dans aucune décision. La trace des marchés est identique au bit près à climbEquivalentKm = 0 ; 0,03 ; 0,09 ; 0,2, et sans montagne ou sans rugosité, sous les deux solveurs : mêmes prix, mêmes écarts, mêmes usines. Seul le résultat net bouge (237 647 → 219 411 → 182 940 → 116 075). La scierie de Cedarton reste à 0 % dans tous les cas, comme celle d'Ironhill dans heartland : ce n'est pas la montagne qui la tue, c'est la règle de coût imputé du transporteur (expectedLoadFactor), qui la fait démarrer à 19 % quand on la passe de 0,6 à 2.",
+  "//traction": "climbEquivalentKm reste à 0,03, comme sierra.json : une variable à la fois. Sous ce modèle, les options 0,09 et 0,2 sont chiffrées dans FINDINGS (143 093 et 79 573 de résultat moyen sous la référence).",
 
-  "//trains": "Trois trains, aux arrêts 0, 4 et 9 comme heartland. Balayage en ne changeant que le nombre de trains (au-delà de trois, copies du premier aux arrêts 7, 2, 6) — solveur de référence : 76 695 / 178 139 / 219 411 / 200 890 / 134 325 / 47 819 de 1 à 6 trains ; anticipant : 76 243 / 160 108 / 242 254 / 228 096 / 171 811 / 103 973. L'optimum est à trois sous les deux solveurs, et le taux d'usines desservies monte de 72 % à 82 % pendant que le résultat s'effondre : la même forme que heartland, relief compris.",
+  "//trains": "Trois trains, aux arrêts 0, 4 et 9, comme sierra.json. Sous ce modèle l'optimum s'aplatit entre trois et quatre trains (178 919 et 176 952 sous la référence) et six trains gagnent encore 98 627, là où sierra.json s'effondre à −449 479 : voir FINDINGS.",
 
-  "//anticipating": "Réglé pour ce scénario, pas recopié : le bloc de heartland (4 ticks, poids 1, lissage 0,15) fait ici chuter le résultat de 219 411 (bloc neutre, c'est-à-dire la référence) à 100 693, parce que le charbon se met à tourner en rond — 29 558 chargements livrés pour 723 produits après chauffe, contre 5 389 sous la référence. Grille mesurée (horizon 0 à 8, poids 0,5 et 1, lissage 0,10 à 0,25) : 2 ticks, poids 1, lissage 0,15 donne 242 254 (+10 %), une mobilité de 0,548 contre 0,384 (+43 %) et un changement de tête de 24,3 % contre 20,1 %, avec des voisins cohérents (lissage 0,10 : 232 603 et 0,511 ; 0,25 : 222 325 et 0,587). À 4 et 5 trains il bat encore la référence en résultat et en mobilité ; à 2 trains il perd 10 % de résultat pour une mobilité un peu moindre (0,404 contre 0,442). Le paysage est bruité — un seul cran sur un réglage voisin fait bouger le résultat de 4 à 10 % —, ce qui interdit d'optimiser plus finement que ce voisinage.",
+  "//anticipating": "Le bloc de sierra.json, inchangé : il a été réglé pour le modèle flat, pas pour celui-ci, et le régler à nouveau serait une seconde variable. Sous ce modèle l'anticipant fait un peu moins bien que la référence (175 232 contre 178 919).",
 
-  "//saisons": "Aucune saison, et c'est mesuré. Celles de heartland coûtent 9 % de résultat (219 862) pour +1,5 % de mobilité. Une saison de chauffage sur le charbon, pourtant de circonstance en montagne, donne +15 % de mobilité à trois trains (amplitude 0,25) mais fait perdre 3,5 à 6 % de résultat à 2, 4 et 5 trains, et devient défavorable à 0,35 comme à 0,5 : un effet qui dépend du nombre de trains et n'est pas monotone n'est pas un réglage, c'est du bruit. Les grumes ne voyagent jamais (la scierie de Pinecrest consomme tout sur place) : leur saison laisse le résultat identique (242 254).",
+  "//entretien": "Entretien des voies à 0,2 par kilomètre de voie et par tick, comme sierra.json : 72 723 sur 720 ticks, compris dans tous les résultats cités ici.",
 
-  "//croissance": "growthRatePerTick à 0, pour la même raison que heartland, re-mesurée ici : 0,003, 0,01 et 0,05 font tomber la mobilité de 0,628 à 0,524, 0,486 et 0,529, et le résultat de 243 680 à 218 364, 212 681 et 202 472 (mesures faites avec la saison de charbon à 0,25, écartée ensuite).",
+  "//events": "Pas d'événements, pour la même raison que sierra.json : un scénario éprouve une chose à la fois, et celui-ci éprouve le modèle de coût.",
 
-  "//entretien": "Entretien des voies à 0,2 par kilomètre de voie et par tick, décision de l'équipe du 30 septembre 2026 : 505 km de voie, 101 par tick, 72 723 sur 720 ticks. Charge fixe, due que les trains roulent ou non : la trace des marchés est identique au caractère près avec et sans elle, et tous les résultats cités dans ce fichier et dans docs/FINDINGS.md avant cette date se lisent donc diminués de 72 723 — 146 689 sous la référence, 169 531 sous l'anticipant, à trois trains.",
-
-  "//events": "Pas d'événements : ce scénario éprouve le couplage entre relief et économie, et un scénario éprouve une chose à la fois. Un choc local déplacerait la trajectoire de ±4 % à lui seul (voir « Événements historiques et aléatoires » dans docs/FINDINGS.md) et brouillerait la mesure du relief. Le module s'éprouve sur data/heartland-events.json.",
-
-  "//finance": "Pas de finance : un scénario éprouve une chose à la fois, et celui-ci éprouve le couplage réseau ↔ économie. Activer la finance ferait entrer le découvert et les intérêts dans la trésorerie du transporteur, donc dans ses achats, et brouillerait la mesure du coût du relief. Le devis du réseau (1 524 566, quinze fois la mise de départ) n'étant débité nulle part, la finance n'aurait de toute façon rien à financer ici.",
+  "//finance": "Pas de finance, pour la même raison que sierra.json : le découvert et les intérêts entreraient dans les achats du transporteur et brouilleraient la mesure du coût d'exploitation.",
 
   "priceModel": {
     "coverageHorizonTicks": 15,
@@ -48,7 +44,16 @@
     "minProfitPerUnit": 1.5,
     "expectedLoadFactor": 0.6,
     "priceImpactSlices": 8,
-    "minTradeQty": 0.25
+    "minTradeQty": 0.25,
+
+    "//costModel": "« mass » : coût proportionnel à la masse remorquée, décision sur le surcoût marginal (Transport/TrainCost.cs). expectedLoadFactor reste déclaré pour que l'économie soit celle de sierra.json au caractère près, mais ce modèle ne le lit pas.",
+    "costModel": "mass",
+    "massCost": {
+      "locomotiveTonnes": 48,
+      "wagonTareTonnes": 9,
+      "tonnesPerLoad": 9,
+      "calibrationLoadFactor": 0.89
+    }
   },
 
   "anticipating": {
@@ -154,7 +159,7 @@
     },
     {
       "id": "cedarton", "name": "Cedarton", "population": 21000,
-      "//": "Seconde scierie, à 355 km de la forêt et de l'autre côté du col. Elle ne démarre jamais, comme Ironhill dans heartland, et pour la même raison : les grumes y valent 12,4 en moyenne contre 3,0 à Pinecrest, un gain de 7,6 par chargement contre un coût imputé de 19,7 à cette distance. Le relief n'y est pour rien (voir « //geographie »).",
+      "//": "Seconde scierie, à 355 km de la forêt et de l'autre côté du col. Sous le modèle flat elle ne démarre jamais (coût imputé de 19,7 par chargement de grumes) ; ici un chargement de Pinecrest à Cedarton coûte ce qu'il ajoute à la facture, 6,1 à 0,03 (5,6 sur le plat, relief nul), et elle tourne à 24 %. À climbEquivalentKm = 0,2, le col porte ce surcoût à 9,0 et elle s'arrête : c'est la montagne, cette fois, qui la tue.",
       "demand": { "coal": 0.20, "boards": 0.11, "food": 0.13 },
       "industries": [ { "recipe": "sawmill", "capacity": 0.7 } ]
     },

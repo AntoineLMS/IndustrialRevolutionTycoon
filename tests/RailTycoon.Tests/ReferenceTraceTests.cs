@@ -56,11 +56,15 @@ internal static class ReferenceTraceTests
         new("heartland-events.json", "reference", "58116D2D6C28310A"),
         new("heartland-events.json", "anticipating", "E151A952D595E431"),
         new("ironpeak.json", "reference", "76B80943D1BEA4B7"),
-        new("terrain-plain.json", "reference", "AD49052A42109540"),
-        new("terrain-valley.json", "reference", "AB05B9D83446BD73"),
-        new("terrain-pass.json", "reference", "19AB8C39B5812F10"),
-        new("sierra.json", "reference", "E60F3BB3F1F2B083"),
-        new("sierra.json", "anticipating", "6CEA03DA2C0CDB89"),
+        new("terrain-plain.json", "reference", "385B9C85FF4583DB"),
+        new("terrain-valley.json", "reference", "20F02CD65C227C94"),
+        new("terrain-pass.json", "reference", "597B843F8505881B"),
+        new("sierra.json", "reference", "44876808B521C9E4"),
+        new("sierra.json", "anticipating", "B80E7C2F7DFBD1A5"),
+        // La même sierra sous le modèle de coût « mass » : le relief y entre dans les
+        // décisions, donc chaque solveur y joue sa propre partie.
+        new("sierra-marginal.json", "reference", "3A328BE0FBB30F59"),
+        new("sierra-marginal.json", "anticipating", "64BC50252805D975"),
     ];
 
     public static void Register(TestRunner runner)

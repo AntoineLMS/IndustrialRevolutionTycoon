@@ -119,6 +119,8 @@ internal static class SierraTests
             // 2026, trois trains, 720 ticks —
             //   référence   résultat 219 411   mobilité 0,384
             //   anticipant  résultat 242 254   mobilité 0,548
+            // Avec l'entretien des voies (0,2 par km et par tick depuis le 30 septembre),
+            // 146 689 et 169 531 : 72 723 de moins chacun, mobilités inchangées.
             // Les seuils gardent de la marge : ils protègent contre une régression,
             // ils ne consacrent pas ces chiffres exacts. Le bloc de heartland, recopié
             // tel quel, échouerait ici : 100 693 de résultat.
@@ -144,7 +146,9 @@ internal static class SierraTests
             // que la montagne coûte ou non. Si ce test échoue parce que le relief
             // entre désormais dans les décisions, c'est une bonne nouvelle : mettre
             // à jour docs/FINDINGS.md (« Relief et économie ensemble »), qui chiffre
-            // les options, et retirer ce test.
+            // les options, et retirer ce test. Le constat est celui du modèle de coût
+            // par défaut (« flat ») ; sous le modèle « mass », le relief entre dans
+            // les décisions, et MarginalCostTests vérifie le contraire.
             var scenario = ScenarioLoader.Load(SierraPath());
             var flat = ScenarioLoader.Load(SierraPath());
             flat.Network.Traction.ClimbEquivalentKm = 0;
