@@ -329,7 +329,11 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
 5. **Une bourse solide** : une profondeur de carnet finie, et des grandeurs
    financières moyennées.
 6. **L'éviction du PDG**, et les objectifs de scénario.
-7. **Un relief qui pèse** : c'est le chantier en cours du coût marginal.
+7. **Un relief qui pèse.** Le coût marginal réel existe, en option
+   (`haulage.costModel = "mass"`) : il crée deux bassins de part et d'autre du col
+   sans détruire de valeur, mais seulement au-delà d'une traction de 0,12 à 0,15.
+   En faire le défaut est une décision ouverte (FINDINGS.md, « Le coût marginal
+   réel »).
 
 ## Questions ouvertes, en un coup d'œil
 
