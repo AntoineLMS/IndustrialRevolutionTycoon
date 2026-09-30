@@ -63,6 +63,11 @@ kilométriques.
 courbe, coût de déblai et de remblai calculé sur le terrain, ponts, tunnels,
 aiguillages.
 
+**Coût du réseau** : l'entretien des voies, 0,2 par kilomètre de voie et par tick
+(`costs.upkeepPerTrackKmPerTick`), prélevé au transporteur en tête de la phase
+transport, que les trains roulent ou non. Le devis de construction lui-même n'est
+toujours débité nulle part.
+
 **Ce qui manque** : les aiguillages comme objets (une bifurcation est pour l'instant
 un nœud sans contrainte de géométrie), la recherche automatique d'un tracé — le
 géomètre chiffre celui qu'on lui donne —, le terrassement à flanc de coteau, la

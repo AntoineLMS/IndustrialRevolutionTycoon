@@ -218,6 +218,19 @@ public sealed class Company
     }
 
     /// <summary>
+    /// Part de <see cref="TotalOperatingCost"/> qui paie l'entretien des voies,
+    /// et non les kilomètres des trains. Elle reste une charge d'exploitation —
+    /// <c>bilan-tresorerie</c> n'a pas de cinquième flux — mais se lit à part.
+    /// </summary>
+    public double TotalTrackUpkeep;
+
+    public void PayTrackUpkeep(double amount)
+    {
+        PayOperating(amount);
+        TotalTrackUpkeep += amount;
+    }
+
+    /// <summary>
     /// Cumul net des mouvements financiers passés en trésorerie : positif si la
     /// finance a apporté de l'argent (emprunt, apport en capital, cession de
     /// titres), négatif si elle en a prélevé (intérêts, dividende, achat de

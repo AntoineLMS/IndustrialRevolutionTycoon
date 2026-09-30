@@ -801,7 +801,9 @@ mention contraire.
    ne compter que les dénivelés au-delà d'un seuil, ou lisser le profil avant de
    sommer — deux façons de déplacer les empreintes `terrain-*`, à décider avant
    d'écrire d'autres cartes.
-4. **Le devis doit-il coûter quelque chose ?** Il n'est débité nulle part : la
+4. *Tranchée le 30 septembre 2026 : entretien de 0,2 par kilomètre de voie et
+   par tick, voir la section suivante.* **Le devis doit-il coûter quelque chose ?**
+   Il n'est débité nulle part : la
    sierra coûte 1 524 566, quinze fois la mise de départ et près de quatorze ans
    de son résultat, et ce chiffre n'entre dans aucun compte. Tant que c'est le cas,
    « contourner, franchir ou percer » est un choix sans conséquence dans la
@@ -818,6 +820,45 @@ mention contraire.
    le résultat de la sierra par deux. C'est soit une contrainte à documenter pour
    les auteurs de cartes, soit le signe d'un solveur trop sensible pour servir
    sans réglage.
+
+## Le réseau coûte : entretien de 0,2 par kilomètre de voie et par tick
+
+*Décision de l'équipe, 30 septembre 2026, en réponse à la décision 4 ci-dessus.*
+
+Chaque kilomètre de voie posée coûte 0,2 par tick au transporteur, que ses trains
+roulent ou non — même sous administration judiciaire, qui arrête les trains, pas
+le réseau. Une double voie compte double. Le tarif vit dans les données
+(`network.costs.upkeepPerTrackKmPerTick`, 0,2 par défaut), et le prélèvement se
+fait une fois par tick en tête de la phase transport. Le harnais l'affiche sous
+l'exploitation (« dont entretien ») et dans le devis (`--survey`).
+
+| scénario | voie | entretien / tick | sur 720 ticks | résultat avant | résultat après |
+|---|---|---|---|---|---|
+| sierra, référence | 505 km | 101 | 72 723 | 219 411 | 146 689 |
+| sierra, anticipant | 505 km | 101 | 72 723 | 242 254 | 169 531 |
+| terrain-plain | 60 km | 12 | 8 640 | −75 391 | −84 031 |
+| terrain-valley | 60 km | 12 | 8 641 | −78 511 | −87 152 |
+| terrain-pass | 120 km | 24 | 17 282 | −78 366 | −95 648 |
+
+La carte du col compte deux itinéraires construits (par le col et par la crête
+percée) : on paie la voie qu'on a posée, qu'on y roule ou non.
+
+**La trace des marchés est identique au caractère près** avec et sans entretien,
+sur les quatre cartes : c'est une charge fixe, elle ne change ni un prix ni un
+chargement. Conséquence pratique : tous les résultats de la section « Relief et
+économie ensemble », mesurés avant cette décision, restent justes à une
+soustraction près — 72 723 pour chaque ligne de la sierra à trois trains (le
+tableau par nombre de trains aussi, puisque l'entretien ne dépend pas des
+trains), 8 640 ou 17 282 pour les cartes d'essai. `heartland`, `ironpeak` et
+leurs variantes n'ont pas de réseau déclaré et ne changent pas.
+
+Ce que l'entretien ne fait pas encore : peser sur un choix. Un tracé plus long
+coûte plus cher à entretenir, mais aucun acteur de la simulation ne choisit de
+tracé — le réseau est donné par le scénario. Il pèsera sur les décisions le jour
+où la construction se fera en cours de partie (module `network`, « ce qui
+manque »), et c'est ce qui le distingue du relief : lui ne pèsera sur rien tant
+que les trains roulent à vide (voir la décision 1 et le chantier du coût
+marginal).
 
 ## Questions ouvertes pour l'équipe
 

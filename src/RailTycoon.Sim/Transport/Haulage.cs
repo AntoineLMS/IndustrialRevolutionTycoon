@@ -83,6 +83,17 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
 
     public void Step(WorldState world, SimTick tick)
     {
+        // L'entretien des voies est dû avant la porte ci-dessous, et c'est voulu :
+        // une compagnie sous administration arrête ses trains, pas son réseau. Une
+        // voie posée coûte ce qu'elle coûte, qu'on y roule ou non. Nul sans réseau
+        // déclaré, donc heartland et les scénarios à lignes saisies à la main ne
+        // voient rien changer.
+        if (world.Network is { } network)
+        {
+            double upkeep = network.UpkeepPerTick;
+            if (upkeep > 0) world.Company.PayTrackUpkeep(upkeep);
+        }
+
         // Une compagnie sous administration ne fait pas rouler ses trains. Sans
         // cette porte, plus elle roulait plus elle creusait : les coûts
         // kilométriques étaient prélevés sans condition alors que les achats de

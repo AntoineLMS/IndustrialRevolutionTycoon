@@ -63,7 +63,8 @@
       "bridgePerKmPerMetre": 1800,
       "tunnelPerKm": 120000,
       "curvePerDegree": 400,
-      "extraTrackStructureFactor": 0.6
+      "extraTrackStructureFactor": 0.6,
+      "upkeepPerTrackKmPerTick": 0.2
     },
 
     "traction": { "climbEquivalentKm": 0.03 },

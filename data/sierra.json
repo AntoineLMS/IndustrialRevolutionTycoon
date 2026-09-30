@@ -23,6 +23,8 @@
 
   "//croissance": "growthRatePerTick à 0, pour la même raison que heartland, re-mesurée ici : 0,003, 0,01 et 0,05 font tomber la mobilité de 0,628 à 0,524, 0,486 et 0,529, et le résultat de 243 680 à 218 364, 212 681 et 202 472 (mesures faites avec la saison de charbon à 0,25, écartée ensuite).",
 
+  "//entretien": "Entretien des voies à 0,2 par kilomètre de voie et par tick, décision de l'équipe du 30 septembre 2026 : 505 km de voie, 101 par tick, 72 723 sur 720 ticks. Charge fixe, due que les trains roulent ou non : la trace des marchés est identique au caractère près avec et sans elle, et tous les résultats cités dans ce fichier et dans docs/FINDINGS.md avant cette date se lisent donc diminués de 72 723 — 146 689 sous la référence, 169 531 sous l'anticipant, à trois trains.",
+
   "//events": "Pas d'événements : ce scénario éprouve le couplage entre relief et économie, et un scénario éprouve une chose à la fois. Un choc local déplacerait la trajectoire de ±4 % à lui seul (voir « Événements historiques et aléatoires » dans docs/FINDINGS.md) et brouillerait la mesure du relief. Le module s'éprouve sur data/heartland-events.json.",
 
   "//finance": "Pas de finance : un scénario éprouve une chose à la fois, et celui-ci éprouve le couplage réseau ↔ économie. Activer la finance ferait entrer le découvert et les intérêts dans la trésorerie du transporteur, donc dans ses achats, et brouillerait la mesure du coût du relief. Le devis du réseau (1 524 566, quinze fois la mise de départ) n'étant débité nulle part, la finance n'aurait de toute façon rien à financer ici.",
@@ -199,7 +201,8 @@
       "bridgePerKmPerMetre": 1800,
       "tunnelPerKm": 120000,
       "curvePerDegree": 400,
-      "extraTrackStructureFactor": 0.6
+      "extraTrackStructureFactor": 0.6,
+      "upkeepPerTrackKmPerTick": 0.2
     },
 
     "traction": { "climbEquivalentKm": 0.03 },

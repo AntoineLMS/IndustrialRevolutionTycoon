@@ -119,6 +119,8 @@ internal static class SierraTests
             // 2026, trois trains, 720 ticks —
             //   référence   résultat 219 411   mobilité 0,384
             //   anticipant  résultat 242 254   mobilité 0,548
+            // Avec l'entretien des voies (0,2 par km et par tick depuis le 30 septembre),
+            // 146 689 et 169 531 : 72 723 de moins chacun, mobilités inchangées.
             // Les seuils gardent de la marge : ils protègent contre une régression,
             // ils ne consacrent pas ces chiffres exacts. Le bloc de heartland, recopié
             // tel quel, échouerait ici : 100 693 de résultat.

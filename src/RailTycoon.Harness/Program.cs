@@ -290,6 +290,8 @@ internal static class Report
 
         Console.WriteLine();
         Console.WriteLine($"  Total réseau {network.BuiltCost.ToString("N0", Ci),12}");
+        Console.WriteLine($"  Entretien    {network.UpkeepPerTick.ToString("N2", Ci),12} par tick " +
+                          $"({network.TrackKm.ToString("N1", Ci)} km de voie)");
         Console.WriteLine();
 
         foreach (var route in network.Routes)
@@ -434,10 +436,17 @@ internal static class Report
         // facturé et ce qu'auraient coûté les mêmes kilomètres à plat. C'est le seul
         // effet du relief sur l'économie tant qu'il n'entre dans aucune décision du
         // transporteur (docs/FINDINGS.md, « Relief et économie ensemble »).
+        // L'entretien des voies est retiré avant : il est dû que les trains roulent
+        // ou non, et n'a rien à voir avec le relief.
         double flatCost = w.Trains.Sum(t => t.TotalKmTravelled * t.CostPerKm);
+        double trainCost = co.TotalOperatingCost - co.TotalTrackUpkeep;
         if (w.Network is not null && flatCost > 0)
-            Console.WriteLine($"    dont relief       -{(co.TotalOperatingCost - flatCost).ToString("N0", Ci),12}" +
-                              $"   ({((co.TotalOperatingCost / flatCost - 1) * 100).ToString("0.0", Ci)} % du coût à plat)");
+            Console.WriteLine($"    dont relief       -{(trainCost - flatCost).ToString("N0", Ci),12}" +
+                              $"   ({((trainCost / flatCost - 1) * 100).ToString("0.0", Ci)} % du coût à plat)");
+        if (co.TotalTrackUpkeep > 0)
+            Console.WriteLine($"    dont entretien    -{co.TotalTrackUpkeep.ToString("N0", Ci),12}" +
+                              $"   ({w.Network!.TrackKm.ToString("N0", Ci)} km de voie, " +
+                              $"{w.Network.UpkeepPerTick.ToString("0.##", Ci)} par tick)");
         Console.WriteLine($"  Résultat net         {co.NetProfit.ToString("N0", Ci),12}");
         // Quatrième flux de bilan-tresorerie. Négatif = la finance a prélevé au
         // transporteur ; c'est de l'argent qui n'est plus disponible pour le fret.

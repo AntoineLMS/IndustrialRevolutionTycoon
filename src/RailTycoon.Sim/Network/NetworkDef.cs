@@ -187,6 +187,21 @@ public sealed class ConstructionCostDef
     /// qu'une fois.
     /// </summary>
     public double ExtraTrackStructureFactor { get; set; } = 0.6;
+
+    /// <summary>
+    /// Entretien de la voie posée, par kilomètre de voie et par tick, prélevé au
+    /// transporteur que ses trains roulent ou non. Une double voie compte deux
+    /// kilomètres par kilomètre de tracé.
+    /// <para>
+    /// C'est ce qui fait que le réseau coûte quelque chose : le devis de
+    /// construction n'est débité nulle part (docs/FINDINGS.md, « Relief et
+    /// économie ensemble », décision 4). Le tarif est proportionnel à la longueur
+    /// de voie, pas au devis : une voie plus longue coûte plus cher à entretenir,
+    /// un tunnel ou un pont pas davantage que la voie qui les traverse. À 0,2, la
+    /// sierra (505 km) paie 101 par tick, 72 720 sur 720 ticks.
+    /// </para>
+    /// </summary>
+    public double UpkeepPerTrackKmPerTick { get; set; } = 0.2;
 }
 
 /// <summary>Ce que le relief coûte à l'exploitation, et non à la construction.</summary>
