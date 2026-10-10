@@ -83,6 +83,26 @@
       "marketImpact": 1.5
     },
 
+    "market": {
+      "//": "La bourse solide (docs/FINDINGS.md, « La bourse solide »). Le flottant n'est plus une contrepartie de profondeur infinie : un ordre remonte le carnet, les autres actionnaires prennent leurs bénéfices sur une montée soudaine, et une action trop chère se divise.",
+      "//carnet": "Profondeur finie : un ordre se découpe en tranches de 1 % du capital ; chacune s'exécute au cours du moment, puis le déplace de l'impact de marché (1,5 % par tranche, valuation.marketImpact). Acheter 38 % du capital en un soir ne se paie plus au cours d'avant : les dernières actions coûtent 75 % plus cher que les premières. La taille de la tranche (0,5 %, 1 %, 2 %) ne déplace presque rien ; c'est l'impact qui fait la profondeur.",
+      "bookTrancheFraction": 0.01,
+      "//prises": "Prises de bénéfices : quand le cours dépasse de plus de 15 % à la fois sa valeur fondamentale et le cours de référence des investisseurs (qui suit une baisse le jour même, une hausse en 30 jours), les autres actionnaires revendent au flottant, dans le carnet, de quoi refermer tout l'excès dans la journée, sans céder plus de 30 % du flottant. Avec la profondeur finie, le soir de l'ordre de bourse du 1er avril 1872 coûte 45 000 au magnat témoin de heartland-cycle au lieu de lui en rapporter 539 000. Seuil (10 à 25 %), vitesse et part vendue ne déplacent la fortune moyenne que de quelques milliers ; à vitesse 0,5 et 10 % du flottant, le même soir lui rapporte encore 65 000.",
+      "profitTaking": {
+        "enabled": true,
+        "thresholdPercent": 15,
+        "referenceTicks": 30,
+        "speed": 1,
+        "maxSellFraction": 0.3
+      },
+      "//division": "Division 2 pour 1 d'une action qui finit l'exercice au-dessus de 100. Le cours de heartland n'y arrive pas (35 au plus en six ans) : la règle attend les parties longues, et un test l'éprouve.",
+      "split": {
+        "enabled": true,
+        "priceThreshold": 100,
+        "ratio": 2
+      }
+    },
+
     "//decouvert": "Une trésorerie d'exploitation négative n'est plus tacite : elle devient un découvert au passif, qui porte intérêt à 14 % — délibérément plus cher qu'une obligation, sinon le joueur n'aurait aucune raison de préférer l'emprunt. Le découvert autorisé est gagé sur 35 % des capitaux propres : une société solide encaisse un mauvais trimestre, une société vide est mise sous administration et ses trains s'arrêtent.",
 
     "overdraft": {
@@ -107,6 +127,10 @@
       "marginInitialRatio": 0.65,
       "marginMaintenanceRatio": 0.70,
       "marginAnnualRatePercent": 9,
+      "//ligne": "Le courtier ne prête pas au-delà de 50 % de la valeur des titres, comptés au cours d'avant l'ordre, et appelle la marge à 70 % : un achat frais a un matelas de 28 % de baisse avant l'appel. Prêter jusqu'au seuil d'appel, comme avant, ruine le magnat témoin de heartland-cycle 9 fois sur 40 (toutes soldées par son salaire) ; à 50 %, aucune ; à 30 %, plus aucun appel de marge, mais un demi-million atteint plus tard.",
+      "creditLineRatio": 0.5,
+      "//cascade": "Une vente forcée pèse sur le cours et peut rouvrir le déficit qu'elle comblait : le courtier revend au nouveau cours, jusqu'à 20 tours dans la journée, et reprend le lendemain. Au-delà de (1 − 0,70) / (0,70 × 1,5) = 29 % du capital, chaque vente forcée creuse le déficit au lieu de le combler : la cascade va à la liquidation, et si tout vendre ne suffit pas, à la ruine.",
+      "marginCallMaxRounds": 20,
       "sellAboveCostRatio": 1.6,
       "sellFraction": 0.25,
       "minLotShares": 100,
@@ -115,6 +139,21 @@
       "rescueCashFraction": 0.5,
       "rescueDiscountPercent": 25
     },
+
+    "ceoPay": {
+      "//": "Le président touche 12 000 par an, constatés chaque mois par la compagnie et payés sur sa caisse disponible, soit environ 7 % de son résultat annuel. Révisé à chaque clôture selon la performance — le résultat de l'exercice rapporté à la capitalisation moyenne de l'exercice, la valeur de la compagnie que la vision retient pour le score de dirigeant — : 10 % de salaire en plus par point au-dessus de 8 %, entre la moitié et le double. Au-delà de 12 %, une prime de 2 % du résultat obtenu au-delà.",
+      "enabled": true,
+      "baseAnnual": 12000,
+      "intervalTicks": 30,
+      "performanceBase": "marketValue",
+      "targetPercent": 8,
+      "sensitivity": 10,
+      "minFactor": 0.5,
+      "maxFactor": 2,
+      "bonusThresholdPercent": 12,
+      "bonusSharePercent": 2
+    },
+
 
     "bondOffers": [
       { "id": "serie-a", "name": "Obligation 1870, série A", "principal": 100000, "annualRatePercent": 6.0, "termTicks": 540, "availableFromTick": 0 },

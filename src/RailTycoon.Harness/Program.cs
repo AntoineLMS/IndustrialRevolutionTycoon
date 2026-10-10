@@ -52,6 +52,7 @@ internal static class Program
         var recorder = new CsvRecorder { Every = opts.RecordEvery };
         var stats = new RunStatistics { WarmupTicks = opts.WarmupTicks };
         var rotation = new FreightRotation { WarmupTicks = opts.WarmupTicks };
+        var financeStats = new FinanceStatistics { WarmupTicks = opts.WarmupTicks };
 
         var cashHistory = new List<double>();
         var violations = new List<(int Tick, Invariants.Violation V)>();
@@ -70,6 +71,7 @@ internal static class Program
             recorder.Record(sim.World);
             stats.Sample(sim.World);
             rotation.Sample(sim.World);
+            financeStats.Sample(sim.World);
             cashHistory.Add(sim.World.Company.Cash);
 
             decimal residual = Report.WorstResidual(sim.World);
@@ -104,12 +106,13 @@ internal static class Program
         CsvRecorder.WriteEvents(sim.World, opts.OutDir);
         CsvRecorder.WriteCycle(sim.World, opts.OutDir);
         CsvRecorder.WriteObjectives(sim.World, opts.OutDir);
+        CsvRecorder.WriteFinanceJournal(sim.World, opts.OutDir);
         Report.PrintBalance(scenario);
         Report.PrintRun(sim, opts, recorder, stats, cashHistory, rotation);
         Report.PrintEvents(sim);
         Report.PrintCycle(sim);
         Report.PrintObjectives(sim);
-        Report.PrintFinance(sim, worstResidual, worstResidualTick, worstFrontierGap);
+        Report.PrintFinance(sim, worstResidual, worstResidualTick, worstFrontierGap, financeStats);
 
         if (violations.Count > 0)
         {
@@ -795,7 +798,42 @@ internal static class Report
     /// Plus grand écart de bilan, tous grands livres confondus. C'est le chiffre
     /// qui dit si la comptabilité tient : il doit valoir zéro, pas « très peu ».
     /// </summary>
+    /// <summary>
+    /// Le journal public de la bourse : les événements rares en clair (ruine, division,
+    /// clôtures d'exercice), les fréquents en compte (appels de marge, prises de
+    /// bénéfices). Le détail est dans bourse.csv.
+    /// </summary>
+    private static void PrintMarketJournal(Simulation sim)
+    {
+        var journal = sim.World.Finance.Journal;
+        if (journal.Count == 0) return;
+
+        Console.WriteLine();
+        int calls = journal.Count(r => r.Kind == MarketRecordKind.MarginCall);
+        long forced = journal.Where(r => r.Kind == MarketRecordKind.MarginCall).Sum(r => r.Shares);
+        int maxRounds = journal.Where(r => r.Kind == MarketRecordKind.MarginCall).Select(r => r.Rounds).DefaultIfEmpty(0).Max();
+        var takes = journal.Where(r => r.Kind == MarketRecordKind.ProfitTaking).ToList();
+        Console.WriteLine($"Journal de la bourse — {calls} appel(s) de marge ({forced} titres vendus d'office, " +
+                          $"jusqu'à {maxRounds} tour(s) un même jour), {takes.Count} jour(s) de prises de bénéfices " +
+                          $"({takes.Sum(r => r.Shares)} titres) — détail dans bourse.csv");
+        foreach (var r in journal)
+        {
+            string line = r.Kind switch
+            {
+                MarketRecordKind.Ruin => $"magnat RUINÉ : titres vendus, caisse saisie, dette résiduelle {r.Amount.ToString("N2", Ci)}",
+                MarketRecordKind.RuinCleared => $"magnat sorti de la ruine : dette résiduelle soldée ({r.Amount.ToString("N2", Ci)} saisis au total)",
+                MarketRecordKind.Split => $"division {r.Shares} pour 1 des actions de {r.CompanyId} : cours {r.PriceBefore.ToString("0.00", Ci)} → {r.PriceAfter.ToString("0.000", Ci)}",
+                MarketRecordKind.PayReview => $"clôture de l'exercice : performance {(r.Rate * 100m).ToString("0.0", Ci)} %, " +
+                                              $"salaire annuel révisé à {r.Amount.ToString("N0", Ci)}" +
+                                              (r.Bonus > 0m ? $", prime de {r.Bonus.ToString("N2", Ci)}" : ", pas de prime"),
+                _ => "",
+            };
+            if (line.Length > 0) Console.WriteLine($"  {Date(sim.World, r.Tick),-12}{line}");
+        }
+    }
+
     public static decimal WorstResidual(WorldState world)
+
     {
         if (!world.Finance.Enabled) return 0m;
 
@@ -814,7 +852,7 @@ internal static class Report
     }
 
     public static void PrintFinance(Simulation sim, decimal worstResidual, int worstResidualTick,
-        double worstFrontierGap)
+        double worstFrontierGap, FinanceStatistics stats)
     {
         var finance = sim.World.Finance;
         if (!finance.Enabled || finance.Player is null || finance.Magnate is null)
@@ -872,6 +910,24 @@ internal static class Report
                           $"   appels de marge : {tycoon.MarginCalls}");
         Console.WriteLine($"  Part du capital      {(player.Register.HeldBy(Holders.Tycoon) * 100.0
             / Math.Max(1, player.Register.SharesIssued)).ToString("0.0", Ci),13} %");
+        if (tycoon.ForcedSaleShares > 0)
+            Console.WriteLine($"  Ventes forcées       {tycoon.ForcedSaleShares,14} titres en {tycoon.ForcedSaleRounds} tour(s)");
+        if (sim.World.Def.Finance.CeoPay.Enabled)
+            Console.WriteLine($"  Salaire + primes     {tycoon.PayReceivedTotal.ToString("N2", Ci),14}" +
+                              $"   (dont primes {player.BonusAccruedTotal.ToString("N2", Ci)} ; " +
+                              $"dû {player.Book[Accounts.SalaryPayable].ToString("N2", Ci)} ; " +
+                              $"facteur en cours ×{player.SalaryFactor.ToString("0.00", Ci)}, " +
+                              $"dernière performance {(player.LastPerformance * 100m).ToString("0.0", Ci)} %)");
+
+        // La ruine d'abord : c'est l'état qui change ce que le magnat peut encore faire.
+        string personal = tycoon.Ruined
+            ? $"RUINÉ depuis le {Date(sim.World, tycoon.RuinTick)} — dette résiduelle {tycoon.ResidualDebt.ToString("N2", Ci)} " +
+              $"(constatée : {tycoon.ResidualDebtAtRuin.ToString("N2", Ci)}), ne peut plus rien acheter"
+            : tycoon.RuinCount > 0
+                ? $"sorti de la ruine le {Date(sim.World, tycoon.RuinClearedTick)} ({tycoon.RuinCount} ruine(s), " +
+                  $"{tycoon.SeizedTotal.ToString("N2", Ci)} saisis)"
+                : "solvable";
+        Console.WriteLine($"  Situation            {personal}");
 
         // Les emprunts de la société, et ce qui a fait leur taux. Sans conjoncture, le
         // taux facial de l'offre : la ligne n'apprend rien, on ne l'affiche pas.
@@ -892,6 +948,27 @@ internal static class Report
                                   $"{bond.Outstanding.ToString("N2", Ci),14}");
             }
         }
+
+        // La bourse, en moyenne dans le temps : la dette n° 2 du module. La fortune du
+        // dernier soir n'est qu'un instantané, et un soir d'ordre de bourse en porte
+        // encore l'impact.
+        if (stats.Samples > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"Bourse — sur {stats.Samples} soirs après chauffe (moyenne ± écart-type, [min – max])");
+            Console.WriteLine($"  Cours de l'action    {stats.SharePrice.Mean.ToString("N2", Ci),14} ± {stats.SharePrice.StdDev.ToString("N2", Ci)}" +
+                              $"   [{stats.SharePrice.Min.ToString("N2", Ci)} – {stats.SharePrice.Max.ToString("N2", Ci)}]" +
+                              (player.SplitFactor > 1 ? $"   (en actions d'origine, divisions ×{player.SplitFactor})" : ""));
+            Console.WriteLine($"  Fortune du magnat    {stats.NetWorth.Mean.ToString("N0", Ci),14} ± {stats.NetWorth.StdDev.ToString("N0", Ci)}" +
+                              $"   [{stats.NetWorth.Min.ToString("N0", Ci)} – {stats.NetWorth.Max.ToString("N0", Ci)}]");
+            Console.WriteLine($"  Dette de marge       {stats.MarginLoan.Mean.ToString("N0", Ci),14}");
+            Console.WriteLine($"  Plus grand saut      {stats.LargestJump.ToString("N0", Ci),14} de fortune d'un soir au suivant" +
+                              (stats.LargestJumpTick >= 0 ? $" (le {Date(sim.World, stats.LargestJumpTick)})" : "") +
+                              $" ; cours : {(stats.LargestPriceMove * 100).ToString("0.0", Ci)} %");
+            Console.WriteLine($"  Soirs ruiné          {stats.RuinedTicks,14}");
+        }
+
+        PrintMarketJournal(sim);
 
         Console.WriteLine();
         Console.WriteLine("Concurrents");

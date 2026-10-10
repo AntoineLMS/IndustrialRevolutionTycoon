@@ -208,6 +208,17 @@ public static class Invariants
                     $"trains à l'arrêt = {world.Company.Grounded} alors que " +
                     $"l'administration judiciaire = {playerCompany.InReceivership}"));
 
+            // La rémunération du président : ce qui a été constaté est payé ou dû, au
+            // centime, et ce qui a été payé est arrivé dans la caisse du magnat.
+            decimal salaryDue = playerCompany.Book[Accounts.SalaryPayable];
+            if (playerCompany.SalaryAccruedTotal + playerCompany.BonusAccruedTotal != playerCompany.SalaryPaidTotal + salaryDue)
+                violations.Add(new("salaire-president",
+                    $"salaire et primes constatés {playerCompany.SalaryAccruedTotal + playerCompany.BonusAccruedTotal} ≠ " +
+                    $"payés {playerCompany.SalaryPaidTotal} + dus {salaryDue}"));
+            if (finance.Magnate is not null && finance.Magnate.PayReceivedTotal != playerCompany.SalaryPaidTotal)
+                violations.Add(new("salaire-president",
+                    $"la compagnie a payé {playerCompany.SalaryPaidTotal}, le magnat a reçu {finance.Magnate.PayReceivedTotal}"));
+
             double expectedLimit = playerCompany.InReceivership
                 ? 0.0
                 : Money.ToDouble(playerCompany.CreditFacility);
@@ -231,10 +242,27 @@ public static class Invariants
                     $"magnat : écart {tycoon.Book.Residual} " +
                     $"(dernière écriture : {tycoon.Book.LastEntry})"));
 
-            if (tycoon.InterestAccruedTotal != tycoon.InterestPaidTotal + tycoon.Book[Accounts.AccruedPayable])
+            // Les intérêts dus et impayés au jour d'une ruine passent dans la dette
+            // résiduelle : ils restent comptés, dans leur propre cumul.
+            if (tycoon.InterestAccruedTotal !=
+                tycoon.InterestPaidTotal + tycoon.Book[Accounts.AccruedPayable] + tycoon.InterestCapitalizedAtRuin)
                 violations.Add(new("dette-emprunts",
                     $"magnat : {tycoon.InterestAccruedTotal} d'intérêts de marge dus ≠ " +
-                    $"{tycoon.InterestPaidTotal} payés + {tycoon.Book[Accounts.AccruedPayable]} à payer"));
+                    $"{tycoon.InterestPaidTotal} payés + {tycoon.Book[Accounts.AccruedPayable]} à payer " +
+                    $"+ {tycoon.InterestCapitalizedAtRuin} versés dans la dette résiduelle"));
+
+            // La ruine est un état explicite, et elle est cohérente avec le bilan : une
+            // dette résiduelle n'existe que chez un magnat ruiné, et un magnat ruiné n'a
+            // plus de compte sur marge. Un ruiné sans dette serait sorti de la ruine ; une
+            // dette résiduelle sans ruine serait une dette qu'aucun revenu ne rembourse.
+            if (tycoon.Ruined != (tycoon.ResidualDebt > 0m))
+                violations.Add(new("ruine-explicite",
+                    $"magnat : ruiné = {tycoon.Ruined}, dette résiduelle {tycoon.ResidualDebt}"));
+            if (tycoon.Ruined && (tycoon.MarginLoan != 0m || tycoon.Cash != 0m))
+                violations.Add(new("ruine-explicite",
+                    $"magnat ruiné avec une marge de {tycoon.MarginLoan} et une caisse de {tycoon.Cash} : " +
+                    "la caisse doit aller à la dette résiduelle, la marge y être versée"));
+
 
             // Le portefeuille au bilan est tenu au prix de revient : il doit valoir
             // exactement la somme des lignes.

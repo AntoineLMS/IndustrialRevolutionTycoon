@@ -22,6 +22,21 @@ public static class Accounts
     public const string AccruedPayable = "accrued-payable";
     public const string MarginLoan = "margin-loan";
 
+    /// <summary>
+    /// Salaire et prime du président constatés et pas encore payés. Un compte à part,
+    /// et non les charges à payer : celles-ci reçoivent à la fusion les charges
+    /// impayées d'une compagnie absorbée, qu'il ne faudrait pas verser au président.
+    /// </summary>
+    public const string SalaryPayable = "salary-payable";
+
+
+    /// <summary>
+    /// La dette résiduelle d'un magnat ruiné : ce que le courtier réclame encore une
+    /// fois tous les titres vendus et la caisse saisie. Elle ne porte pas intérêt — le
+    /// compte sur marge est clos — et chaque revenu du magnat la rembourse en priorité.
+    /// </summary>
+    public const string ResidualDebt = "residual-debt";
+
     public const string ShareCapital = "share-capital";
     public const string RetainedEarnings = "retained-earnings";
     public const string PersonalEquity = "personal-equity";
@@ -102,6 +117,17 @@ public sealed class ShareRegister
         SharesIssued = 0;
     }
 
+    /// <summary>
+    /// Division d'actions : chaque ligne du registre est multipliée par le rapport, le
+    /// total émis aussi. Aucune action ne change de mains ; la somme détenue reste
+    /// égale au total émis, par construction.
+    /// </summary>
+    public void Split(int ratio)
+    {
+        foreach (var holder in _holders) holder.Shares *= ratio;
+        SharesIssued *= ratio;
+    }
+
     public long HeldTotal()
     {
         long total = 0;
@@ -172,6 +198,12 @@ public sealed class Portfolio
         position.Shares -= shares;
         position.CostBasis -= basisOut;
         return basisOut;
+    }
+
+    /// <summary>Division d'actions : le nombre de titres de la ligne est multiplié, son prix de revient total ne bouge pas.</summary>
+    public void Split(string companyId, int ratio)
+    {
+        if (_byId.TryGetValue(companyId, out var position)) position.Shares *= ratio;
     }
 
     public decimal CostBasisTotal()
@@ -255,6 +287,50 @@ public sealed class FinanceCompany
     /// <summary>Découvert autorisé au tick courant, gagé sur les capitaux propres.</summary>
     public decimal CreditFacility;
 
+    // --- La bourse (StockMarket). Tout ce qui est exprimé par action est divisé à
+    // une division d'actions, comme le cours.
+
+    /// <summary>Valeur fondamentale par action, telle que la dernière valorisation l'a calculée : la cible vers laquelle le cours converge.</summary>
+    public decimal IntrinsicPrice;
+
+    /// <summary>
+    /// Cours de référence des investisseurs : il suit le cours à la baisse le jour même,
+    /// à la hausse lentement. Une prise de bénéfices se mesure contre lui.
+    /// </summary>
+    public decimal ReferencePrice;
+
+    /// <summary>Produit des rapports de division depuis l'ouverture. Sert à convertir les quantités de titres que les données expriment en actions d'origine.</summary>
+    public long SplitFactor = 1;
+
+    /// <summary>Titres revendus par les investisseurs en prises de bénéfices, cumulés, et nombre de jours où ils l'ont fait.</summary>
+    public long ProfitTakingShares;
+    public int ProfitTakingDays;
+
+    // --- Le salaire du président (CeoPay). Tenu par la compagnie qui le verse.
+
+    /// <summary>Facteur appliqué au salaire de base pour l'exercice en cours, fixé à la clôture du précédent.</summary>
+    public decimal SalaryFactor = 1m;
+
+    /// <summary>Performance du dernier exercice clos (résultat rapporté à la valeur), nulle avant la première clôture.</summary>
+    public decimal LastPerformance;
+
+    /// <summary>
+    /// Salaire et primes constatés, et ce qui en a été payé. La différence est au passif
+    /// (<c>salary-payable</c>) : elle se règle dès que la caisse le permet.
+    /// </summary>
+    public decimal SalaryAccruedTotal;
+    public decimal BonusAccruedTotal;
+    public decimal SalaryPaidTotal;
+
+    /// <summary>Ouverture de l'exercice en cours : report à nouveau, dividendes déjà versés, capitaux propres.</summary>
+    public decimal YearStartRetained;
+    public decimal YearStartDividends;
+    public decimal YearStartEquity;
+
+    /// <summary>Somme des capitalisations du soir sur l'exercice en cours, et nombre de soirs.</summary>
+    public decimal YearMarketCapSum;
+    public int YearTicks;
+
     // --- Cumuls servant aux invariants de dette. Ils ne sont pas cosmétiques :
     // c'est par eux qu'on vérifie qu'aucun intérêt ni aucun capital ne s'évapore.
     public decimal PrincipalIssuedTotal;
@@ -298,7 +374,8 @@ public sealed class FinanceCompany
     /// capitalisation ne le suggère.
     /// </summary>
     public decimal EnterpriseValue =>
-        MarketCap + Debt + OverdraftBalance + UnpaidInterest + Book[Accounts.AccruedPayable] - Cash;
+        MarketCap + Debt + OverdraftBalance + UnpaidInterest + Book[Accounts.AccruedPayable]
+        + Book[Accounts.SalaryPayable] - Cash;
 
     public decimal OutstandingPrincipal()
     {
@@ -327,9 +404,43 @@ public sealed class Tycoon
     public long SharesSoldTotal;
     public int MarginCalls;
 
+    /// <summary>Titres vendus d'office par le courtier, cumulés, et nombre total de tours de vente forcée.</summary>
+    public long ForcedSaleShares;
+    public int ForcedSaleRounds;
+
+    /// <summary>
+    /// Ruiné : une fois tous ses titres vendus, sa dette de marge dépassait sa caisse.
+    /// Il ne peut plus rien acheter — ni actions, ni apport en capital, ni
+    /// renflouement — et ses revenus (salaire de président, dividendes) remboursent
+    /// d'abord sa dette résiduelle. Il sort de la ruine le jour où elle tombe à zéro.
+    /// </summary>
+    public bool Ruined;
+
+    /// <summary>Tick de la dernière ruine, -1 s'il n'a jamais été ruiné ; tick de la dernière sortie de ruine, -1 sinon.</summary>
+    public int RuinTick = -1;
+    public int RuinClearedTick = -1;
+    public int RuinCount;
+
+    /// <summary>Dette résiduelle constatée à la dernière ruine.</summary>
+    public decimal ResidualDebtAtRuin;
+
+    /// <summary>
+    /// Intérêts de marge dus et impayés au jour de la ruine, versés dans la dette
+    /// résiduelle. Sans ce cumul, l'invariant « intérêts dus = payés + à payer »
+    /// perdrait leur trace.
+    /// </summary>
+    public decimal InterestCapitalizedAtRuin;
+
+    /// <summary>Revenus saisis au profit du courtier pendant la ruine.</summary>
+    public decimal SeizedTotal;
+
+    /// <summary>Rémunération de président reçue — salaire et primes —, saisie comprise s'il était ruiné.</summary>
+    public decimal PayReceivedTotal;
+
     public decimal Cash => Book[Accounts.Cash];
     public decimal MarginLoan => Book[Accounts.MarginLoan];
     public decimal PortfolioCost => Book[Accounts.Portfolio];
+    public decimal ResidualDebt => Book[Accounts.ResidualDebt];
 
     /// <summary>
     /// Valeur du portefeuille aux cours du moment — hors bilan, justement parce
@@ -349,10 +460,50 @@ public sealed class Tycoon
 
     /// <summary>Fortune personnelle du magnat : ce que le joueur cherche vraiment à maximiser.</summary>
     public decimal NetWorth(FinanceState state)
-        => Cash + PortfolioMarketValue(state) - MarginLoan - Book[Accounts.AccruedPayable];
+        => Cash + PortfolioMarketValue(state) - MarginLoan - Book[Accounts.AccruedPayable] - ResidualDebt;
 }
 
+public enum MarketRecordKind
+{
+    /// <summary>Appel de marge : ventes forcées du jour, en autant de tours qu'il a fallu.</summary>
+    MarginCall,
+
+    /// <summary>Prises de bénéfices des investisseurs sur une compagnie.</summary>
+    ProfitTaking,
+
+    /// <summary>Le magnat est ruiné : titres vendus, caisse saisie, dette résiduelle constatée.</summary>
+    Ruin,
+
+    /// <summary>La dette résiduelle est soldée : le magnat sort de la ruine.</summary>
+    RuinCleared,
+
+    /// <summary>Division d'actions.</summary>
+    Split,
+
+    /// <summary>Clôture de l'exercice : performance, nouveau salaire, prime éventuelle.</summary>
+    PayReview,
+}
+
+/// <summary>
+/// Une ligne du journal public de la bourse. Les champs se lisent selon le genre :
+/// titres échangés (ou rapport de division), cours avant et après, montant (dette
+/// restante, dette résiduelle, salaire annuel révisé), taux (performance de
+/// l'exercice), tours de vente forcée, prime.
+/// </summary>
+public sealed record MarketRecord(
+    int Tick,
+    MarketRecordKind Kind,
+    string CompanyId,
+    long Shares,
+    decimal PriceBefore,
+    decimal PriceAfter,
+    decimal Amount,
+    decimal Rate = 0m,
+    int Rounds = 0,
+    decimal Bonus = 0m);
+
 /// <summary>Trace d'une fusion, pour la télémétrie et pour les tests.</summary>
+
 public sealed record MergerRecord(
     int Tick,
     string AcquirerId,
@@ -377,6 +528,26 @@ public sealed class FinanceState
     public FinanceCompany? Player { get; internal set; }
     public Tycoon? Magnate { get; internal set; }
     public List<MergerRecord> Mergers { get; } = new();
+
+    /// <summary>
+    /// Journal public de la bourse et du président : appels de marge, prises de
+    /// bénéfices, ruine et sortie de ruine, divisions d'actions, révisions du salaire
+    /// et primes. Vide tant qu'aucune de ces mécaniques n'a joué.
+    /// </summary>
+    public List<MarketRecord> Journal { get; } = new();
+
+    /// <summary>Résumé du journal pour les empreintes de référence ; vide quand il l'est.</summary>
+    public string JournalSummary()
+    {
+        if (Journal.Count == 0) return "";
+        var ci = System.Globalization.CultureInfo.InvariantCulture;
+        var sb = new System.Text.StringBuilder();
+        foreach (var r in Journal)
+            sb.Append(r.Tick.ToString(ci)).Append(':').Append(r.Kind).Append(':').Append(r.CompanyId)
+              .Append(':').Append(r.Shares.ToString(ci)).Append(':').Append(r.PriceAfter.ToString(ci))
+              .Append(':').Append(r.Amount.ToString(ci)).Append(';');
+        return sb.ToString();
+    }
 
     /// <summary>
     /// Aléa du module, sur une séquence qui lui est propre. Partager le flux de

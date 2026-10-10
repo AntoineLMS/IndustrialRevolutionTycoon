@@ -68,6 +68,7 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
         }
 
         state.Enabled = true;
+        Validate(def);
         state.Rng = new DeterministicRandom(world.Def.Seed, def.RandomSequence);
 
         // La conjoncture, si le scénario en a une : la finance y lira chaque jour
@@ -171,6 +172,15 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
         // Le résultat de la première période se mesure à partir d'ici, pas à
         // partir de zéro : le report à nouveau d'ouverture n'est pas un bénéfice.
         player.RetainedAtLastPayout = player.Book[Accounts.RetainedEarnings];
+        CeoPay.OpenYear(player);
+
+        // Les références de la bourse partent du cours d'ouverture : aucune compagnie
+        // n'a encore d'historique, ni monté, ni baissé.
+        foreach (var company in state.Companies)
+        {
+            company.IntrinsicPrice = company.SharePrice;
+            company.ReferencePrice = company.SharePrice;
+        }
 
         // Le découvert autorisé existe dès l'ouverture : sans cela le transporteur
         // passerait son premier tick sans la facilité que son bilan lui donne.
@@ -256,22 +266,38 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
         RaiseCashIfNeeded(def, state, player, tick, def.BorrowWhenCashBelow);
         if (!player.InReceivership) PayDividend(state, player, tick);
 
-        // 8 — le magnat : coût de sa marge, puis ses ordres, puis l'appel de
-        // marge. Dans cet ordre, parce qu'un ordre passé ce tick doit pouvoir
-        // déclencher l'appel de marge du même tick : différer le contrôle
-        // laisserait exister une position intenable pendant tout un tick.
-        ServiceMargin(def, tycoon);
-        TradeAsTycoon(state, def, tycoon, tick);
-        EnforceMarginCall(state, def, tycoon);
+        // 7b — le salaire du président, et à la clôture de l'exercice sa révision et
+        // sa prime. Après le dividende : c'est une charge de l'exercice comme une
+        // autre, et elle ne doit pas amputer la période que le dividende distribue.
+        CeoPay.Step(state, def, player, tycoon, tick);
+
+        // 8 — le magnat : coût de sa marge, puis ses ordres, puis les prises de
+        // bénéfices, puis l'appel de marge. Dans cet ordre, parce qu'un ordre passé ce
+        // tick doit pouvoir déclencher l'appel de marge du même tick : différer le
+        // contrôle laisserait exister une position intenable pendant tout un tick. Les
+        // prises de bénéfices répondent aux ordres du jour — ceux du magnat, et les
+        // montées au capital de la veille — avant que le courtier ne lise le cours :
+        // une position qui ne tient qu'au cours qu'elle a elle-même fait monter est
+        // appelée le jour même.
+        Brokerage.ServiceMargin(def, tycoon);
+        Brokerage.Trade(state, def, tycoon, tick);
+        foreach (var company in state.Companies)
+            StockMarket.TakeProfits(state, def, company, tick.Index);
+        Brokerage.EnforceMarginCall(state, def, tycoon, tick);
 
         // 9 — le renflouement, s'il est dans la politique du magnat. Après ses
         // ordres de bourse, parce que remettre de l'argent dans une société qui
-        // sombre est une décision d'un autre ordre que jouer son cours.
-        Recapitalize(state, def, player, tycoon, tick);
+        // sombre est une décision d'un autre ordre que jouer son cours. Un magnat
+        // ruiné n'apporte plus rien.
+        if (!tycoon.Ruined) Recapitalize(state, def, player, tycoon, tick);
 
         // 10 — montée au capital d'un concurrent, puis OPA. Une société sous
         // administration n'achète pas de concurrent.
         if (!player.InReceivership) RunAcquisition(state, def, player, tick);
+
+        // 10b — division d'actions, le dernier jour de l'exercice, sur le cours de
+        // clôture, une fois tous les ordres du jour passés.
+        StockMarket.SplitIfDue(state, def, tick);
 
         // 11 — clôture. Dans cet ordre, et il compte : on arrête d'abord le solde
         // de caisse en portant sa part négative au découvert, on rapproche ensuite
@@ -280,6 +306,58 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
         SweepOverdraft(player);
         ReconcileOperatingCash(state, world, player);
         AssessSolvency(def, world, player);
+    }
+
+    /// <summary>
+    /// Refuse au chargement les réglages de la bourse et du salaire qui ne veulent rien
+    /// dire, avec un message qui dit pourquoi : une erreur de données qui passerait
+    /// ferait jouer une partie absurde sans que rien ne le signale.
+    /// </summary>
+    private static void Validate(FinanceDef def)
+    {
+        static void Require(bool condition, string message)
+        {
+            if (!condition) throw new InvalidDataException("finance : " + message);
+        }
+
+        var market = def.Market;
+        Require(market.BookTrancheFraction >= 0m && market.BookTrancheFraction <= 1m,
+            "market.bookTrancheFraction doit être dans [0, 1] (0 = profondeur infinie).");
+        var pt = market.ProfitTaking;
+        if (pt.Enabled)
+        {
+            Require(pt.ThresholdPercent >= 0m, "market.profitTaking.thresholdPercent ne peut pas être négatif.");
+            Require(pt.ReferenceTicks >= 1, "market.profitTaking.referenceTicks doit valoir au moins 1.");
+            Require(pt.Speed > 0m && pt.Speed <= 1m, "market.profitTaking.speed doit être dans ]0, 1].");
+            Require(pt.MaxSellFraction > 0m && pt.MaxSellFraction <= 1m, "market.profitTaking.maxSellFraction doit être dans ]0, 1].");
+            Require(def.Valuation.MarketImpact > 0m,
+                "des prises de bénéfices sans impact de marché ne feraient pas bouger le cours (valuation.marketImpact = 0).");
+        }
+        var split = market.Split;
+        if (split.Enabled)
+        {
+            Require(split.PriceThreshold > 0m, "market.split.priceThreshold doit être positif.");
+            Require(StockMarket.IsExactRatio(split.Ratio),
+                $"market.split.ratio = {split.Ratio} : seuls 2, 4, 5, 8, 10… (2^a·5^b) divisent un cours exactement, sans changer la capitalisation d'un centime.");
+        }
+
+        var tycoon = def.Tycoon;
+        Require(tycoon.MarginCallMaxRounds >= 1, "tycoon.marginCallMaxRounds doit valoir au moins 1.");
+        if (tycoon.CreditLineRatio is decimal line)
+            Require(line >= 0m && line <= tycoon.MarginMaintenanceRatio,
+                $"tycoon.creditLineRatio = {line} : la ligne de crédit doit rester sous le seuil d'appel de marge " +
+                $"({tycoon.MarginMaintenanceRatio}), sinon un achat déclencherait son propre appel de marge.");
+
+        var pay = def.CeoPay;
+        if (pay.Enabled)
+        {
+            Require(pay.BaseAnnual >= 0m, "ceoPay.baseAnnual ne peut pas être négatif.");
+            Require(pay.IntervalTicks >= 1, "ceoPay.intervalTicks doit valoir au moins 1.");
+            Require(pay.PerformanceBase is "marketValue" or "bookEquity",
+                $"ceoPay.performanceBase = « {pay.PerformanceBase} » : « marketValue » ou « bookEquity ».");
+            Require(pay.MinFactor >= 0m && pay.MinFactor <= pay.MaxFactor, "ceoPay : il faut 0 ≤ minFactor ≤ maxFactor.");
+            Require(pay.BonusSharePercent >= 0m, "ceoPay.bonusSharePercent ne peut pas être négatif.");
+        }
     }
 
     // ------------------------------------------------------------ insolvabilité
@@ -462,6 +540,7 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
         book.Open(Accounts.Overdraft, AccountKind.Liability);
         book.Open(Accounts.InterestPayable, AccountKind.Liability);
         book.Open(Accounts.AccruedPayable, AccountKind.Liability);
+        book.Open(Accounts.SalaryPayable, AccountKind.Liability);
         book.Open(Accounts.ShareCapital, AccountKind.Equity);
         book.Open(Accounts.RetainedEarnings, AccountKind.Equity);
 
@@ -480,6 +559,7 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
         book.Open(Accounts.Cash, AccountKind.Asset);
         book.Open(Accounts.Portfolio, AccountKind.Asset);
         book.Open(Accounts.MarginLoan, AccountKind.Liability);
+        book.Open(Accounts.ResidualDebt, AccountKind.Liability);
         book.Open(Accounts.AccruedPayable, AccountKind.Liability);
         book.Open(Accounts.PersonalEquity, AccountKind.Equity);
         return book;
@@ -699,34 +779,7 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
 
     // -------------------------------------------------------------- valorisation
 
-    private static decimal SharePriceFloor(FinanceDef def, decimal price)
-    {
-        decimal floor = Money.Round(def.Valuation.MinSharePrice);
-        return price < floor ? floor : price;
-    }
-
-    /// <summary>
-    /// Impact d'un ordre sur le cours. Un achat pousse le cours vers le haut, une
-    /// vente vers le bas, proportionnellement à la fraction du capital échangée.
-    /// <para>
-    /// C'est l'analogue boursier du découpage en tranches d'une grosse livraison :
-    /// sans lui, le flottant absorbe n'importe quel volume au cours affiché et
-    /// l'aller-retour ne coûte rien. On l'applique au cours et non à l'ordre
-    /// lui-même — l'ordre se règle au cours d'avant — parce que la trace reste
-    /// ainsi lisible et l'écriture comptable exacte au centime.
-    /// </para>
-    /// </summary>
-    private static void ApplyMarketImpact(FinanceDef def, FinanceCompany company, long shares, int direction)
-    {
-        decimal impact = def.Valuation.MarketImpact;
-        if (impact <= 0m || shares <= 0 || company.Register.SharesIssued <= 0) return;
-
-        decimal move = Money.Round(
-            company.SharePrice * impact * shares / company.Register.SharesIssued);
-        if (move <= 0m) return;
-
-        company.SharePrice = SharePriceFloor(def, company.SharePrice + direction * move);
-    }
+    private static decimal SharePriceFloor(FinanceDef def, decimal price) => StockMarket.PriceFloor(def, price);
 
     /// <summary>
     /// Cours = actif net comptable + un multiple du résultat annualisé, approché
@@ -756,6 +809,10 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
 
         company.SharePrice = SharePriceFloor(def, Money.Round(
             company.SharePrice + cfg.PriceSmoothing * (target - company.SharePrice)));
+
+        // La valeur fondamentale et le cours de référence des investisseurs, que
+        // lisent les prises de bénéfices. Ne changent rien au cours lui-même.
+        StockMarket.UpdateReferences(def, company, target);
     }
 
     // ---------------------------------------------------------------- dividende
@@ -798,14 +855,14 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
                     new Leg(Accounts.Cash, -total));
                 company.DividendsPaidTotal += total;
                 company.DividendThisTick = total;
-                Distribute(state, company, perShare);
+                Distribute(state, company, perShare, tick.Index);
             }
         }
 
         company.RetainedAtLastPayout = company.Book[Accounts.RetainedEarnings];
     }
 
-    private static void Distribute(FinanceState state, FinanceCompany company, decimal perShare)
+    private static void Distribute(FinanceState state, FinanceCompany company, decimal perShare, int tick)
     {
 
         // Parcours du registre dans l'ordre d'inscription. La part du flottant
@@ -820,9 +877,8 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
 
             if (holder.HolderId == Holders.Tycoon && state.Magnate is not null)
             {
-                state.Magnate.Book.Post($"dividende {company.Id}",
-                    new Leg(Accounts.Cash, amount),
-                    new Leg(Accounts.PersonalEquity, -amount));
+                // Un revenu : s'il est ruiné, il rembourse d'abord sa dette résiduelle.
+                Brokerage.ReceiveIncome(state, state.Magnate, $"dividende {company.Id}", amount, tick);
                 state.Magnate.DividendsReceivedTotal += amount;
             }
             else
@@ -833,172 +889,6 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
                     new Leg(Accounts.Cash, amount),
                     new Leg(Accounts.RetainedEarnings, -amount));
             }
-        }
-    }
-
-    // ------------------------------------------------------------------ magnat
-
-    private static void ServiceMargin(FinanceDef def, Tycoon tycoon)
-    {
-        decimal interest = Money.InterestForTick(tycoon.MarginLoan, def.Tycoon.MarginAnnualRatePercent);
-        if (interest > 0m)
-        {
-            AccrueExpense(tycoon.Book, Accounts.PersonalEquity, Accounts.AccruedPayable,
-                "intérêts de marge", interest);
-            tycoon.InterestAccruedTotal += interest;
-        }
-        tycoon.InterestPaidTotal += SettlePayable(
-            tycoon.Book, Accounts.AccruedPayable, "paiement d'intérêts de marge");
-    }
-
-    /// <summary>
-    /// Le magnat n'opère que sur les titres de sa propre compagnie. C'est le cas
-    /// intéressant : il connaît son entreprise mieux que le marché, et rien ne
-    /// l'empêche de vendre avant que la sanction n'arrive au cours.
-    /// </summary>
-    private static void TradeAsTycoon(FinanceState state, FinanceDef def, Tycoon tycoon, SimTick tick)
-    {
-        var policy = def.Tycoon;
-        if (policy.TradeIntervalTicks <= 0 || tick.Index <= 0) return;
-        if (tick.Index % policy.TradeIntervalTicks != 0) return;
-
-        var company = state.Player;
-        if (company is null || company.Merged || company.SharePrice <= 0m) return;
-
-        long held = tycoon.Portfolio.SharesOf(company.Id);
-        decimal basis = tycoon.Portfolio.CostBasisOf(company.Id);
-
-        if (held >= policy.MinLotShares && basis > 0m)
-        {
-            decimal averageCost = basis / held;
-            if (company.SharePrice >= averageCost * policy.SellAboveCostRatio)
-            {
-                long lot = (long)(held * policy.SellFraction);
-                if (lot >= policy.MinLotShares)
-                {
-                    SellShares(state, def, tycoon, company, lot);
-                    return;
-                }
-            }
-        }
-
-        BuyShares(state, def, tycoon, company);
-    }
-
-    private static void BuyShares(FinanceState state, FinanceDef def, Tycoon tycoon, FinanceCompany company)
-    {
-        var policy = def.Tycoon;
-        decimal price = company.SharePrice;
-        decimal ownFunds = Money.Round(tycoon.Cash * policy.BuyBudgetFraction);
-        if (ownFunds <= 0m) return;
-
-        // Achat sur marge : la fraction empruntée porte sur le montant total de
-        // l'achat, pas sur l'apport. Un ratio de 0,5 double donc la force de
-        // frappe, et double aussi la perte si le cours cède.
-        decimal ratio = policy.MarginInitialRatio;
-        if (ratio < 0m) ratio = 0m;
-        if (ratio > 0.9m) ratio = 0.9m;
-        decimal firepower = Money.Round(ownFunds / (1m - ratio));
-
-        long available = company.Register.HeldBy(Holders.Float);
-        long lot = (long)(firepower / price);
-        if (lot > available) lot = available;
-        if (lot < policy.MinLotShares) return;
-
-        decimal cost = lot * price;
-        decimal borrowed = Money.Round(cost * ratio);
-
-        // On ne s'endette jamais au-delà du seuil d'appel de marge : emprunter
-        // pour déclencher la liquidation au même tick n'est pas une stratégie,
-        // c'est un bug.
-        decimal valueAfter = tycoon.PortfolioMarketValue(state) + cost;
-        decimal ceiling = Money.Round(policy.MarginMaintenanceRatio * valueAfter) - tycoon.MarginLoan;
-        if (borrowed > ceiling) borrowed = ceiling;
-        if (borrowed < 0m) borrowed = 0m;
-        if (cost - borrowed > tycoon.Cash)
-        {
-            lot = (long)((tycoon.Cash + borrowed) / price);
-            if (lot < policy.MinLotShares) return;
-            cost = lot * price;
-            if (borrowed > cost) borrowed = cost;
-            if (cost - borrowed > tycoon.Cash) return;
-        }
-
-        if (borrowed > 0m)
-            tycoon.Book.Post("emprunt sur marge", Accounts.Cash, Accounts.MarginLoan, borrowed);
-
-        tycoon.Book.Post($"achat {company.Id}", Accounts.Portfolio, Accounts.Cash, cost);
-        tycoon.Portfolio.Add(company.Id, lot, cost);
-        company.Register.Transfer(Holders.Float, Holders.Tycoon, lot);
-        tycoon.SharesBoughtTotal += lot;
-        ApplyMarketImpact(def, company, lot, 1);
-    }
-
-    private static void SellShares(FinanceState state, FinanceDef def, Tycoon tycoon, FinanceCompany company, long lot)
-    {
-        long held = company.Register.HeldBy(Holders.Tycoon);
-        if (lot > held) lot = held;
-        if (lot <= 0) return;
-
-        decimal proceeds = lot * company.SharePrice;
-        decimal basisOut = tycoon.Portfolio.Remove(company.Id, lot);
-        decimal result = proceeds - basisOut;
-
-        // La plus-value n'apparaît qu'ici : c'est à la vente qu'elle devient de
-        // l'argent. Trois mouvements, dont la somme est nulle par construction.
-        tycoon.Book.Post($"vente {company.Id}",
-            new Leg(Accounts.Cash, proceeds),
-            new Leg(Accounts.Portfolio, -basisOut),
-            new Leg(Accounts.PersonalEquity, -result));
-
-        company.Register.Transfer(Holders.Tycoon, Holders.Float, lot);
-        tycoon.SharesSoldTotal += lot;
-        tycoon.RealizedResultTotal += result;
-        ApplyMarketImpact(def, company, lot, -1);
-
-        decimal repay = Math.Min(tycoon.MarginLoan, tycoon.Cash);
-        if (repay > 0m)
-            tycoon.Book.Post("remboursement de marge", Accounts.MarginLoan, Accounts.Cash, repay);
-    }
-
-    /// <summary>
-    /// Appel de marge. Vendre <c>n</c> titres au cours <c>p</c> réduit la dette et
-    /// le portefeuille du même montant : la contrainte
-    /// <c>dette − p·n ≤ maintien × (valeur − p·n)</c> donne directement le nombre
-    /// de titres à liquider. C'est ce calcul qui fait de l'achat à crédit un
-    /// risque et non un multiplicateur gratuit.
-    /// </summary>
-    private static void EnforceMarginCall(FinanceState state, FinanceDef def, Tycoon tycoon)
-    {
-        decimal loan = tycoon.MarginLoan;
-        if (loan <= 0m) return;
-
-        decimal maintenance = def.Tycoon.MarginMaintenanceRatio;
-        decimal value = tycoon.PortfolioMarketValue(state);
-        decimal deficit = loan - Money.Round(maintenance * value);
-        if (deficit <= 0m) return;
-
-        tycoon.MarginCalls++;
-
-        foreach (var position in tycoon.Portfolio.Positions)
-        {
-            if (position.Shares <= 0) continue;
-            var company = state.CompanyById(position.CompanyId);
-            if (company is null || company.Merged || company.SharePrice <= 0m) continue;
-
-            decimal unitRelief = company.SharePrice * (1m - maintenance);
-            if (unitRelief <= 0m) continue;
-
-            long needed = (long)decimal.Ceiling(deficit / unitRelief);
-            long lot = Math.Min(needed, position.Shares);
-            if (lot <= 0) continue;
-
-            SellShares(state, def, tycoon, company, lot);
-
-            loan = tycoon.MarginLoan;
-            if (loan <= 0m) return;
-            deficit = loan - Money.Round(maintenance * tycoon.PortfolioMarketValue(state));
-            if (deficit <= 0m) return;
         }
     }
 
@@ -1050,25 +940,29 @@ public sealed class ReferenceFinanceSolver : IFinanceSolver
         decimal price = target.SharePrice;
         if (price <= 0m) return;
 
+        // La tranche des données est en actions d'origine : elle suit les divisions.
         long available = target.Register.HeldBy(Holders.Float);
-        long lot = Math.Min(policy.StakeTrancheShares, available);
+        long lot = Math.Min(policy.StakeTrancheShares * target.SplitFactor, available);
         if (lot <= 0) return;
 
+        // Dans le carnet, comme tout acheteur : la tranche se paie au cours qu'elle
+        // fait monter.
         decimal buffer = Money.Round(policy.MinCashBuffer);
-        if (lot * price > acquirer.Cash - buffer)
-            RaiseCashIfNeeded(def, state, acquirer, tick, buffer + lot * price);
+        decimal quote = StockMarket.Quote(def, target, lot, +1).Amount;
+        if (quote > acquirer.Cash - buffer)
+            RaiseCashIfNeeded(def, state, acquirer, tick, buffer + quote);
 
         decimal spendable = acquirer.Cash - buffer;
         if (spendable <= 0m) return;
-        if (lot * price > spendable) lot = (long)(spendable / price);
+        if (quote > spendable) lot = StockMarket.MaxSharesFor(def, target, spendable, available);
         if (lot <= 0) return;
 
-        decimal cost = lot * price;
+        decimal cost = StockMarket.Execute(def, target, lot, +1);
         acquirer.Book.Post($"participation {target.Id}", Accounts.Investments, Accounts.Cash, cost);
         acquirer.Investments.Add(target.Id, lot, cost);
         target.Register.Transfer(Holders.Float, acquirer.Id, lot);
-        ApplyMarketImpact(def, target, lot, 1);
     }
+
 
     /// <summary>
     /// Offre publique d'achat sur le flottant, à un cours majoré. Tant que la

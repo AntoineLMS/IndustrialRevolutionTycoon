@@ -80,6 +80,12 @@ internal static class FinanceTests
             Check.True(tycoon.MarginLoan >= 0m, "dette de marge négative");
             Check.True(finance.Mergers.Count >= 1,
                 $"aucune fusion en 720 ticks : l'OPA n'est pas exercée ({finance.Mergers.Count})");
+
+            // Et la bourse solide, livrée sur ce scénario : les investisseurs ont pris
+            // leurs bénéfices au moins une fois, et le président a été payé.
+            Check.True(finance.Companies.Sum(c => c.ProfitTakingDays) > 0, "aucune prise de bénéfices en 720 ticks");
+            Check.True(tycoon.PayReceivedTotal > 0m && player.SalaryPaidTotal == tycoon.PayReceivedTotal,
+                "le salaire du président doit avoir été versé, et reçu au centime");
         });
 
         runner.Add("finance — la dette plus les intérêts payés correspond aux emprunts", () =>

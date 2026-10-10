@@ -1078,6 +1078,11 @@ internal static class Program
         // local, entretien, puissance et accélération. Un seul point d'entrée ici.
         VehicleTests.Register(runner);
 
+        // La bourse solide : carnet de profondeur finie, prises de bénéfices, ligne de
+        // crédit, cascade des ventes forcées, ruine du magnat, salaire du président,
+        // division d'actions. Un seul point d'entrée ici.
+        StockMarketTests.Register(runner);
+
         // ------------------------------------------------ traces de référence
         // En dernier : elles figent le comportement de tous les modules à la fois,
         // et un échec ici se lit mieux une fois les invariants de chacun passés.

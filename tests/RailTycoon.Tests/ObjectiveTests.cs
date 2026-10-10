@@ -152,7 +152,9 @@ internal static class ObjectiveTests
             // suit les premiers mois (la fortune du magnat témoin fond d'abord, puis
             // remonte) : la moyenne de 30 jours au tick 330, et la fortune du jour la
             // plus haute des 300 premiers.
-            decimal averagedTarget = Money(Average(330, 30));
+            // Arrondie au centime inférieur : arrondie au plus près, elle pouvait
+            // dépasser d'un demi-centime la moyenne du tick 330 et ne tomber qu'au 331.
+            decimal averagedTarget = decimal.Floor(Average(330, 30) * 100m) / 100m;
             decimal instantTarget = series.Take(300).Max();
             int expectedAveraged = FirstAt(averagedTarget, 30);
             int expectedInstant = FirstAt(instantTarget, 1);
@@ -468,9 +470,9 @@ internal static class ObjectiveTests
             var expected = new Dictionary<(string, string), string>
             {
                 [("heartland-cycle.json", "reference")] =
-                    "372:fortune/demi-million:atteint;1175:vivres/mille:atteint;1917:charbon-northgate/trois-cents:atteint;2159:fortune/million:manqué",
+                    "1079:fortune/demi-million:manqué;1175:vivres/mille:atteint;1917:charbon-northgate/trois-cents:atteint;2159:fortune/million:manqué",
                 [("heartland-cycle.json", "anticipating")] =
-                    "356:fortune/demi-million:atteint;1169:vivres/mille:atteint;1850:charbon-northgate/trois-cents:atteint;2159:fortune/million:manqué",
+                    "429:fortune/demi-million:atteint;1169:vivres/mille:atteint;1850:charbon-northgate/trois-cents:atteint;2159:fortune/million:manqué",
                 [("sierra.json", "reference")] = "4:col/premier-mois:atteint:t1",
                 [("sierra.json", "anticipating")] = "4:col/premier-mois:atteint:t1",
             };
@@ -482,7 +484,10 @@ internal static class ObjectiveTests
 
                 // Un palier atteint le reste quand la mesure redescend : la fortune du
                 // magnat fond après la panique de 1873, le demi-million reste acquis.
-                if (file == "heartland-cycle.json" && solver == "reference")
+                // Sous l'anticipant : depuis la bourse solide, le magnat témoin de la
+                // référence manque le demi-million de peu (569 000 le 1er janvier 1873,
+                // le lendemain de l'échéance), l'anticipant l'atteint puis redescend.
+                if (file == "heartland-cycle.json" && solver == "anticipating")
                 {
                     var fortune = sim.World.Objectives.Goals[0];
                     Check.True(fortune.Tiers[0].Status == TierStatus.Attained && fortune.Measure < 500_000,

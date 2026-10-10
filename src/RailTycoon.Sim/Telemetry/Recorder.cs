@@ -192,7 +192,47 @@ public sealed class CsvRecorder
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Le journal public de la bourse et du président en CSV, une ligne par
+    /// événement : appel de marge, prises de bénéfices, ruine, sortie de ruine,
+    /// division d'actions, clôture d'exercice. Hors de <see cref="Fingerprint"/> ; les
+    /// traces de référence ajoutent <c>FinanceState.JournalSummary</c> à leur
+    /// empreinte, vide sans finance. Toujours écrit, même vide.
+    /// </summary>
+    public static string FinanceJournalCsv(WorldState world)
+    {
+        var ci = CultureInfo.InvariantCulture;
+        var sb = new StringBuilder("tick,kind,company,shares,price_before,price_after,amount,rate,rounds,bonus\n");
+        foreach (var r in world.Finance.Journal)
+            sb.Append(r.Tick.ToString(ci)).Append(',')
+              .Append(r.Kind switch
+              {
+                  Finance.MarketRecordKind.MarginCall => "margin_call",
+                  Finance.MarketRecordKind.ProfitTaking => "profit_taking",
+                  Finance.MarketRecordKind.Ruin => "ruin",
+                  Finance.MarketRecordKind.RuinCleared => "ruin_cleared",
+                  Finance.MarketRecordKind.Split => "split",
+                  _ => "pay_review",
+              }).Append(',')
+              .Append(r.CompanyId).Append(',')
+              .Append(r.Shares.ToString(ci)).Append(',')
+              .Append(r.PriceBefore.ToString(ci)).Append(',')
+              .Append(r.PriceAfter.ToString(ci)).Append(',')
+              .Append(r.Amount.ToString(ci)).Append(',')
+              .Append(r.Rate.ToString(ci)).Append(',')
+              .Append(r.Rounds.ToString(ci)).Append(',')
+              .Append(r.Bonus.ToString(ci)).Append('\n');
+        return sb.ToString();
+    }
+
+    public static void WriteFinanceJournal(WorldState world, string directory)
+    {
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, "bourse.csv"), FinanceJournalCsv(world));
+    }
+
     public static void WriteObjectives(WorldState world, string directory)
+
     {
         Directory.CreateDirectory(directory);
         File.WriteAllText(Path.Combine(directory, "objectives.csv"), ObjectivesCsv(world));

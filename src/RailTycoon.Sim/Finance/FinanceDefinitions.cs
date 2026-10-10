@@ -135,6 +135,27 @@ public sealed class TycoonPolicyDef
 
     public decimal MarginAnnualRatePercent { get; set; } = 9m;
 
+    /// <summary>
+    /// Ligne de crédit du courtier : la dette de marge ne peut pas dépasser cette part
+    /// de la valeur des titres détenus, comptés au cours d'avant l'ordre. C'est une
+    /// limite à l'<em>octroi</em> : un achat qui la franchirait est réduit à ce que la
+    /// caisse et la ligne permettent, ou refusé. L'appel de marge, lui, reste au
+    /// seuil de maintien, plus haut : l'écart entre les deux est le matelas d'un
+    /// achat frais. Nulle, la ligne vaut le seuil de maintien — le comportement
+    /// d'avant, où un achat pouvait s'endetter jusqu'au seuil d'appel et n'avait
+    /// donc aucun matelas. Doit rester inférieure ou égale au seuil de maintien.
+    /// </summary>
+    public decimal? CreditLineRatio { get; set; }
+
+    /// <summary>
+    /// Nombre maximal de tours de vente forcée dans un même appel de marge. Une vente
+    /// forcée pèse sur le cours, ce qui peut rouvrir le déficit qu'elle comblait : le
+    /// courtier revend alors encore, au cours du moment. La cascade est voulue ; elle
+    /// est bornée par ce nombre de tours, et au-delà elle reprend le lendemain. 1 = une
+    /// seule passe, le comportement d'avant.
+    /// </summary>
+    public int MarginCallMaxRounds { get; set; } = 1;
+
     /// <summary>Il vend quand le cours dépasse son prix de revient moyen de ce facteur.</summary>
     public decimal SellAboveCostRatio { get; set; } = 1.6m;
 
@@ -252,6 +273,12 @@ public sealed class FinanceDef
     public ulong RandomSequence { get; set; } = 7;
 
     public ValuationDef Valuation { get; set; } = new();
+
+    /// <summary>La bourse : profondeur du carnet, prises de bénéfices, division d'actions.</summary>
+    public StockMarketDef Market { get; set; } = new();
+
+    /// <summary>Le salaire du président de la compagnie du joueur, et sa prime.</summary>
+    public CeoPayDef CeoPay { get; set; } = new();
     public OverdraftDef Overdraft { get; set; } = new();
     public DividendPolicyDef Dividends { get; set; } = new();
     public TycoonPolicyDef Tycoon { get; set; } = new();

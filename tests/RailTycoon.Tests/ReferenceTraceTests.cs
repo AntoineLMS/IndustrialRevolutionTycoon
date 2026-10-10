@@ -49,7 +49,7 @@ internal static class ReferenceTraceTests
     [
         new("heartland.json", "reference", "B966B86D3F0AF83C"),
         new("heartland.json", "anticipating", "29EE085518F1B2B0"),
-        new("heartland-finance.json", "reference", "227CB2EF4504BDBE"),
+        new("heartland-finance.json", "reference", "FCA4CC0F07543E5A"),
         // Le scénario du module events, sous les deux solveurs : chacun compose les
         // multiplicateurs du jour dans ses propres taux, et l'empreinte porte aussi
         // le journal des événements déclenchés.
@@ -74,8 +74,8 @@ internal static class ReferenceTraceTests
         // et non deux : il faut contenir la panique de 1873 (tick 1 337), qui force la
         // crise, et au moins un cycle complet. L'empreinte porte aussi le journal de
         // la conjoncture et les taux des obligations.
-        new("heartland-cycle.json", "reference", "E8210450987FCE4E", CycleTests.Ticks),
-        new("heartland-cycle.json", "anticipating", "3CA30C95E38BE915", CycleTests.Ticks),
+        new("heartland-cycle.json", "reference", "0451AC4AF0591A79", CycleTests.Ticks),
+        new("heartland-cycle.json", "anticipating", "D3E10DC5C3ACA094", CycleTests.Ticks),
     ];
 
     public static void Register(TestRunner runner)
@@ -180,6 +180,16 @@ internal static class ReferenceTraceTests
             player.DividendsPaidTotal.ToString(ci),
             tycoon.NetWorth(finance).ToString(ci),
             tycoon.MarginCalls.ToString(ci),
-            finance.Mergers.Count.ToString(ci));
+            finance.Mergers.Count.ToString(ci))
+            // La bourse solide : la ruine du magnat, sa rémunération de président, et
+            // le journal public — appels de marge, prises de bénéfices, divisions,
+            // clôtures d'exercice. Une cascade de ventes forcées ou des prises de
+            // bénéfices qui changeraient sans rien déplacer d'autre s'y verraient.
+            + ";" + string.Join(";",
+                tycoon.Ruined.ToString(ci),
+                tycoon.ResidualDebt.ToString(ci),
+                tycoon.PayReceivedTotal.ToString(ci),
+                player.Register.SharesIssued.ToString(ci))
+            + finance.JournalSummary();
     }
 }
