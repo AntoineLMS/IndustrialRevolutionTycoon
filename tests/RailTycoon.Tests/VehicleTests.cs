@@ -484,6 +484,61 @@ internal static class VehicleTests
                 "achetée le premier jour de 1910, l'E6 est permise");
         });
 
+        // ------------------------------------------------ le catalogue est dense
+        // Une machine ne s'achète qu'à partir de son année de sortie : un catalogue
+        // troué laisse un scénario sans rien d'autre qu'une machine vieille de dix ans
+        // ou plus. Le catalogue n'avait aucune machine américaine entre 1870 et 1910 ;
+        // la sierra de 1875 et ironpeak, en 1900, n'avaient le choix qu'entre des
+        // machines de 1855 à 1870.
+
+        runner.Add("véhicules — le catalogue américain n'a pas de trou de plus de sept ans de 1866 à 1910", () =>
+        {
+            // Sept ans : le plus long intervalle du catalogue sur cette fenêtre (1886 →
+            // 1893, de la Decapod du Northern Pacific à la 999). Le test borne ce qui a
+            // été fait : retirer une des neuf machines ajoutées le 30 septembre 2026
+            // rouvre un trou de dix ans ou plus et le fait échouer. La fenêtre commence
+            // à la première 2-8-0 (1866) : avant, le catalogue américain a des trous
+            // connus (1837 → 1855 → 1866), et il en a un après l'E6 (1910 → 1941) ; ce
+            // test ne les garde pas, il ne prétend pas qu'ils sont comblés.
+            const int maxGapYears = 7;
+            var catalog = LocomotiveLoader.Load(Fixtures.LocomotivesPath());
+            var years = catalog.Locomotives
+                .Where(l => l.Name.Contains("États-Unis") && l.Year >= 1866 && l.Year <= 1910)
+                .Select(l => l.Year).Distinct().OrderBy(y => y).ToList();
+            Check.True(years.Count > 0 && years.First() == 1866, "la Consolidation de 1866 ouvre la fenêtre");
+            Check.True(years.Last() == 1910, "l'E6 de 1910 la ferme");
+            for (int i = 1; i < years.Count; i++)
+                Check.True(years[i] - years[i - 1] <= maxGapYears,
+                    $"aucune machine américaine entre {years[i - 1]} et {years[i]} " +
+                    $"({years[i] - years[i - 1]} ans, plus de {maxGapYears})");
+        });
+
+        runner.Add("véhicules — à aucune date, une locomotive ne surpasse toutes celles déjà sorties", () =>
+        {
+            // « Écraser » : au moins égale aux autres sur la puissance, l'effort de
+            // traction et la vitesse, au plus égale sur la consommation, et strictement
+            // meilleure quelque part. Le prix et la masse ne comptent pas ici : ils
+            // suivent la puissance (la note de méthode de SOURCES.md les en déduit), et
+            // une machine plus lourde n'est donc jamais « écrasée » sur le papier par une
+            // plus légère ; c'est leur comparaison qui ne dit rien. La fenêtre commence
+            // en 1866 : de 1847 à 1865, l'Iron Duke (voie large, 126 km/h) surpasse tout
+            // le catalogue — un fait connu, qui n'est pas de ce travail.
+            var all = LocomotiveLoader.Load(Fixtures.LocomotivesPath()).Locomotives;
+            static bool Beats(LocomotiveDef a, LocomotiveDef b) =>
+                a.PowerKw >= b.PowerKw && a.TractiveEffortKn >= b.TractiveEffortKn
+                && a.TopSpeedKmh >= b.TopSpeedKmh && a.FuelKgPer1000TonneKm <= b.FuelKgPer1000TonneKm
+                && (a.PowerKw > b.PowerKw || a.TractiveEffortKn > b.TractiveEffortKn
+                    || a.TopSpeedKmh > b.TopSpeedKmh || a.FuelKgPer1000TonneKm < b.FuelKgPer1000TonneKm);
+
+            for (int year = 1866; year <= 1945; year++)
+            {
+                var available = all.Where(l => l.Year <= year).ToList();
+                foreach (var a in available)
+                    Check.True(!available.Where(b => b != a).All(b => Beats(a, b)),
+                        $"en {year}, « {a.Id} » surpasse toutes les autres machines sorties");
+            }
+        });
+
         runner.Add("véhicules — sans année de départ, le module refuse de borner à l'aveugle", () =>
         {
             var scenario = Vehicles();

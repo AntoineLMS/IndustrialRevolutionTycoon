@@ -2137,6 +2137,117 @@ les achats retirés** (30/40 positives) ; sous l'anticipant, **+986 ± 647** (20
 À ce prix, sur deux ans et achats passés en charge, les deux machines se valent sur
 la sierra : la puissance de la Consolidation paie tout juste son prix.
 
+### Huitième résultat : neuf machines de 1875 à 1909 — où la domination se mesure
+
+*Ajout du 30 septembre 2026 ; sierra-vehicules, copies hors dépôt (`startYear`, locomotive,
+plafond de vitesse et longueur des trains changés en mémoire), solveur de référence, 40
+réalisations comme ci-dessus (20 pour les trains longs).*
+
+**Le trou.** Le catalogue n'avait aucune machine entre la D5 (1870) et l'E6 (1910) :
+depuis qu'il est borné à l'époque, la sierra de 1875 n'avait le choix qu'entre des
+machines de 1855 à 1870, et ironpeak (1900) référençait la D5, faute de mieux. Neuf
+machines américaines, réelles et identifiables, le comblent (SOURCES.md : chacune dit
+ce qui est documenté, estimé, écarté) : B&O n°600 Mogul (1875), Santa Fe n°2414
+Consolidation (1880), Northern Pacific classe M Decapod (1886), NYC&HR n°999 (1893),
+PRR H6 Consolidation (1899), PRR E2 Atlantic (1901), Missouri Pacific P-69, la première
+Pacific (1902), B&O n°2400 Mallet (1904), B&LE n°154 Consolidation (1909). Le plus long
+intervalle de 1866 à 1910 est de sept ans (un test le garde). Une famille manque, la
+Ten-Wheeler : aucune fiche n'a rendu d'effort ni de masse, et rien n'est inventé. Les
+conventions de calcul sont celles de la note de méthode, appliquées telles quelles ; la
+seule chose écrite en plus est la règle de vitesse que la D5 et la Consolidation
+suivaient déjà sans le dire (SOURCES.md, « Extension de 1871 à 1909 »). ironpeak
+référence désormais la H6, sans qu'aucune empreinte bouge : le champ n'est lu par rien.
+
+**Sur le papier : aucune ne les écrase toutes.** À chaque année de 1866 à 1945, aucune
+machine sortie n'est à la fois au moins égale aux autres sur la puissance, l'effort de
+traction et la vitesse, au plus égale sur la consommation, et meilleure quelque part
+(un test le garde). Sur le prix et la masse il n'y a rien à vérifier : la formule les
+fait suivre la puissance (132 par tonne, 10 kW par tonne), donc une machine plus lourde
+n'est jamais écrasée par une plus légère. Exception du catalogue, antérieure à ce
+travail : de 1847 à 1865, l'Iron Duke (126 km/h, voie large) surpasse tout ce qui est
+sorti.
+
+**Sur la sierra : la domination dépend de la carte et de ce que le scénario ne
+déclare pas.** Résultat net moins achats, sur la sierra (relief) et sur la même carte
+sans relief (plat), trois trains de 24 wagons ; « borné » est `maxTrainSpeedKmh` = 50,
+la valeur de la décision 2, que sierra-vehicules ne déclare pas :
+
+| machine (année) | relief | plat | relief, borné | plat, borné |
+|---|---|---|---|---|
+| D5 (1870) | 158 342 | 377 149 | 150 412 | 334 119 |
+| Consolidation (1866) | 178 256 | 259 462 | 178 256 | 259 462 |
+| B&O n°600 Mogul (1875) | 235 252 | 496 655 | 209 137 | 335 297 |
+| Santa Fe 2414 (1880) | 199 006 | 250 143 | 199 006 | 250 143 |
+| Northern Pacific M Decapod (1886) | 200 688 | 239 360 | 200 688 | 239 360 |
+| NYC&HR n°999 (1893) | 295 067 | 614 496 | 200 606 | 328 786 |
+| PRR H6 (1899) | 247 602 | 294 931 | 247 602 | 294 931 |
+| PRR E2 Atlantic (1901) | 433 927 | 693 756 | 263 310 | 322 458 |
+| Missouri Pacific P-69 (1902) | 417 027 | 605 974 | 263 222 | 322 115 |
+| B&O 2400 Mallet (1904) | 130 190 | 151 061 | 130 190 | 151 061 |
+| B&LE 154 (1909) | 250 300 | 286 196 | 250 300 | 286 196 |
+| *PRR E6 (1910)* | 532 523 | 864 437 | 261 046 | 304 490 |
+
+*Les machines de 40 km/h ou moins ne sont pas touchées par le plafond. Écarts-types de
+2 000 à 4 000 ; les différences ci-dessous sont appariées.*
+
+1. **De 1875 à 1893, la n°600 écrase la sierra de 24 wagons.** Même masse, même
+   puissance (408 kW), même prix (5 390) que la Consolidation de 1866 ; la seule
+   différence est qu'elle roule à 80 km/h au lieu de 40, avec 12 kN d'effort de moins
+   (77 contre 89). Apparié, 40 réalisations sur 40 : **+56 997 ± 507 sur le relief,
+   +237 193 ± 550 sur le plat** ; contre la D5, +76 911 ± 516 achats retirés. Sous le
+   plafond, la Santa Fe 2414 la suit de 10 131 ± 644, la Decapod de 8 449 ± 596, la 999
+   de 8 500 environ : aucune ne la rattrape avant la H6 (1899), qui la bat sur le relief
+   (+38 465 ± 708 achats retirés) mais perd sur le plat (−40 366 ± 557). **Sur ces
+   années, le choix de la locomotive n'est pas un compromis sur cette carte.** Ce n'est
+   pas un défaut de la n°600 : à train fixe de 24 wagons, 408 kW suffisent presque
+   partout, et la vitesse rapporte sur tout le plat.
+2. **Sans plafond de vitesse, la machine rapide écrase tout dès qu'elle paraît** : la 999
+   en 1893 (+47 464 ± 915 sur le relief et +319 565 ± 747 sur le plat contre la H6, achats
+   retirés), l'E2 en 1901 (+138 860 ± 664 sur le relief contre la 999), puis l'E6. Ce sont
+   les vitesses de record de la décision 2 : la 999 rend 161 km/h (100 mph revendiqués)
+   à des wagons de 1875. Bornée à 50 km/h, elle tombe de 295 067 à 200 606 sur le relief,
+   l'E2 de 433 927 à 263 310, et le classement se réordonne : à partir de 1899, la
+   machine lourde (H6, E2, P-69) gagne le relief et la n°600, bon marché, le plat — un
+   compromis, étroit (l'E2 et la P-69 sont à égalité : +272 ± 693).
+3. **À trains plus longs, chaque période a deux gagnants.** Une locomotive lourde sert à
+   tirer un train long, et le scénario fixe la longueur du train. Avec 48 wagons (borné
+   à 50, 20 réalisations, achats retirés) :
+
+   | disponible en | meilleure sur le relief | meilleure sur le plat |
+   |---|---|---|
+   | 1875 | Consolidation 1866 | n°600 |
+   | 1880 | Santa Fe 2414 | n°600 |
+   | 1886 | Northern Pacific M | n°600 |
+   | 1893 | Northern Pacific M | 999 |
+   | 1899 | H6 | 999 |
+   | 1901 | H6 | E2 |
+   | 1904 | H6 | P-69 |
+   | 1909 | B&LE 154 | P-69 |
+
+   Aux huit dates mesurées, le gagnant de la montagne n'est pas celui de la plaine : la
+   machine lourde et lente (2-8-0, 2-10-0) contre la machine rapide (Mogul, 4-4-0,
+   Atlantic, Pacific). C'est le compromis du troisième résultat, retrouvé de 1875 à
+   1909. Le Mallet (20 030 pièce, 34 km/h, 18 036 d'entretien pour trois sur deux ans) ne
+   gagne nulle part, même à 48 wagons : ses 34 km/h l'en empêchent.
+
+**Ce qui est vérifié, et ce qui ne l'est pas.** Sur le papier, aucune machine n'écrase
+toutes les autres, à aucune date. Mesuré, à 48 wagons, aucune ne gagne à la fois la
+montagne et la plaine de sa période. **À 24 wagons, c'est faux de 1875 à 1893 (la n°600)
+et, sans plafond, de 1893 à 1909 (la 999, puis l'E2)** : la sierra telle qu'écrite ne
+départage pas les familles de ces années-là. Je n'ai pas retouché une donnée pour le
+corriger : les vitesses de la n°600 et de la H6 sont des estimations par pouce de roue qui
+redonnent celles de la D5 et de la Consolidation, et les retoucher pour faire gagner une
+machine serait choisir le résultat. Ce qui y remédierait est dans le scénario, pas dans
+le catalogue : un `maxTrainSpeedKmh` d'époque (décision 2), des trains dont la longueur
+suit la puissance de la machine, ou la conversion du prix au quadruple (décision 3).
+
+**Deux choses à savoir sur les conventions, non modifiées.** (1) Le prix documenté de la
+Santa Fe 2414 (12 175 $ en 1880, 0,10 $ la livre) est la moitié de ce que la formule
+(0,20 $ de 1870 la livre) donne : elle surestime probablement les machines de 1880 à 1900 ;
+le prix pèse peu au prix du charbon, pas au quadruple. (2) Le catalogue mêle des vitesses
+de service (n°600, H6, P-69, E2 : estimées) et des records (999, E6, Mallard :
+revendiqués ou mesurés) ; c'est ce qui fait gagner la 999 sans plafond.
+
 ### Deux observations en passant
 
 **Sans finance, une flotte plus chère que la caisse est une faillite silencieuse.**

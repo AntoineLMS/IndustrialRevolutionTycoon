@@ -346,7 +346,7 @@ lieu. Sans cette borne, les machines de 1910 écrasaient celles de 1870, et choi
 sa locomotive revenait à prendre la plus récente. Un scénario déclare donc son
 année de départ (`startYear`), que tous les modules datés partagent.
 
-*Déjà en place* : un catalogue de 17 locomotives historiques, de 1829 à 1945, sourcé
+*Déjà en place* : un catalogue de 26 locomotives historiques, de 1829 à 1945 — dont, de 1866 à 1910, une machine américaine au plus tous les sept ans —, sourcé
 dans [SOURCES.md](SOURCES.md) — effort de traction, vitesse, puissance, masse,
 carburant, consommation, prix, entretien —, branché par le module `vehicles` (opt-in,
 scénario `sierra-vehicules`). La compagnie achète les machines que le scénario

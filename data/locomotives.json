@@ -1,5 +1,5 @@
 {
-  "//": "Catalogue de locomotives historiques, 1829-1945. Les caractéristiques physiques (année, effort de traction, vitesse, masse, et la puissance quand elle est publiée) sont sourcées dans docs/SOURCES.md, qui dit machine par machine ce qui est documenté et ce qui est estimé. Puissance non publiée, consommation, prix et entretien sont estimés par des formules uniformes, écrites dans SOURCES.md (« Note de méthode ») : puissance 10 kW par tonne de locomotive, prix 132 par tonne de locomotive (0,20 $ de 1870 la livre, convertis au prix du charbon du jeu), entretien 15 % du prix par an (8 % pour le diesel), consommation par époque en kg pour mille tonnes-kilomètres brutes. Le module vehicles lit ce fichier (vehicles.catalog) ; sans lui, il reste descriptif.",
+  "//": "Catalogue de locomotives historiques, 1829-1945. Les caractéristiques physiques (année, effort de traction, vitesse, masse, et la puissance quand elle est publiée) sont sourcées dans docs/SOURCES.md, qui dit machine par machine ce qui est documenté et ce qui est estimé. Puissance non publiée, consommation, prix et entretien sont estimés par des formules uniformes, écrites dans SOURCES.md (« Note de méthode ») : puissance 10 kW par tonne de locomotive, prix 132 par tonne de locomotive (0,20 $ de 1870 la livre, convertis au prix du charbon du jeu), entretien 15 % du prix par an (8 % pour le diesel), consommation par époque en kg pour mille tonnes-kilomètres brutes (interpolée linéairement de 70 en 1870 à 58 en 1910 pour les machines de 1875 à 1909). Neuf machines américaines de 1875 à 1909 comblent le trou qui séparait la D5 (1870) de l'E6 (1910) ; leurs règles d'estimation (vitesse par pouce de roue, effort de traction, masse de l'ensemble) sont écrites dans SOURCES.md, « Extension de 1871 à 1909 ». Le module vehicles lit ce fichier (vehicles.catalog) ; sans lui, il reste descriptif.",
 
   "locomotives": [
     {
@@ -144,6 +144,123 @@
       "fuelKgPer1000TonneKm": 70,
       "purchaseCost": 3910,
       "maintenancePerTick": 1.63
+    },
+    {
+      "id": "bo_600_davis",
+      "name": "Baltimore & Ohio n°600 « J.C. Davis » (Mogul 2-6-0, Mount Clare, États-Unis)",
+      "year": 1875,
+      "tractiveEffortKn": 76.9,
+      "topSpeedKmh": 80,
+      "powerKw": 408,
+      "massTonnes": 65.3,
+      "fuelType": "coal",
+      "fuelKgPer1000TonneKm": 68,
+      "purchaseCost": 5390,
+      "maintenancePerTick": 2.25
+    },
+    {
+      "id": "atsf_2414_consolidation",
+      "name": "Atchison, Topeka & Santa Fe n°2414 (Consolidation 2-8-0, Baldwin, États-Unis)",
+      "year": 1880,
+      "tractiveEffortKn": 120.9,
+      "topSpeedKmh": 40,
+      "powerKw": 554,
+      "massTonnes": 96.2,
+      "fuelType": "coal",
+      "fuelKgPer1000TonneKm": 67,
+      "purchaseCost": 7310,
+      "maintenancePerTick": 3.05
+    },
+    {
+      "id": "np_m_decapod",
+      "name": "Northern Pacific classe M, n°500 et 501 (Decapod 2-10-0, Baldwin, États-Unis)",
+      "year": 1886,
+      "tractiveEffortKn": 155.7,
+      "topSpeedKmh": 40,
+      "powerKw": 765,
+      "massTonnes": 122.5,
+      "fuelType": "coal",
+      "fuelKgPer1000TonneKm": 65,
+      "purchaseCost": 10100,
+      "maintenancePerTick": 4.21
+    },
+    {
+      "id": "nyc_999",
+      "name": "New York Central & Hudson River n°999 (4-4-0, West Albany, États-Unis)",
+      "year": 1893,
+      "tractiveEffortKn": 68.2,
+      "topSpeedKmh": 161,
+      "powerKw": 562,
+      "massTonnes": 90.0,
+      "fuelType": "coal",
+      "fuelKgPer1000TonneKm": 63,
+      "purchaseCost": 7420,
+      "maintenancePerTick": 3.09
+    },
+    {
+      "id": "prr_h6",
+      "name": "Pennsylvania Railroad classe H6 (Consolidation 2-8-0, Altoona, États-Unis)",
+      "year": 1899,
+      "tractiveEffortKn": 190.0,
+      "topSpeedKmh": 48,
+      "powerKw": 929,
+      "massTonnes": 155.9,
+      "fuelType": "coal",
+      "fuelKgPer1000TonneKm": 61,
+      "purchaseCost": 12260,
+      "maintenancePerTick": 5.11
+    },
+    {
+      "id": "prr_e2_atlantic",
+      "name": "Pennsylvania Railroad classe E2 Atlantic (4-4-2, Altoona, États-Unis)",
+      "year": 1901,
+      "tractiveEffortKn": 121.9,
+      "topSpeedKmh": 105,
+      "powerKw": 776,
+      "massTonnes": 118.0,
+      "fuelType": "coal",
+      "fuelKgPer1000TonneKm": 61,
+      "purchaseCost": 10240,
+      "maintenancePerTick": 4.27
+    },
+    {
+      "id": "mp_p69_pacific",
+      "name": "Missouri Pacific classe P-69, première Pacific (4-6-2, Brooks, États-Unis)",
+      "year": 1902,
+      "tractiveEffortKn": 133.4,
+      "topSpeedKmh": 89,
+      "powerKw": 785,
+      "massTonnes": 125.6,
+      "fuelType": "coal",
+      "fuelKgPer1000TonneKm": 60,
+      "purchaseCost": 10360,
+      "maintenancePerTick": 4.32
+    },
+    {
+      "id": "bo_2400_mallet",
+      "name": "Baltimore & Ohio n°2400 « Old Maude », première Mallet (0-6-6-0, American Locomotive Company, États-Unis)",
+      "year": 1904,
+      "tractiveEffortKn": 318.0,
+      "topSpeedKmh": 34,
+      "powerKw": 1517,
+      "massTonnes": 242.8,
+      "fuelType": "coal",
+      "fuelKgPer1000TonneKm": 60,
+      "purchaseCost": 20030,
+      "maintenancePerTick": 8.35
+    },
+    {
+      "id": "ble_c3b_154",
+      "name": "Bessemer & Lake Erie n°154, classe C3b (Consolidation 2-8-0, Baldwin, États-Unis)",
+      "year": 1909,
+      "tractiveEffortKn": 283.9,
+      "topSpeedKmh": 48,
+      "powerKw": 1134,
+      "massTonnes": 181.4,
+      "fuelType": "coal",
+      "fuelKgPer1000TonneKm": 58,
+      "purchaseCost": 14970,
+      "maintenancePerTick": 6.24
     },
     {
       "id": "prr_e6_atlantic",

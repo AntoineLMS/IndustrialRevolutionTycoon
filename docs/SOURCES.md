@@ -29,7 +29,9 @@ Recherches effectuées via WebSearch le 27 septembre 2026 (Wikipédia et sites
 spécialisés de patrimoine ferroviaire), complétées le 30 septembre 2026 pour le
 module `vehicles`, qui branche le catalogue sur la simulation (masse, puissance,
 carburant, consommation, prix, entretien ; deux machines ajoutées, la PRR D5 et la
-Consolidation). Pour chaque machine : ce qui est documenté, ce qui est estimé, et
+Consolidation), puis le 30 septembre 2026 encore pour combler le trou de 1871 à 1909 :
+neuf machines américaines, de 1875 à 1909 (voir la note de méthode, « Extension de
+1871 à 1909 »). Pour chaque machine : ce qui est documenté, ce qui est estimé, et
 pourquoi.
 
 **Limite, vérifiée le 30 septembre 2026** : les pages elles-mêmes n'ont pas pu être
@@ -150,6 +152,155 @@ texte de jeu.
   de 56 in, non documentée).
 - Source : [Wikipédia — Pennsylvania Railroad class D5](https://en.wikipedia.org/wiki/Pennsylvania_Railroad_class_D5).
 
+### Baltimore & Ohio n°600 « J.C. Davis » (Mogul 2-6-0, Mount Clare, 1875) — ajoutée le 30 septembre 2026
+- **Documenté (extraits)** : construite en 1875 aux ateliers de Mount Clare du B&O par
+  John C. Davis, maître de machines ; la première 2-6-0 conçue pour le service
+  voyageurs (courrier et express de la division Keyser–Grafton), qui montre qu'une
+  Mogul peut tirer un express de 117 t ; premier prix à l'exposition du Centenaire
+  (Philadelphie, 1876), où elle passait pour la locomotive la plus lourde du monde ;
+  renumérotée 918 en 1884, rendue à son numéro en 1893, retirée en 1926, conservée au
+  B&O Railroad Museum. La fiche d'un wiki de passionnés (extrait) donne une masse de
+  locomotive de **45 tonnes** (lue comme tonnes courtes : 40,8 t, tender exclu), des roues
+  motrices de **60 in** en 1875 (56 aujourd'hui) et des cylindres de **19 × 26 in**.
+- **Écarté** : la même fiche donne un effort de traction de 8 580 lbf, avec une
+  pression de 65 psi. C'est ce que les cylindres donnent à 65 psi (8 640 lbf) ; une
+  machine de 1875 brûlait à 120–140 psi, et le chiffre est la moitié de ce qu'il devrait
+  être. Il n'est pas retenu.
+- **Estimé** : effort de traction **76,9 kN** — la formule des cylindres
+  `0,85 × P × d² × c / D`, avec 130 psi supposés (la pression d'origine de l'Inyo de
+  1875, autre machine américaine de l'année, extrait de sa fiche), soit 17 290 lbf ;
+  la limite d'adhérence (0,86 de la masse sur les roues motrices, × 0,25 : 19 300 lbf)
+  est plus haute, ce sont donc les cylindres qui bornent. Vitesse **80 km/h** (50 mph :
+  0,8 mph par pouce de roue × 60 in, machine de voyageurs — voir la note de méthode).
+- Sources : [Locomotive Wiki — B&O n°600 « J.C. Davis »](https://locomotive.fandom.com/wiki/Baltimore_%26_Ohio_No._600_%22J.C._Davis%22) ;
+  [B&O Railroad Museum — « J.C. Davis »](https://www.borail.org/collection/bo-no-600/) ;
+  [Wikipédia — Virginia and Truckee 22 Inyo](https://en.wikipedia.org/wiki/Virginia_and_Truckee_22_Inyo) (pour les 130 psi).
+
+### Atchison, Topeka & Santa Fe n°2414 (Consolidation 2-8-0, Baldwin, 1880) — ajoutée
+- **Documenté (extrait d'un fonds d'archives)** : Consolidation 2-8-0 achetée à Baldwin
+  en 1880 ; **poids de la machine 122 120 lb** (55,4 t), **tender 90 000 lb** (40,8 t,
+  plein ou vide non dit), roues motrices de **51 in**, **coût neuf 12 175 $**. Masse du
+  catalogue : l'ensemble documenté, 212 120 lb (**96,2 t**).
+- **Estimé** : effort de traction **120,9 kN** — la limite d'adhérence, 0,25 × 0,89 ×
+  122 120 lb = 27 170 lbf (0,89 : la part de la masse sur les roues motrices de la
+  Consolidation de 1866, 80 000 lb sur 90 000 ; les cylindres et la pression ne figurent
+  pas dans l'extrait) ; vitesse **40 km/h** (25 mph : 0,5 mph par pouce de roue × 51 in,
+  machine de fret).
+- **Ce que son prix documenté dit de la convention** : 12 175 $ pour 122 120 lb font
+  0,10 $ la livre de machine, **la moitié** des 0,20 $ de 1870 que la note de méthode
+  retient ; le prix du catalogue (7 310) est donc probablement deux fois trop haut pour
+  une machine de 1880. La convention n'est pas changée ici (voir FINDINGS.md).
+- Source : [Kansas Historical Society — fiche de la machine n°2414](https://www.kansashistory.gov/archives/61524)
+  (adresse tirée de la liste de résultats du moteur de recherche ; la correspondance
+  exacte de la page avec l'extrait n'a pas pu être vérifiée).
+
+### Northern Pacific classe M, n°500 et 501 (Decapod 2-10-0, Baldwin, 1886) — ajoutée
+- **Documenté (extraits)** : deux 2-10-0 construites en 1886 par Baldwin (Burnham,
+  Parry, Williams & Co, numéros de série 8168 et 8169), numérotées 500 et 501, puis 1 et 2
+  en 1896 ; destinées aux lacets du col Stampede pendant le percement du tunnel
+  (1887-1888), roues motrices sans boudin pour les courbes serrées ; « les plus grosses
+  machines du monde » à leur sortie ; effort de traction « près de 35 000 lbf »
+  (**155,7 kN**) ; poids « plus de **135 tons** ».
+- **Hypothèse, à revérifier** : les extraits ne disent ni l'unité ni le périmètre de ces
+  135 tons. Lus comme **tonnes courtes, machine et tender** : 122,5 t ; machine seule,
+  par la convention du tender (÷ 1,6), 76,5 t, d'où la puissance et le prix. Le
+  contrôle est cohérent : 0,25 × 0,9 × 76,5 t (168 700 lb) = 38 000 lbf, au-dessus des
+  35 000 documentés. Si les 135 tons étaient la machine seule, puissance et prix
+  seraient 1,6 fois plus hauts.
+- **Estimé** : vitesse **40 km/h** (25 mph : diamètre des roues non trouvé, 50 in
+  supposés, machine de fret ; elle servait à faible allure sur des lacets).
+- Sources : [Wikipédia — Northern Pacific Railway locomotives](https://en.wikipedia.org/wiki/Northern_Pacific_Railway_locomotives) ;
+  [american-rails.com — Stampede Pass](https://american-rails.com/stampede.html) ;
+  [Wikipédia — 2-10-0](https://en.wikipedia.org/wiki/2-10-0) (extraits).
+
+### New York Central & Hudson River n°999 (4-4-0, West Albany, 1893) — ajoutée
+- **Documenté (extraits)** : construite en 1893 aux ateliers de West Albany pour
+  l'Empire State Express ; **masse de la locomotive 124 000 lb (56,2 t)**, tender exclu ;
+  roues motrices **86,5 in** (réduites à 70 in plus tard) ; masse adhérente 84 000 lb ;
+  pression **180 psi** ; première locomotive à vapeur dite avoir dépassé 100 mph, avec
+  112,5 mph (181 km/h) revendiqués par une source — un record contesté. Retenu
+  **100 mph (161 km/h)**, comme pour l'E6 (« dépassant 100 mph »).
+- **De mémoire, à revérifier** : cylindres **19 × 24 in**. L'extrait du moteur de
+  recherche donne « 15 in » ; je ne le retiens pas (à 180 psi et 86,5 in, des cylindres
+  de 15 in feraient 9 600 lbf, moins qu'une 4-4-0 de 1870), mais la contradiction n'a
+  pas pu être levée sans la page.
+- **Estimé** : effort de traction **68,2 kN** — cylindres 19 × 24, 180 psi, 86,5 in :
+  15 330 lbf (l'adhérence, 84 000 lb × 0,25 = 21 000 lbf, est plus haute).
+- Sources : [Wikipédia — NYC&HR n°999](https://en.wikipedia.org/wiki/New_York_Central_and_Hudson_River_Railroad_No._999) ;
+  [MTH Trains](https://mthtrains.com/20-3590-1) (extrait, mêmes chiffres) ;
+  [railarchive.net — NYC 999](https://railarchive.net/nyccollection/nyc999_rcl.htm).
+
+### Pennsylvania Railroad classe H6 (Consolidation 2-8-0, Altoona, 1899) — ajoutée
+- **Documenté (extraits)** : Consolidation construite aux ateliers d'Altoona
+  (Juniata) **à partir de 1899** (un exemplaire est daté de janvier 1899) ; effort de
+  traction **42 717 lbf (190,0 kN)** ; masse adhérente 180 000 lb ; roues motrices
+  **56 in** ; cylindres 22 × 28 in ; 195 psi ; **masse de la locomotive 204 800 lb
+  (92,9 t)**, ensemble avec son tender 70F70 **343 600 lb (155,9 t)**. La classe, avec
+  ses sous-classes, est la plus nombreuse de la PRR (1 707 machines).
+- **Estimé** : vitesse **48 km/h** (30 mph : 0,5 mph par pouce de roue × 56 in = 28 mph,
+  arrondi à 5 ; machine de fret).
+- Sources : [Wikipédia — PRR classe H6](https://en.wikipedia.org/wiki/Pennsylvania_Railroad_class_H6) ;
+  [Locomotive Wiki — PRR H6](https://locomotive.fandom.com/wiki/Pennsylvania_Railroad_Class_H6) ;
+  [rrpicturearchives.net — H6 n°5 et 673](https://rr.rrpicturearchives.net/Locopicture.aspx?id=228612).
+
+### Pennsylvania Railroad classe E2 Atlantic (4-4-2, Altoona, 1901) — ajoutée
+- **Documenté (extraits)** : **masse de la locomotive 171 100 lb (77,6 t)**, tender
+  89 050 lb (40,4 t), ensemble **260 150 lb (118,0 t)** ; effort de traction
+  **27 409 lbf (121,9 kN)** ; masse adhérente 118 400 lb ; roues motrices **80 in** ;
+  construite à Altoona à partir de 1901 (les extraits disent « 1901-1902 » ; l'année
+  est à revérifier). Le E1 de 1899, trois machines expérimentales à roues de 80 in pour
+  Atlantic City, n'a pas pu être chiffré : ni effort ni masse dans les extraits.
+- **Estimé** : vitesse **105 km/h** (65 mph : 0,8 mph par pouce × 80 in = 64 mph,
+  arrondi à 5). Les marches rapides d'Atlantic City (100 mph et plus, revendiquées)
+  sont des records non sourcés ici ; l'E6 de 1910, même dessin à roues de 80 in, garde
+  ses 161 km/h documentés.
+- Sources : [Wikipédia — PRR classes E2, E3 et E7](https://en.wikipedia.org/wiki/Pennsylvania_Railroad_class_E2,_E3,_and_E7) ;
+  [Wikipédia — PRR classe E1](https://en.wikipedia.org/wiki/Pennsylvania_Railroad_class_E1) ;
+  [Locomotive Wiki — PRR E2](https://locomotive.fandom.com/wiki/Pennsylvania_Railroad_Class_E2).
+
+### Missouri Pacific classe P-69, première Pacific (4-6-2, Brooks, 1902) — ajoutée
+- **Documenté (extraits)** : les 21 premières Pacific des États-Unis, livrées par
+  Brooks (Alco) à la Missouri Pacific en 1902 (le type en tient son nom) ; roues
+  motrices de **69 in** (d'où « P-69 ») ; selon steamlocomotive.com (extrait) : masse
+  adhérente **120 000 lb**, masse de la machine **173 000 lb (78,5 t)**.
+- **Écarté** : le même extrait donne un effort de 47 040 lb, soit 39 % de la masse
+  adhérente — impossible (l'adhérence ne dépasse guère 25 à 30 %), et proche des
+  47 535 lbf de la classe P-73 de 1925 qu'une autre recherche renvoyait : confusion
+  probable du résumé du moteur de recherche.
+- **Estimé** : effort de traction **133,4 kN**, la limite d'adhérence (0,25 × 120 000 lb =
+  30 000 lbf ; cylindres non trouvés) ; vitesse **89 km/h** (55 mph : 0,8 × 69 in) ;
+  tender 0,6 × la machine.
+- Sources : [Wikipédia — 4-6-2](https://en.wikipedia.org/wiki/4-6-2) ;
+  [steamlocomotive.com — Missouri Pacific 4-6-2](https://www.steamlocomotive.com/locobase.php?country=USA&railroad=mp&wheel=4-6-2).
+
+### Baltimore & Ohio n°2400 « Old Maude » (Mallet 0-6-6-0, Alco-Schenectady, 1904) — ajoutée
+- **Documenté (extraits)** : construite en mai 1904 (numéro de série 27478) par
+  l'American Locomotive Company sur les plans de James E. Muhlfield (B&O) et de Carl J.
+  Mellin (Alco), la **première Mallet d'Amérique du Nord** ; effort de traction
+  **71 500 lbf (318,0 kN)** ; **vitesse maximale 21 mph (34 km/h)** ; masse de la
+  machine **334 500 lb (151,7 t)**, toute sur les roues motrices (adhérence 0,25 :
+  83 600 lbf ; le chiffre documenté est plus bas) ; roues de 56 in,
+  235 psi, cylindres haute pression 20 × 32 in et basse pression 32 × 32 in ; surnommée
+  « Old Maude », exposée à l'exposition de Saint-Louis (1904) ; numérotée 7000 en 1915.
+- **Estimé** : tender 0,6 × la machine (ensemble 242,8 t).
+- Sources : [Wikipédia — Baltimore and Ohio Railroad locomotives](https://en.wikipedia.org/wiki/Baltimore_and_Ohio_Railroad_locomotives) ;
+  [Wikipédia — 0-6-6-0](https://en.wikipedia.org/wiki/0-6-6-0) ;
+  [american-rails.com — B&O 2-6-8-0 et Mallet](https://american-rails.com/bokl1.html) (extraits).
+
+### Bessemer & Lake Erie n°154, classe C3b (Consolidation 2-8-0, Baldwin, 1909) — ajoutée
+- **Documenté (extraits)** : construite par Baldwin en **1909** pour la Bessemer & Lake
+  Erie — le chemin de fer de minerai fondé en 1897 par Carnegie entre le lac Érié
+  (Conneaut) et les aciéries de Pittsburgh ; conservée au Henry Ford Museum ; effort de
+  traction **63 829 lbf (283,9 kN)** ; masse « **plus de 250 000 lb** ».
+- **Hypothèse, à revérifier** : 250 000 lb (113,4 t) retenues comme **plancher** de la
+  machine seule — une 2-8-0 de 63 829 lbf a au moins 255 000 lb de masse adhérente à
+  0,25 ; le périmètre (machine ou ensemble) n'est pas dit.
+- **De mémoire, à revérifier** : roues motrices de **57 in** (non trouvées) ; d'où la
+  vitesse estimée **48 km/h** (30 mph : 0,5 × 57 in = 28,5 mph, arrondi à 5).
+- Sources : [Henry Ford Museum — Baldwin « Consolidation », 1909](https://www.thehenryford.org/collections/explore/artifact/1214) ;
+  [Locomotive Wiki — B&LE n°154](https://locomotive.fandom.com/wiki/Bessemer_%26_Lake_Erie_No._154) ;
+  [Wikipédia — Bessemer and Lake Erie Railroad](https://en.wikipedia.org/wiki/Bessemer_and_Lake_Erie_Railroad).
+
 ### Pennsylvania Railroad classe E6 Atlantic (1910)
 - **Documenté** : effort de traction 32 000 lbf (142,3 kN) ; masse locomotive
   110,5 t (243 600 lb) ; vitesse « dépassant 100 mph » (retenue : 161 km/h).
@@ -259,6 +410,41 @@ consommation         = kg pour 1 000 tonnes-km brutes, par époque (tableau plus
   l'extrait) : c'est une estimation. Le diesel à 8 % traduit ce qui fit son succès,
   un entretien plus léger — estimé, lui aussi.
 
+<a id="extension-1871-1909"></a>
+**Extension de 1871 à 1909 (30 septembre 2026).** Les neuf machines ajoutées suivent
+les formules ci-dessus sans y rien changer ; ce qui suit dit comment, là où la
+formule avait besoin d'une règle écrite.
+
+- **Unités.** La livre vaut 0,453 592 kg, la tonne courte 0,907 185 t. Une masse
+  américaine « en tons » est lue en tonnes courtes. Les prix sont arrondis à la
+  dizaine, comme ceux des machines déjà au catalogue (132 × 40,82 t = 5 388 → 5 390).
+- **Masse.** L'ensemble documenté quand la machine et son tender le sont (Santa Fe
+  2414, PRR H6, PRR E2) ; sinon la machine × 1,6. Si seul l'ensemble est connu
+  (Northern Pacific classe M), la machine est l'ensemble ÷ 1,6.
+- **Effort de traction.** Le chiffre publié quand il existe (Northern Pacific M, H6,
+  E2, B&O 2400, B&LE 154), comme pour l'E6 ou le Mallard. Sinon la règle de la
+  Consolidation et de la D5 : le plus faible de la limite d'adhérence (0,25 × masse
+  adhérente) et de la formule des cylindres `0,85 × P × d² × c / D`, la pression étant
+  supposée (130 psi pour 1875, d'après l'Inyo de la même année) — la n°600 est bornée par
+  les cylindres, la 999 aussi, la Santa Fe 2414 et la Missouri Pacific par l'adhérence.
+- **Vitesse.** Le chiffre publié quand il existe (999 : 100 mph ; B&O 2400 : 21 mph).
+  Sinon une vitesse de service estimée *comme celles de la D5 et de la Consolidation*,
+  dont la règle n'était pas écrite : **0,8 mph par pouce de roue motrice pour une
+  machine de voyageurs ou mixte** (D5 : 56 in → 44,8 → 45 mph), **0,5 pour une machine
+  de fret** (Consolidation : 48 in → 24 → 25 mph), arrondie à 5 mph. Cette règle n'est
+  qu'une mise au net : elle redonne les deux estimations existantes, elle n'est pas
+  sourcée. Le catalogue mêle ainsi des vitesses de service (n°600, Santa Fe, H6, P-69,
+  E2) et des records ou des revendications (999, E6, Mallard) : voir « Ce qui manque ».
+- **Consommation.** L'interpolation du tableau ci-dessous, pour les années que la
+  table ne couvrait pas. Elle ne distingue pas la compound (B&O 2400), plus économe en
+  vapeur : aucune source ne la chiffre.
+- **Le prix de la Santa Fe 2414 contredit le facteur.** 12 175 $ en 1880 pour 122 120 lb
+  de machine font 0,10 $ la livre, la moitié des 0,20 $ de 1870 de la formule : en
+  dollars courants, les prix de l'époque baissent après 1870, et la formule, qui n'a pas
+  d'année, surestime sans doute les machines de 1880 à 1900 d'un facteur deux. Elle n'est
+  **pas** changée ici (le prix compte peu au prix du charbon, FINDINGS.md, « Les
+  véhicules », septième résultat) ; c'est dit pour qui voudrait convertir au quadruple.
+
 **La conversion au prix du charbon a une conséquence qu'il faut connaître** : au
 prix de jeu du charbon, le carburant pèse 5 % du coût d'un train de la sierra, contre
 un ordre de grandeur de 10 à 15 % des dépenses d'exploitation des chemins de fer
@@ -283,6 +469,7 @@ tonnes-km**, 115 lb **36 kg**. Retenu :
 | 1837-1852 | 75 | estimé, entre les deux |
 | 1866-1870 (charbon) | 70 | estimé : « 41 milles par tonne de charbon » sur un chemin de fer du milieu du siècle (extrait, [*American Heritage*, « Wood burn »](https://americanheritage.com/wood-burn)), pour un train supposé de 200 t brutes |
 | 1855, **bois** (General) | 175 | 2,5 × le charbon de l'époque : « 5 000 lb de bois évaporent autant d'eau que 2 000 lb de charbon » (même extrait) ; le même chemin de fer faisait 26 milles à la corde de bois contre 41 à la tonne de charbon |
+| 1875-1909 | 68 à 58 | estimé : interpolation linéaire entre 70 (1870) et 58 (1910), soit −0,3 par an, arrondie à l'unité — 1875 : 68, 1880 : 67, 1886 : 65, 1893 : 63, 1899 et 1901 : 61, 1902 et 1904 : 60, 1909 : 58 |
 | 1910 | 58 | estimé, un peu au-dessus de 1920 (54) |
 | 1923 | 48 | entre 1920 (54) et 1927 (40) |
 | 1935-1941 | 38 à 36 | 1940 : 36 (documenté) |
@@ -314,13 +501,14 @@ dont la doc XML renvoie ici.
 - Aucune consommation n'est documentée **par machine** : les sources donnent des
   moyennes de réseau (1920-1940) ou des anecdotes (milles par tonne, par corde).
   Toutes les consommations sont des estimations par époque.
-- La puissance n'est documentée que pour deux machines sur dix-sept ; les autres
+- La puissance n'est documentée que pour deux machines sur vingt-six ; les autres
   sortent de la formule à 10 kW par tonne, probablement basse pour le XXᵉ siècle.
 - L'effort de traction de la D5 et de la Consolidation est une limite d'adhérence
   (0,25 × masse adhérente), pas une mesure ; celle de la D5 suppose en plus la
   répartition de sa masse.
-- La vitesse de la D5, de la Consolidation, de Lafayette et du General n'a pas de
-  source directe. Et la vitesse du catalogue est souvent un **record** (Mallard,
+- La vitesse de la D5, de la Consolidation, de Lafayette, du General, de la n°600,
+  de la Santa Fe 2414, de la Northern Pacific M, de la H6, de l'E2, de la P-69 et de la
+  B&LE 154 n'a pas de source directe (estimée par pouce de roue, voir l'extension). Et la vitesse du catalogue est souvent un **record** (Mallard,
   203 km/h) : un train de marchandises ne l'atteint pas. `vehicles.maxTrainSpeedKmh`
   permet de borner la vitesse d'un train par celle de ses wagons ; aucune valeur
   n'est sourcée pour 1875.
@@ -333,6 +521,15 @@ dont la doc XML renvoie ici.
   elles restent au charbon.
 - Les pages citées le 30 septembre 2026 n'ont été lues qu'à travers les extraits
   du moteur de recherche (voir la limite en tête de section).
+- **Les neuf machines de 1875 à 1909 reposent sur des extraits de moteur de
+  recherche, dont plusieurs se contredisent** (fiche de la n°600 : 8 580 lbf pour 19 × 26
+  in ; Missouri Pacific : 47 040 lbf pour 120 000 lb adhérents ; 999 : cylindres de 15
+  in). Les valeurs incompatibles sont écartées et dites, pas arrangées ; la relecture
+  des pages (Wikipédia est refusé par le proxy) est la première étape avant de s'y fier.
+  Aucune Ten-Wheeler (4-6-0) n'est au catalogue : aucune fiche de 4-6-0 des années 1880
+  ou 1890 (PRR G3, Norfolk & Western E, Union Pacific 1881) n'a rendu, dans les
+  extraits, d'effort ni de masse ; plutôt qu'inventer, la famille est laissée de côté.
+  Les E1 (1899) ne sont pas chiffrées non plus.
 
 <a id="masses-du-train"></a>
 ## Masses du train — modèle de coût `mass` (`haulage.massCost`)
@@ -422,6 +619,12 @@ méritent néanmoins d'être notés :
 - La géographie (Ironpeak isolée à l'origine de la ligne) est une décision de
   conception documentée dans le commentaire `//geographie` du fichier, pas
   une carte réelle.
+- La locomotive que ses trains référencent (`locomotive`, à titre informatif : rien ne
+  lit ce champ tant que le module `vehicles` est inactif) est la **Pennsylvania Railroad
+  classe H6** (Consolidation 2-8-0, 1899), fiche dans le catalogue ci-dessus : une
+  machine de fret lourd, sortie l'année d'avant le scénario, pour une ligne de minerai
+  et d'acier. Elle remplace la D5 (1870), choisie faute de mieux quand le catalogue
+  n'avait rien entre 1870 et 1910, et l'E6 (1910) avant elle, postérieure au scénario.
 
 <a id="evenements"></a>
 ## Événements historiques — `data/heartland-events.json`
