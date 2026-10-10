@@ -136,6 +136,42 @@ dividendes au prorata, achat sur marge avec appel de marge, augmentation de
 capital, prise de participation dans un concurrent piloté par les données, OPA sur
 le flottant et fusion-absorption.
 
+**La bourse solide** (FINDINGS.md, « La bourse solide »), chaque mécanique inerte par
+défaut — sans ses blocs, un scénario rejoue la partie d'avant au bit près, et un test le
+vérifie sur heartland-finance et heartland-cycle :
+
+- **Carnet de profondeur finie** (`market.bookTrancheFraction`, `StockMarket`) : tout
+  ordre au flottant — magnat, montée au capital, vente forcée — se découpe en tranches,
+  chacune au cours du moment, puis l'impact. `StockMarket.Quote` devise sans exécuter.
+  L'OPA reste à prix fixe.
+- **Prises de bénéfices** (`market.profitTaking`) : au-delà de `thresholdPercent`
+  au-dessus de la plus haute de la valeur fondamentale (`FinanceCompany.IntrinsicPrice`)
+  et du cours de référence (`ReferencePrice`, qui suit une baisse le jour même et une
+  hausse en `referenceTicks` jours), le flottant vend au flottant dans le carnet. Le
+  registre ne change pas de lignes ; aucun bilan tenu ne bouge.
+- **Le compte du magnat** (`Brokerage`) : ligne de crédit `tycoon.creditLineRatio` (sur la
+  valeur des titres au cours d'avant l'ordre, ≤ le seuil de maintien), appel de marge en
+  cascade (`tycoon.marginCallMaxRounds` tours par jour), **ruine** (`Tycoon.Ruined`, dette
+  au compte `residual-debt`, sans intérêt) : un ruiné n'achète rien, ne renfloue pas ; tout
+  revenu (`Brokerage.ReceiveIncome` : salaire, dividendes, produit de vente) rembourse
+  d'abord la dette ; il sort de la ruine le jour où elle est soldée.
+- **Salaire du président** (`ceoPay`, `CeoPay`) : constaté chaque mois au compte
+  `salary-payable` de la compagnie, payé sur sa caisse disponible, révisé à chaque clôture
+  selon le résultat rapporté à la capitalisation moyenne (ou aux capitaux propres
+  d'ouverture), prime au-delà d'un seuil. Un flux financier : le transporteur le voit.
+- **Division d'actions** (`market.split`) : le dernier jour de l'exercice, au-dessus du
+  seuil ; chaque ligne de registre et de portefeuille multipliée, cours et références
+  divisés exactement (rapports 2^a·5^b seulement), prix de revient totaux inchangés. Les
+  quantités de titres des données (tranche d'une montée au capital, lot minimal du magnat)
+  suivent `FinanceCompany.SplitFactor`.
+- **Journal public** (`FinanceState.Journal`, `bourse.csv`) : appels de marge, prises de
+  bénéfices, ruine et sortie, divisions, clôtures d'exercice. **Statistiques moyennées**
+  (`Telemetry/FinanceStatistics`).
+
+Ordre interne de la phase 6, complété : … dividende, **salaire du président** ; marge,
+ordres du magnat, **prises de bénéfices** (toutes les compagnies), appel de marge ;
+renflouement (pas si ruiné) ; acquisitions ; **division** ; clôture.
+
 **Scénarios** : `data/heartland-finance.json` est le scénario du module. Il reprend
 l'économie de `heartland.json` au caractère près et n'ajoute que le bloc
 `finance` ; `heartland.json` reste la trace de régression de l'**économie** et
@@ -162,8 +198,14 @@ entrent à l'actif et l'amortissement porte sur la valeur d'origine de tout le p
 valeur résiduelle par machine, et sans vente. `fixedAssetsAtStart` ne devrait plus
 compter que les voies et le matériel que le scénario ne déclare pas.
 
-**Dette connue, assumée, à traiter plus tard.** Deux points sont identifiés et
-volontairement laissés en l'état :
+**Dette connue — traitée.** Les deux points ci-dessous, laissés en l'état jusqu'ici,
+sont traités par la bourse solide : le carnet de profondeur finie et les prises de
+bénéfices pour le premier, `FinanceStatistics` pour le second (FINDINGS.md, « La bourse
+solide »). Le saut de fortune du soir d'un ordre est passé de +539 000 à −45 000, et la
+fortune ne répond plus que de façon monotone, et trois fois moins, à la durée des phases.
+Ce qui reste — une règle contracyclique qui gagne d'autant plus que les phases sont
+courtes — tient à un multiple de valorisation que le marché n'anticipe pas, pas au
+flottant : c'est une décision ouverte, pas une dette. Texte d'origine :
 
 1. **Le flottant est une contrepartie de profondeur infinie.** Il absorbe n'importe
    quel volume au cours affiché, et les plus-values que le magnat y réalise
@@ -191,8 +233,10 @@ l'invariant `bilan-tresorerie` reste vérifié. En finance, une fuite d'un
 millième par tick devient une fortune en deux ans de jeu.
 
 **Invariants apportés** : `bilan-actif-passif`, `actions-emises`,
-`dette-emprunts`, `tresorerie-non-negative`, `decouvert-explicite`,
-`frontiere-tresorerie`. Tous se comparent à zéro exactement, sans tolérance : la
+`dette-emprunts` (intérêts de marge versés dans une dette résiduelle compris),
+`tresorerie-non-negative`, `decouvert-explicite`, `frontiere-tresorerie`,
+`ruine-explicite` (ruiné ⇔ dette résiduelle ; un ruiné n'a ni caisse ni marge),
+`salaire-president` (constaté = payé + dû ; payé = reçu par le magnat). Tous se comparent à zéro exactement, sans tolérance : la
 comptabilité est tenue en `decimal`, donc un écart d'un centime est un bug et non
 un résidu de calcul.
 

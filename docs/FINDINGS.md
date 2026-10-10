@@ -1440,6 +1440,11 @@ carnet finie, **aucune conclusion sur la fortune du magnat ne vaut réglage du c
 les conclusions qualitatives — le levier aveugle est puni, la lecture du journal paie
 — sont celles qu'on peut garder.
 
+*Remesuré avec la bourse solide* (« La bourse solide », plus bas) : carnet fini, prises
+de bénéfices et ligne de crédit font tomber les ruines du témoin de 20 à 0 sur 40 et
+divisent la dispersion de sa fortune par 2,3 ; à phases deux fois plus courtes, la
+fortune ne gagne plus 851 000 mais 317 000, et ce reste ne doit rien au levier.
+
 ### Troisième résultat : emprunter en expansion et racheter en crise ne vont pas ensemble
 
 La compagnie témoin emprunte ses trois séries et rachète ses deux concurrents dans les
@@ -1758,6 +1763,11 @@ Trois lectures :
    témoins de la référence, 15/40 quand la conjoncture et les aléas changent. La
    fortune est la plus dispersée des trois mesures ; un palier de fortune est un pari
    sur la bourse autant qu'un objectif de gestion.
+
+*Remesuré avec la bourse solide* (plus bas) : le soir du tick 810 coûte désormais
+45 000 au magnat au lieu de lui en rapporter 539 000, et l'écart se referme — million
+0/40 au jour le jour comme en moyenne sur les témoins, 5/40 contre 4/40 sur le
+calendrier.
 
 ### Deuxième résultat : les livraisons sont une horloge
 
@@ -2327,6 +2337,336 @@ Aucune n'est tranchée ici ; le module est livré en opt-in, sur la seule
    chargement en argent — carburant compris —, pas sur ce qu'il coûte en temps : un
    train plus lourd est plus lent, donc fait moins de trajets, et rien ne le lui dit.
    Le coût d'opportunité du temps est le prochain terme marginal manquant.
+
+## La bourse solide : le flottant n'est plus une pompe, et la ruine existe
+
+*Campagne de la bourse solide — octobre 2026, scénarios `heartland-finance` (720 ticks)
+et `heartland-cycle` (2 160 ticks), sous les deux solveurs, sur des ensembles de 40
+parties, 90 ticks de chauffe exclus.*
+
+### La question
+
+La vision (« La bourse doit être solide ») fait du cours la mesure de la fortune du
+joueur, et deux dettes du module finance la faussaient : un flottant de profondeur
+infinie, qui absorbait n'importe quel volume au cours affiché, et aucune grandeur
+financière moyennée. Les deux campagnes précédentes en ont montré les symptômes : la
+fortune moyenne du magnat témoin passait de 377 000 à 1 228 000 selon la seule durée des
+phases (« Le cycle économique »), et un ordre de bourse, le soir du 1er avril 1872, lui
+faisait gagner un demi-million et le palier du million (« Les objectifs »). L'équipe a
+décidé une limite à l'achat sur marge et la ruine personnelle, les prises de bénéfices,
+le salaire du président et la division d'actions ; la mesure devait dire :
+
+1. si le saut du tick 810 disparaît ;
+2. si la fortune moyenne dépend encore de la durée des phases ;
+3. combien de ruines, d'appels de marge, de prises de bénéfices, et quelle dispersion ;
+4. si l'écart entre un objectif de fortune lu au jour le jour et en moyenne sur 30 jours
+   se referme.
+
+### Les mécaniques
+
+Le contrat est dans [CONTRACTS.md](CONTRACTS.md) ; le code dans `Finance/StockMarket.cs`
+(carnet, prises de bénéfices, division), `Finance/Brokerage.cs` (le compte du magnat :
+ligne de crédit, appel de marge, ruine), `Finance/CeoPay.cs` (salaire). Chaque mécanique
+est inerte par défaut : sans les nouveaux blocs, heartland-finance et heartland-cycle
+rejouent leurs anciennes empreintes au bit près, sous les deux solveurs — un test le
+vérifie.
+
+- **Un carnet de profondeur finie** (`market.bookTrancheFraction` = 1 %). Un ordre se
+  découpe en tranches de 1 % du capital ; chacune s'exécute au cours du moment, puis le
+  déplace de l'impact de marché (1,5 % par tranche, `valuation.marketImpact`, inchangé).
+  C'est le découpage d'une grosse livraison côté fret, transposé. Il vaut pour tout
+  acheteur : le magnat, la compagnie qui monte au capital d'un concurrent, le courtier
+  qui liquide. L'OPA reste à prix fixe : c'est une offre, pas un ordre au carnet.
+- **Les prises de bénéfices** (`market.profitTaking`). Quand le cours dépasse de plus
+  de 15 % *à la fois* sa valeur fondamentale (la cible de la valorisation) et le cours
+  de référence des investisseurs, les autres actionnaires revendent, dans le carnet, de
+  quoi refermer l'excès le jour même (`speed` = 1), sans céder plus de 30 % du flottant
+  dans la journée (`maxSellFraction`). Le cours de référence suit le cours **à la baisse
+  le jour même, à la hausse sur 30 jours** : ce que les investisseurs ont récemment payé.
+  Les deux conditions écartent deux faux positifs : un cours qui rattrape sa valeur (une
+  expansion, une fusion rentable) n'est pas une montée à vendre ; un cours encore
+  au-dessus de sa valeur mais qui baisse (le début d'une crise) n'est pas une montée du
+  tout — vendre alors accélérerait le krach. Au registre, le flottant vend au flottant :
+  ni le magnat ni les compagnies ne bougent, ni le total émis, et aucun argent tenu au
+  bilan ne bouge. Seul le cours baisse.
+- **La ligne de crédit** (`tycoon.creditLineRatio` = 0,5). Le courtier ne prête pas
+  au-delà de 50 % de la valeur des titres, **comptés au cours d'avant l'ordre** — il ne
+  prête pas sur la hausse que l'ordre va lui-même provoquer —, et appelle toujours la
+  marge à 70 %. Un achat qui la dépasserait est réduit au plus gros lot que la caisse et
+  la ligne financent ensemble, ou refusé. Choisie sur la valeur des titres plutôt que sur
+  un multiple de la fortune nette : la fortune contient le portefeuille, la prendre pour
+  gage prêterait sur l'argent prêté ; et pour un portefeuille d'une seule ligne, les deux
+  formes coïncident (50 % de la valeur, c'est une fois la mise propre). Avant, le plafond
+  d'emprunt *était* le seuil d'appel : un achat frais n'avait aucun matelas.
+- **La cascade des ventes forcées** (`tycoon.marginCallMaxRounds` = 20). Le courtier
+  vend ce qui suffirait au cours du moment ; la vente fait baisser le cours ; il relit le
+  compte et revend ce qui manque, au plus 20 tours par jour, puis reprend le lendemain.
+  Chaque tour vend au moins un titre : la cascade s'arrête au plus tard quand il n'y a
+  plus rien à vendre. Linéarisé, un tour multiplie le déficit par `m·k·(n/S) / (1 − m)`
+  (maintien *m* = 0,7, impact *k* = 1,5, part du capital *n/S* détenue). **Sous 29 % du
+  capital, la cascade converge ; au-delà, chaque vente forcée creuse le déficit** — le
+  gros porteur déprécie tout le reste de sa ligne en vendant —, et elle ne s'arrête qu'en
+  repassant sous ce seuil, ou à la liquidation. Les deux régimes sont testés.
+- **La ruine.** Si, tous les titres vendus, une dette subsiste, la caisse est saisie et
+  le reste — marge et intérêts impayés — devient une **dette résiduelle**, au passif, sans
+  intérêt. Le magnat ne peut plus rien acheter, ni actions, ni apport, ni renflouement ;
+  ses revenus — salaire de président, dividendes — la remboursent en priorité ; **il sort
+  de la ruine le jour où elle tombe à zéro**. Rien ne disparaît : ce qui était dû est
+  remboursé par la vente et la caisse, ou constaté. Avant, le magnat sans titres gardait
+  sa marge, payait des intérêts dessus jusqu'à la fin, et prenait un appel de marge
+  **chaque jour** : les 447 appels de marge moyens de la campagne du cycle étaient surtout
+  ceux-là.
+- **Le salaire du président** (`ceoPay`). 12 000 par an, constatés chaque mois et payés
+  sur la caisse disponible (ce qui ne peut l'être reste dû) ; révisé à chaque clôture
+  selon la performance — le résultat de l'exercice, dividendes rajoutés, rapporté à la
+  capitalisation moyenne de l'exercice — : 10 % de plus par point au-dessus de 8 %,
+  entre ×0,5 et ×2 ; au-delà de 12 %, une prime de 2 % du résultat obtenu au-delà. La
+  capitalisation **moyenne**, pas celle d'un jour : un ordre de bourse ne fait pas le
+  salaire. Payé sur la caisse disponible parce qu'un découvert, même d'un jour, déclenche
+  le renflouement : une première version payait d'office, et un salaire de 1 000 tombé
+  le jour où une échéance d'emprunt avait vidé la caisse faisait souscrire au magnat
+  228 000 d'actions nouvelles à 25 % de décote.
+- **La division d'actions** (`market.split`). Le dernier jour de l'exercice, une
+  compagnie dont le cours finit au-dessus de 100 voit chaque action divisée en deux. Le
+  cours est divisé *exactement* (101,23 devient 50,615), ce qui garde la capitalisation et
+  chaque fortune identiques au centime ; le demi-centime ne vit que jusqu'à la
+  valorisation du lendemain. Seuls les rapports 2^a·5^b sont acceptés. Le cours de
+  heartland ne dépasse pas 35 en six ans : la règle attend les parties longues, et deux
+  tests l'éprouvent sur une compagnie construite pour.
+- **Des statistiques moyennées** (`FinanceStatistics`, la dette n° 2) : cours et fortune
+  en moyenne après chauffe, écart-type, bornes, plus grand saut d'un soir au suivant,
+  soirs ruiné — affichés par le harnais, avec le journal public de la bourse
+  (`bourse.csv`).
+
+### Méthode
+
+Les bancs de la campagne du cycle et de celle des objectifs, réunis, compilés deux fois :
+contre le code d'avant (4abacf1, « avant ») et contre celui-ci. Deux ensembles :
+
+- **calendrier** (heartland-cycle) : `events.randomSequence` = 11 + *i*,
+  `cycle.randomSequence` = 13 + *i* — la méthode de la campagne du cycle ;
+- **témoin** (heartland-cycle et heartland-finance) : un choc de demande de 0,1 % pendant
+  38 jours sur un couple (ville, marchandise) et à une date qui changent avec la partie —
+  la méthode des objectifs, celle où l'ordre de bourse tombe au tick 810 dans les 40.
+
+Chaque variante change une valeur en mémoire. « + X » : tout désactivé sauf X ;
+« livré sans X » : tout le livré sauf X. Fortune en milliers, **moyenne dans le temps**
+après chauffe, « moyenne ± écart-type entre parties » ; « ruinés » compte les parties où
+le magnat l'a été au moins une fois / l'est encore à la fin (avant : zéro titre et une
+marge, l'état que la ruine nomme désormais) ; « saut max » est le plus grand écart de
+fortune d'un soir au suivant. Le résultat du transport est **identique au centime**
+dans les 80 parties du calendrier appariées, avant et après : rien de tout cela ne touche
+l'économie, et le test d'équivalence des marchés heartland / heartland-finance tient.
+
+### Premier résultat : le saut du tick 810 a disparu — il est devenu une perte
+
+Témoins de heartland-cycle, référence (anticipant entre crochets) :
+
+| | avant | + carnet | + prises | + carnet + prises | livré |
+|---|---|---|---|---|---|
+| saut de fortune le soir du tick 810 (k) | **+539 ± 21** [+192 ± 114] | +176 ± 51 | +160 ± 13 | −46 ± 12 | **−45 ± 22** [+51 ± 28] |
+| plus grand saut d'un soir au suivant (k) | 539 ± 21 [415 ± 269] | 197 ± 24 | 179 ± 13 | 81 ± 14 | 67 ± 13 [167 ± 46] |
+| million, au jour le jour ; sur 30 jours | **40/40** ; 0/40 | 0 ; 0 | 0 ; 0 | 0 ; 0 | **0/40 ; 0/40** |
+| demi-million, au jour le jour ; sur 30 jours | 40/40 ; 40/40 | 40/40 ; 33/40 | 40 ; 40 | 0 ; 0 | 6/40 ; 6/40 |
+
+Le soir du 1er avril 1872 (partie telle qu'écrite), le magnat engage toute sa caisse
+(467 000) et 326 000 de marge. Avant, il payait 38 000 titres au cours d'avant (23,7),
+puis l'impact portait le cours à 37,3 et réévaluait toute sa position. Dans le carnet, ses
+27 700 titres lui coûtent 28,6 en moyenne et portent le cours de 23,25 à 35,18 ; les
+investisseurs revendent 18 000 titres dans la soirée, le cours revient à 26,81 — sous ce
+qu'il a payé —, et il finit la soirée **en perte de 49 000**. **Les deux mécaniques sont
+nécessaires** : le carnet seul laisse +176 000 (le cours reste où l'ordre l'a poussé),
+les prises de bénéfices seules +160 000 (sur un flottant infini, l'ordre se paie encore
+au cours d'avant). Ensemble, l'ordre coûte ce qu'il fait monter, et ce qu'il fait monter
+ne tient pas.
+
+**L'écart entre les deux lectures de la fortune s'est refermé.** Avant, 40 témoins sur
+40 atteignaient le million au jour le jour, le soir de l'ordre, et aucun en moyenne sur
+30 jours ; désormais 0 et 0. Sur l'ensemble calendrier, le million passe de 38/40 au jour
+le jour contre 15/40 en moyenne, à 5/40 contre 4/40 ; le demi-million de 40 et 40 à 36 et
+36. Le demi-million devient difficile sur les témoins (6/40), et la partie telle
+qu'écrite le manque sous la référence (le journal figé des objectifs a bougé) : le magnat
+ne fabrique plus sa fortune, et les paliers livrés, valeurs d'illustration, avaient été
+posés sur celle qu'il fabriquait.
+
+### Deuxième résultat : la pompe est arrêtée ; ce qui reste est le rythme du cycle
+
+Fortune moyenne du magnat témoin selon la durée des phases, calendrier, référence
+(anticipant entre crochets) :
+
+| | sans cycle | phases ×1 (livré) | ×0,75 | ×0,5 |
+|---|---|---|---|---|
+| avant, magnat témoin (65 % sur marge) | 721 ± 161 [391] | 377 ± 218 [436] | 278 ± 182 [384] | **1 228 ± 532** [985] |
+| avant, sans marge | 538 ± 66 [430] | 457 ± 78 [430] | — | 881 ± 232 [738] |
+| avant, sans ordres de bourse | — | 586 ± 28 [518] | — | 589 ± 24 [519] |
+| **livré, magnat témoin** | 469 ± 56 [404] | **387 ± 95** [388] | 398 ± 115 [360] | **704 ± 160** [594] |
+| livré, sans marge | 555 ± 52 [465] | 466 ± 63 [461] | — | 781 ± 149 [695] |
+| livré, sans ordres de bourse | — | 608 ± 27 [539] | — | 611 ± 23 [541] |
+
+**La réponse non monotone et à ±850 000 près a disparu.** Avant, ×0,75 faisait perdre
+99 000 ± 38 000 au magnat témoin et ×0,5 lui faisait gagner 851 000 ± 91 000 : le levier
+sur un flottant infini amplifiait n'importe quelle oscillation, dans n'importe quel sens.
+Désormais la fortune est monotone en la durée des phases : ×0,75 ne change rien
+(+11 000), ×0,5 ajoute 317 000.
+
+**Ce qui reste n'est plus la pompe du flottant infini.** Trois témoins le disent. Sans
+ordres de bourse, la durée des phases ne change rien (608 contre 611) : ce n'est pas la
+valorisation. Sans marge, l'effet est du même ordre (+315 000 livré, +424 000 avant) :
+ce n'est pas le levier. Et la profondeur du carnet ne le touche pas (tranches de 0,5 à
+2 %, impact de 0,75 à 1,5 : 57 000 au plus sur la fortune moyenne). C'est **la règle du
+magnat témoin** — acheter chaque mois, revendre un quart de sa ligne quand le cours
+atteint 1,6 fois son prix de revient — sur un cours dont la valeur fondamentale oscille
+d'un facteur 2,2 entre expansion et crise : une règle contracyclique gagne d'autant plus
+que les cycles sont courts. Le flottant lui sert de contrepartie au cours que la
+valorisation fixe, et la valorisation applique le multiple de la phase sans l'anticiper.
+C'est le « rythme financier exploitable » que la campagne du cycle voulait ; savoir si un
+marché devrait l'anticiper est une décision (plus bas).
+
+### Troisième résultat : la ligne de crédit rend la ruine rare ; la cascade sans elle la multiplie
+
+Calendrier de heartland-cycle, référence [anticipant] :
+
+| | fortune moy. (k) | σ entre parties | ruinés (jamais / fin) | appels de marge | titres vendus d'office | jours de prises | saut max (k) |
+|---|---|---|---|---|---|---|---|
+| avant | 377 [436] | 218 [141] | **20/20** [5/5] | 447 [118] | — | — | 734 [485] |
+| tout désactivé (la ruine nommée) | 378 [436] | 218 [141] | 20/20 [5/5] | 6,0 [6,1] | 58 500 | 0 | 734 [485] |
+| + ligne de crédit | 453 [450] | 195 [119] | 1/1 [2/2] | 6,5 [6,7] | 33 200 | 0 | 760 [482] |
+| + carnet | 302 [319] | 100 [122] | 3/3 [1/1] | 25,5 [29,1] | 36 000 | 0 | 271 [179] |
+| + prises de bénéfices | 382 [426] | 220 [141] | 21/21 [4/4] | 6,0 [6,2] | 58 600 | 10,1 [8,3] | 371 [256] |
+| + cascade | 366 [423] | 224 [150] | **29/29** [9/9] | 1,0 [0,7] | 60 100 | 0 | 734 [485] |
+| + salaire | 394 [453] | 223 [143] | 24/15 [9/5] | 6,0 [6,1] | 61 300 | 0 | 782 [507] |
+| **livré** | **387** [388] | **95** [115] | **0/0** [1/0] | 2,9 [4,2] | 9 500 | 8,8 [9,2] | **96** [137] |
+| livré sans ligne (prêt jusqu'à 70 %) | 309 [353] | 106 [125] | 9/0 [5/3] | 6,5 [8,3] | 35 200 | 9,1 [9,3] | 252 [198] |
+| livré, ligne à 30 % | 433 [446] | 73 [81] | 0/0 [0/0] | 0,0 [0,0] | 0 | 8,4 [8,7] | 69 [84] |
+| livré sans carnet | 474 [461] | 210 [136] | 5/0 [5/1] | 0,7 [0,6] | 33 800 | 9,4 [9,2] | 441 [281] |
+| livré sans prises | 390 [391] | 92 [116] | 0/0 [2/0] | 2,5 [3,5] | 8 700 | 0 | 264 [229] |
+| livré sans cascade | 389 [398] | 96 [109] | 0/0 [0/0] | 9,2 [12,7] | 8 800 | 8,8 [9,3] | 95 [117] |
+| livré sans salaire | 333 [336] | 78 [97] | 0/0 [0/0] | 3,6 [8,2] | 7 100 | 8,7 [8,3] | 66 [90] |
+
+Cinq lectures :
+
+1. **La dispersion de la fortune est divisée par 2,3** (218 000 → 95 000 entre parties
+   sous la référence) et le plus grand saut d'un soir par 7,6. La fortune moyenne ne
+   bouge pas (377 → 387) : on n'a pas rendu le magnat plus riche, on a cessé de le faire
+   jouer à pile ou face.
+2. **La ruine du magnat témoin tenait d'abord à l'absence de matelas.** La ligne seule
+   la fait passer de 20 parties sur 40 à 1. Avec tout le reste, prêter jusqu'au seuil
+   d'appel ruine encore le témoin 9 fois sur 40 — et 9 fois il en sort, par son salaire,
+   en 381 jours médians (de 27 à 669). À 30 %, plus aucun appel de marge, mais le
+   demi-million n'est plus atteint que 36 fois sur 40, et plus tard (tick 443 contre 371).
+3. **La cascade seule est une machine à ruiner** : sans profondeur ni matelas, revendre
+   tant que le déficit subsiste fait passer les ruines de 20 à 29. C'est le régime au-delà
+   de 29 % du capital, où chaque vente creuse le déficit. Avec la ligne et le carnet, elle
+   ne coûte presque rien (livré sans cascade : même fortune, trois fois plus d'appels) :
+   elle règle en une journée ce que la passe unique étalait sur des semaines.
+4. **Le salaire sans le reste n'empêche pas la ruine ; il la rend réversible.** + salaire :
+   24 ruines, dont 9 soldées en 637 jours médians, les autres finissant avec une dette
+   résiduelle de 3 000 à 131 000. Dans le livré, il pèse plus que ses 77 000 : ôté, la
+   fortune moyenne perd 54 000 (référence) à 52 000 (anticipant), parce que le témoin
+   réinvestit chaque mois sa caisse sur marge, et qu'une caisse vide ne paie plus les
+   intérêts de sa marge.
+5. **Les prises de bénéfices jouent 8 à 10 jours par partie**, presque tous au soir d'un
+   ordre du magnat ou d'une montée au capital d'un concurrent. Leur seuil (10 à 25 %) ne
+   déplace la fortune moyenne que de quelques milliers ; leur vitesse et leur part vendue
+   décident du saut du soir : 96 000 au plus au livré (vitesse 1, 30 % du flottant),
+   110 000 à vitesse 0,5, 157 000 à 10 % du flottant, 228 000 à 3 %.
+
+Sur heartland-finance (témoins, 720 ticks), le livré fait passer la fortune moyenne de
+426 000 ± 13 000 à 347 000 ± 14 000 sous la référence (−79 000, dont −39 000 par la
+seule ligne de crédit), et de 271 000 à 324 000 sous l'anticipant. Aucune ruine, avant
+comme après : deux ans ne contiennent pas de crise.
+
+### Le salaire du président
+
+| | versé sur six ans | exercices avec prime | parties avec au moins une prime |
+|---|---|---|---|
+| calendrier, référence | 76 700 ± 3 500 | 0,97 sur 6 | 29/40 |
+| calendrier, anticipant | 72 800 ± 3 700 | 0,28 sur 6 | 11/40 |
+| base « capitaux propres » au lieu de la capitalisation (référence) | 127 700 | 5,0 sur 6 | 40/40 |
+
+Dans la partie telle qu'écrite, le premier exercice est mauvais (−43 % : le transporteur
+constitue son stock, et l'absorption de Great Plains passe 180 000 de perte) : le salaire
+de 1871 tombe au plancher (6 000), remonte à 20 000 après un exercice 1871 à +14,7 %
+(et une prime de 575), puis oscille entre 11 000 et 17 000 (performances de 7 à 12 %).
+**La capitalisation est la bonne base** : rapporté aux capitaux propres d'ouverture,
+faibles au début, le résultat donne une performance moyenne de 47 %, un salaire au
+plafond et une prime cinq ans sur six — la prime n'est plus une surperformance, c'est un
+dû.
+
+### Conclusions
+
+1. **Le saut du tick 810 a disparu** : +539 000 → −45 000. Il faut le carnet *et* les
+   prises de bénéfices ; chacun seul en laisse un tiers.
+2. **La pompe du flottant infini est arrêtée** : la fortune ne répond plus de façon non
+   monotone et à ±850 000 près à la durée des phases. Il reste +317 000 à phases deux fois
+   plus courtes, qui ne doivent rien à la valorisation, au levier ni à la profondeur :
+   c'est la règle contracyclique du témoin sur un multiple de bourse qui oscille sans
+   être anticipé.
+3. **La ruine existe, et la ligne de crédit la rend rare** : 0 sur 40 au livré sous la
+   référence, 1 sous l'anticipant (soldée en 687 jours), 9 sur 40 sans la ligne — toutes
+   soldées par le salaire.
+4. **La dispersion de la fortune est divisée par 2,3, les appels de marge par 150** (447
+   → 2,9, l'ancien compte incluant un appel par jour à un magnat sans titres) ; la fortune
+   moyenne ne bouge pas.
+5. **Les deux lectures de la fortune se rejoignent** : un objectif de fortune ne se gagne
+   plus en un ordre. La décision « au jour le jour ou en moyenne » (« Les objectifs ») peut
+   se prendre sur d'autres critères que la manipulation.
+6. **Rien ne touche l'économie** : résultat du transport identique au centime dans toutes
+   les parties appariées, empreintes des scénarios sans finance inchangées, équivalence des
+   marchés heartland / heartland-finance conservée.
+
+### Décisions laissées à l'équipe
+
+Chiffres du calendrier de heartland-cycle sous la référence, sauf mention.
+
+1. **Ce que devient un ruiné, au-delà de ce qui est décidé.** Décidé : il n'achète plus,
+   ses revenus remboursent sa dette en priorité, il sort de la ruine le jour où elle est
+   soldée. Reste :
+   - *l'intérêt sur la dette résiduelle* — livré : aucun (le compte sur marge est clos).
+     Au taux de la marge (9 %), une dette de 45 000 (la médiane des ruines d'avant) coûte
+     4 000 par an, un tiers du salaire de base : la sortie de ruine passerait d'un an et
+     demi à plus de deux ;
+   - *la part saisie* — décidé : tout, en priorité. Une saisie partielle laisserait de
+     quoi vivre et allongerait d'autant la ruine (637 jours médians avec le salaire seul) ;
+   - *fin de partie ?* — livré : non, il reste président et encaisse ; une ruine qui
+     dure au-delà de l'échéance d'un objectif de fortune le lui fait manquer. Une fin de
+     partie serait un objectif « ne pas être ruiné », que le module `objectives` peut
+     porter ;
+   - *le score de dirigeant* : un président ruiné devrait-il perdre des points ? Le score
+     n'existe pas encore.
+2. **Forme de la ligne de crédit.** *50 % de la valeur affichée (livré)* : 0 ruine, saut
+   max 96 000. *70 % (comme avant)* : 9 ruines, toutes soldées. *30 %* : aucun appel de
+   marge, un demi-million plus tardif. *Sur la valeur de liquidation* (ce que la vente de
+   toute la ligne rapporterait dans le carnet, bien plus bas pour un gros porteur — la
+   cascade montre qu'au-delà de 29 % du capital la vente s'effondre sur elle-même) : non
+   implémentée, la plus prudente, la seule qui tienne compte de la concentration. Et le
+   taux de la marge, qui ne suit pas la conjoncture (« Le cycle économique », décision 2).
+3. **Seuils des prises de bénéfices.** Livré : 15 %, référence sur 30 jours, vitesse 1,
+   30 % du flottant par jour. *Vitesse 0,5 et 10 %* (un premier réglage) : le soir du
+   tick 810 laisse encore +65 000 ± 38 000 sur les témoins — la manipulation redevient
+   à moitié rentable. *Seuil 10 ou 25 %* : rien ne bouge en moyenne ; le seuil est surtout
+   un choix de jeu — en dessous, un joueur fait monter son cours sans que le marché
+   réagisse.
+4. **Profondeur du carnet.** La taille de la tranche ne change rien de mesurable (0,5 %,
+   1 %, 2 %) : c'est l'impact (1,5 par unité de capital, inchangé) qui fait la profondeur.
+   *Impact 0,75* : fortune +57 000, 13 appels de marge au lieu de 3 — un marché plus
+   profond rend le levier moins dangereux et la manipulation moins chère. L'impact fixe
+   aussi le seuil de la cascade, (1 − m) / (m·k).
+5. **Le marché doit-il anticiper la conjoncture ?** Il reste +317 000 de fortune à phases
+   deux fois plus courtes, pour une règle qui achète et revend mécaniquement. Un multiple
+   qui suivrait la phase *attendue* plutôt que celle du jour, ou une transition plus lente
+   que 30 jours, réduirait cette rente ; elle est aussi exactement ce que la vision appelle
+   « racheter un concurrent dont le cours s'est effondré ».
+6. **Le salaire.** *Capitalisation moyenne (livré)* : une prime une année sur six, 77 000
+   sur six ans. *Capitaux propres d'ouverture* : 128 000, une prime cinq ans sur six. Et le
+   salaire en crise : le résultat baisse peu (la demande ne perd que 5 %) quand la
+   capitalisation s'effondre (×0,6) — la performance *monte* en crise, le salaire de
+   l'année suivante aussi. Défendable (le dirigeant qui tient son résultat dans la crise
+   surperforme), contestable (il est mieux payé parce que le cours s'est effondré). À
+   trancher avec le barème du score de dirigeant, qui utilise la même mesure.
+7. **La division.** 2 pour 1 au-dessus de 100 n'arrive pas en six ans sur heartland. Un
+   seuil de 50 la ferait jouer ; elle ne change aucune fortune, c'est la lisibilité du
+   cours qui est en jeu.
 
 ## Questions ouvertes pour l'équipe
 

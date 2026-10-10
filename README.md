@@ -31,6 +31,15 @@ dotnet run --project src/RailTycoon.Harness -- --scenario data/heartland-finance
 Même économie, au caractère près. `heartland.json` reste la trace de régression de
 l'économie et n'active pas la finance : un scénario éprouve une chose à la fois.
 
+La bourse y est **solide** : un ordre remonte un carnet de profondeur finie, les autres
+actionnaires prennent leurs bénéfices sur une montée soudaine, le courtier limite sa
+ligne de crédit et vend d'office en cascade quand le cours cède — jusqu'à la **ruine**
+du magnat, dont il ne sort qu'en remboursant sa dette sur ses revenus —, le président
+touche un salaire révisé chaque année et une prime, et une action qui finit l'année
+au-dessus de 100 se divise. Le harnais affiche la fortune et le cours **en moyenne dans
+le temps** et le journal de la bourse (`bourse.csv`). Mesures dans
+[docs/FINDINGS.md](docs/FINDINGS.md), « La bourse solide ».
+
 Pour les événements — grève de l'anthracite de 1871, grand incendie de Chicago,
 panique de 1873, et un catalogue d'aléas (vagues de froid, mauvaises récoltes,
 afflux d'ouvriers…) :
@@ -65,8 +74,8 @@ quand), manqué ou en cours. Le module ne fait qu'observer : la partie est la m�
 et sans. Ce que « fortune », « livré » et « relier » veulent dire, et pourquoi, est
 dans [docs/FINDINGS.md](docs/FINDINGS.md), « Les objectifs ».
 
-Le harnais écrit six CSV dans `out/` (`markets.csv`, `company.csv`,
-`industries.csv`, `events.csv`, `cycle.csv`, `objectives.csv`), affiche la matrice des
+Le harnais écrit sept CSV dans `out/` (`markets.csv`, `company.csv`,
+`industries.csv`, `events.csv`, `cycle.csv`, `objectives.csv`, `bourse.csv`), affiche la matrice des
 prix finaux, la dispersion des prix par marchandise, l'utilisation des usines, le
 compte d'exploitation et, si le scénario en déclare, les journaux des événements, de
 la conjoncture et des objectifs.
@@ -158,8 +167,10 @@ franchissant au col, et 2 690 000 en l'attaquant de front.
 | Une compagnie sous administration | Le découvert a dépassé ce que ses capitaux propres gagent ; les trains sont à l'arrêt |
 | Une part élevée de tronçons « coupés » dans le parc | La machine n'a pas l'adhérence de ses trains sur les rampes de la ligne : elle les monte en plusieurs passes, et perd ses trajets |
 | Un remplissage à 0 % avec des achats de matériel | La flotte a coûté plus que la caisse ; sans finance, le transporteur n'achète plus rien et les trains roulent à vide |
-| Une fortune de magnat qui bondit quand on raccourcit les phases | La pompe du flottant infini sur un cours qui oscille, pas un gain de jeu (voir FINDINGS, « Le cycle économique ») |
-| Un palier de fortune atteint un soir d'ordre de bourse, perdu le lendemain | La fortune lue au jour le jour sur un flottant infini : un achat sur marge réévalue toute la position (voir FINDINGS, « Les objectifs ») |
+| Une fortune de magnat qui bondit quand on raccourcit les phases | Avant la bourse solide, la pompe du flottant infini ; désormais trois fois moins, et c'est une règle contracyclique sur un multiple de bourse que le marché n'anticipe pas (voir FINDINGS, « La bourse solide ») |
+| Un palier de fortune atteint un soir d'ordre de bourse, perdu le lendemain | Un carnet ou des prises de bénéfices désactivés : l'ordre se paie au cours d'avant et réévalue toute la position (voir FINDINGS, « La bourse solide ») |
+| Un appel de marge par jour, des semaines durant | Un gros porteur en cascade : au-delà de (1 − maintien) / (maintien × impact) du capital, soit 29 %, chaque vente forcée creuse le déficit |
+| Un magnat ruiné qui le reste | Aucun revenu ne rembourse sa dette résiduelle : ni salaire de président, ni dividende |
 | Un objectif de livraisons atteint en quelques semaines | Vérifier qu'il compte le livré net (vendu moins racheté) : compter les ventes compte la revente, des dizaines de fois pour la nourriture |
 | Un écart de quelques pourcents entre deux parties | **Rien**, tant qu'il n'est pas mesuré sur un ensemble : un choc de 0,1 % déplace le résultat de heartland de ±4 % (voir FINDINGS) |
 
@@ -176,11 +187,11 @@ src/RailTycoon.Sim/        bibliothèque de simulation, sans dépendance moteur
   Economy/                 marchandises, marchés, prix, production
   Network/                 relief, tracé, terrassement, graphe de voies
   Transport/               lignes, trains, échanges
-  Finance/                 société, emprunts, bourse, OPA (comptabilité en decimal)
+  Finance/                 société, emprunts, bourse (carnet, marge, ruine), salaire, OPA (decimal)
   Events/                  événements historiques et aléatoires, journal public
   Cycle/                   conjoncture : phases, taux, bourse, demande, journal public
   Objectives/              objectifs de scénario : fortune, livraisons, liaisons (observateur pur)
-  Telemetry/               traces CSV et invariants
+  Telemetry/               traces CSV, statistiques (marchés, finance) et invariants
 src/RailTycoon.Harness/    exécutable en ligne de commande
 tests/RailTycoon.Tests/    invariants, sans dépendance externe
 data/                      scénarios et cartes (données de conception, modifiables sans recompiler)

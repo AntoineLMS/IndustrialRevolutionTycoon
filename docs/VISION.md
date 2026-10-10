@@ -47,6 +47,50 @@ personnelle est distincte de celle de la compagnie qu'il dirige.
 celle de sa société, et le magnat renfloue ou laisse couler, achète à crédit, et
 prend des participations.
 
+### Acheter sur marge, et la ruine
+
+**Décidé.** Le joueur peut acheter des actions à crédit, chez un courtier, et ce crédit
+est **limité** :
+
+- **Une ligne de crédit.** Le courtier ne prête pas au-delà d'une part de la valeur des
+  titres qu'il garde en gage (50 % dans les scénarios livrés). Un achat qui la
+  dépasserait est réduit, ou refusé.
+- **L'appel de marge.** Si le cours baisse et que la dette dépasse une part plus haute
+  de la valeur des titres (70 %), le courtier **revend d'office** de quoi revenir sous
+  ce seuil. La vente forcée pèse elle-même sur le cours, ce qui peut appeler une
+  nouvelle vente : la cascade est voulue, et bornée.
+- **La ruine personnelle.** Si, une fois tous ses titres vendus, sa dette dépasse
+  encore sa caisse, le personnage est **ruiné** : sa caisse est saisie, et le reste dû
+  est constaté en dette résiduelle. C'est un état public, au journal de la bourse.
+
+**Décidé : ce que devient un personnage ruiné.** Il **ne peut plus rien acheter** — ni
+actions, ni apport en capital, ni renflouement de sa compagnie. Ses seules sources de
+revenus sont **son salaire de président**, s'il dirige toujours une compagnie, et **les
+dividendes des actions qu'il possède encore**. Ces revenus **remboursent en priorité**
+sa dette résiduelle ; tant qu'il en reste un centime, il reste ruiné. **Le jour où elle
+est soldée, il sort de la ruine** (journal public) et retrouve le droit d'acheter.
+
+*Lecture retenue, à confirmer* : la dette résiduelle ne porte pas intérêt (le compte sur
+marge est clos), et la ruine n'est pas une fin de partie. Ruiné, il reste président :
+l'éviction est une autre affaire, celle des actionnaires.
+
+### Le salaire du président
+
+**Décidé.** Le PDG reçoit un **salaire**, versé par la compagnie à sa caisse
+personnelle. Il **monte ou descend selon les performances** de la compagnie, et une
+**prime** tombe en cas de **surperformance sur l'année**. C'est un flux financier comme
+un dividende : il sort de la caisse de la compagnie, donc de ce que ses trains peuvent
+engager.
+
+*Lecture retenue, à confirmer* : la performance d'un exercice est son résultat rapporté
+à la valeur de la compagnie — sa capitalisation moyenne sur l'exercice, la même mesure
+que la sanction du score de dirigeant. Le salaire de base (12 000 par an dans les
+scénarios livrés) vaut à une performance de 8 % ; 10 % de plus par point au-dessus,
+entre la moitié et le double. Au-delà de 12 %, la prime : 2 % du résultat obtenu
+au-delà. Le salaire se paie sur la caisse disponible ; ce qui ne peut l'être reste dû.
+Sous administration judiciaire, ni salaire ni prime. Mesures dans FINDINGS.md, « La
+bourse solide ».
+
 ## Devenir PDG : fonder une compagnie
 
 **Décidé.** Posséder une compagnie, c'est **en être nommé PDG**. On le devient en
@@ -423,8 +467,9 @@ donné, relier n'est qu'une question d'horaire.
 - **Ce qu'un palier vaut** : victoire, médaille, simple jalon ? Et un palier manqué,
   fait-il perdre ?
 - **Comment les objectifs se combinent** : tous, un nombre, un score ?
-- **La lecture de la fortune** : au jour le jour, ou en moyenne sur un mois — à
-  refaire quand la bourse aura une profondeur finie.
+- **La lecture de la fortune** : au jour le jour, ou en moyenne sur un mois. Remesurée
+  avec la bourse solide (FINDINGS.md, « La bourse solide ») : l'écart entre les deux
+  lectures s'est refermé, un ordre de bourse ne fait plus gagner un palier un soir.
 
 ## La bourse doit être solide
 
@@ -439,14 +484,37 @@ ses industries sur le marché local et y rachète ce que ses trains emportent, a
 du marché. La réponse a été retenue comme **la valeur d'une compagnie**.
 
 Ce qui en découle : **tout ce qui fausse le cours fausse le jeu.** Deux dettes
-connues du module finance ([CONTRACTS.md](CONTRACTS.md)) deviennent donc
-prioritaires dès que le joueur fonde et rachète :
+connues du module finance ([CONTRACTS.md](CONTRACTS.md)) étaient donc prioritaires :
 
-1. **Le flottant est une contrepartie de profondeur infinie.** Il absorbe n'importe
-   quel volume au cours affiché : on peut acheter ou vendre sans limite, et les
-   plus-values viennent de l'extérieur du modèle.
-2. **Aucune statistique moyennée côté finance.** Le cours se lit au dernier tick,
+1. **Le flottant était une contrepartie de profondeur infinie.** Il absorbait n'importe
+   quel volume au cours affiché.
+2. **Aucune statistique moyennée côté finance.** Le cours se lisait au dernier tick,
    alors qu'un tick d'ordre de bourse porte encore l'impact de l'ordre.
+
+**Décidé, et en place** (FINDINGS.md, « La bourse solide ») :
+
+- **Un carnet de profondeur finie.** Un gros ordre se découpe en tranches de 1 % du
+  capital, chacune au cours du moment, qui monte (ou baisse) à chaque tranche : un gros
+  ordre coûte plus cher que plusieurs petits.
+- **Les prises de bénéfices.** Quand le cours monte trop vite, trop haut — plus de 15 %
+  au-dessus à la fois de sa valeur fondamentale et de ce que les investisseurs ont
+  récemment payé —, les autres actionnaires revendent une partie de leurs titres à
+  d'autres investisseurs, ce qui fait mécaniquement baisser le cours. Seuil, vitesse et
+  part vendue sont dans les données. Le soir de l'ordre de bourse qui faisait gagner un
+  demi-million au magnat témoin, sa fortune baisse désormais.
+- **La division d'actions.** À la fin de chaque année, une compagnie dont le cours
+  finit au-dessus de 100 voit ses actions divisées par deux pour une : chaque
+  actionnaire en détient deux fois plus, le cours est divisé par deux, et ni la
+  capitalisation ni aucune fortune ne bougent. Seuil et rapport dans les données.
+- **Des moyennes.** Le harnais affiche le cours et la fortune en moyenne dans le temps,
+  leur dispersion et le plus grand saut d'un soir au suivant.
+
+**À décider** : la forme de la ligne de crédit (sur la valeur affichée des titres, ou
+sur ce que leur vente rapporterait vraiment, plus bas pour un gros porteur), la vitesse
+des prises de bénéfices, et si le marché doit anticiper la conjoncture : le magnat qui
+achète en crise et revend en expansion gagne encore d'autant plus que les phases sont
+courtes — ce n'est plus la pompe du flottant infini, c'est le rythme financier que le
+cycle voulait, chiffré dans FINDINGS.md.
 
 ## Les concurrents
 
@@ -617,17 +685,17 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
 5. **Des ordres de train** : une liste de gares, et des chargements forcés. Le
    transporteur automatique décide seul, sur des lignes fixes, en regardant tous les
    arrêts à venir, avec une information parfaite.
-6. **Une bourse solide** : une profondeur de carnet finie, et des grandeurs
-   financières moyennées. Puis le vote d'éviction et le rachat par offre sur les
-   actions. (Des taux d'emprunt qui dépendent de la conjoncture et de la compagnie
-   existent désormais ; il leur manque le score du dirigeant. La conjoncture rend la
-   profondeur de carnet plus urgente : un cours qui oscille est une pompe sur un
-   flottant infini.)
+6. **Une bourse solide** : *en place* — carnet de profondeur finie, prises de
+   bénéfices, ligne de crédit, ruine et sortie de ruine, salaire du président, division
+   d'actions, grandeurs financières moyennées. Restent le vote d'éviction et le rachat
+   par offre sur les actions. (Des taux d'emprunt qui dépendent de la conjoncture et de
+   la compagnie existent ; il leur manque le score du dirigeant, dont le salaire du
+   président attend aussi le barème.)
 7. **Des objectifs de scénario.** Ils existent et se mesurent (module `objectives`,
    sur heartland-cycle et sierra) ; il manque ce qui fait gagner ou perdre. Et deux
    des trois sortes attendent un autre chantier pour devenir un choix : la fortune,
-   une bourse à profondeur finie (point 6) ; relier, la construction en cours de
-   partie.
+   une bourse à profondeur finie (point 6, en place) ; relier, la construction en cours
+   de partie.
 8. **Un relief qui pèse.** Le coût marginal réel existe, en option
    (`haulage.costModel = "mass"`) : il crée deux bassins de part et d'autre du col
    sans détruire de valeur, mais seulement au-delà d'une traction de 0,12 à 0,15.
@@ -644,8 +712,8 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
    chiffrées* dans FINDINGS.md, « Le cycle économique » : le livré (phases calées sur
    le NBER, −1 / +3 points de taux, multiple ×1,3 / ×0,6, demande ±5 %, panique et
    poussées équilibrées) donne un rythme lisible sans aucune faillite de compagnie ;
-   ce qui reste à trancher dépend de la profondeur de carnet finie, sans laquelle la
-   fortune du magnat n'est pas une mesure fiable.
+   la profondeur de carnet finie existe désormais (FINDINGS.md, « La bourse solide »),
+   et la fortune du magnat redevient une mesure : la décision peut se prendre.
 4. Le prix d'une industrie sans propriétaire.
 5. Les tailles de gare, leur rayon d'action et leur prix.
 6. Ce que vaut un palier d'objectif, comment les objectifs d'un scénario se combinent
@@ -654,3 +722,7 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
 7. Les véhicules : à quel prix (converti au charbon, le prix ne pèse presque rien ; au quadruple, il
    équilibre les deux machines de 1870 sur la sierra), et une vitesse limite des
    wagons. *Mesuré, options chiffrées* dans FINDINGS.md, « Les véhicules ».
+8. La bourse solide : la forme de la ligne de crédit, la vitesse des prises de
+   bénéfices, l'intérêt sur la dette résiduelle d'un ruiné, et si le marché doit
+   anticiper la conjoncture. *Mesuré, options chiffrées* dans FINDINGS.md, « La bourse
+   solide ».

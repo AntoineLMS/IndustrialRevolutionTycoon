@@ -55,7 +55,7 @@ changement au détour d'un correctif.
 | 3 | Consommation des habitants, modulée par le prix | `IEconomySolver` |
 | 4 | Recalcul des prix | `IEconomySolver` |
 | 5 | Entretien des voies et des locomotives ; achats de matériel datés ; déplacement des trains, plein de carburant, achats et ventes | `IHaulageSolver` |
-| 6 | Finance : exploitation constatée, découvert, intérêts, cours, dividendes, bourse, OPA | `IFinanceSolver` |
+| 6 | Finance : exploitation constatée, découvert, intérêts, cours, dividendes, salaire du président, bourse (carnet, prises de bénéfices, marge, ruine), OPA, division d'actions | `IFinanceSolver` |
 | 7 | Objectifs : lecture du soir (fortune du magnat, carnet de route), paliers atteints ou manqués, journal public — observateur pur | `IObjectiveSolver` |
 
 La phase 6 a été **ajoutée à la fin**, jamais insérée. C'est la décision
@@ -397,6 +397,13 @@ Convertir le flux de chaque tick laisserait au contraire un demi-centime d'erreu
 par tick. Un invariant surveille cet écart et exige qu'il reste sous le
 demi-centime pour toujours.
 
+**Une exception, bornée à une nuit.** Le soir d'une division d'actions, le cours est
+divisé *exactement* — 101,23 devient 50,615 —, parce que c'est la seule façon que la
+capitalisation et chaque fortune restent identiques au centime. Le demi-centime ne vit
+que jusqu'à la valorisation du lendemain, qui arrondit ; aucun ordre ne s'exécute entre
+les deux, et seuls les rapports qui divisent un centime exactement (2^a·5^b) sont
+acceptés.
+
 Côté finance, la comptabilité est tenue en **partie double** : chaque écriture est
 un ensemble de mouvements dont la somme est nulle, refusée à l'instant où elle est
 passée si elle ne l'est pas. L'identité actif = passif + capitaux propres n'est
@@ -436,7 +443,9 @@ exige que le matériel porté à l'actif vaille les achats du transporteur au
 demi-centime près.
 
 `Company.Cash` est désormais **la seule vérité** sur l'argent disponible à
-l'exploitation. `NetProfit` reste volontairement hors flux financiers — un
+l'exploitation. Le salaire du président passe par le même chemin qu'un dividende :
+constaté au bilan, payé sur la caisse disponible, il sort de la trésorerie du
+transporteur au rapprochement du soir. `NetProfit` reste volontairement hors flux financiers — un
 emprunt n'est pas une recette, un dividende n'est pas une charge d'exploitation —
 ce qui garde la marge au kilomètre interprétable et la sentinelle
 anti-lavage-de-fret utilisable.
