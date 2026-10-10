@@ -1608,6 +1608,12 @@ partie sans cycle, sous la référence, sauf mention.
 
 ## Les objectifs : ce qu'on compte, et quand ça tombe
 
+*Note du 10 octobre 2026 : les dates de cette section ont été mesurées avant la
+bourse solide. Avec le carnet de profondeur finie et les prises de bénéfices, le
+demi-million de heartland-cycle n'est plus atteint sous le solveur de référence
+(manqué au tick 1 079) et l'est au tick 429 sous l'anticipant, au lieu de 372 et 356.
+Voir la section « La bourse solide ».*
+
 *Campagne du module `objectives` — 30 septembre 2026, scénarios `heartland-cycle`
 (2 160 ticks, 1870-1875) et `sierra` (720 ticks), sous les deux solveurs, sur des
 ensembles de 40 parties.*

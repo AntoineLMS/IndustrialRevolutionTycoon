@@ -577,7 +577,9 @@ un compromis et non une domination — aucune machine contemporaine ne doit l'em
 sur toutes les cartes —, sans violer aucun invariant, sous les deux solveurs.
 Aujourd'hui : entre la D5 et la Consolidation, la montagne choisit la seconde
 (+24 263 ± 595) et le plat la première (+114 023 ± 625) ; la General au bois est
-dominée partout, et les machines d'autres époques dominent celles de 1870.
+dominée partout. Les machines d'autres époques dominaient celles de 1870 : le
+catalogue est désormais borné à l'époque du scénario (paragraphe « Époque » ci-dessus),
+et une machine ne peut plus affronter que ses contemporaines.
 
 ### `content` — données historiques
 

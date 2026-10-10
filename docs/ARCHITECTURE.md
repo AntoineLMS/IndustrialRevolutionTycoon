@@ -510,8 +510,7 @@ derrière `ICycleSolver` (phase 0c) ; elle touche les taux, la bourse et, modest
 la demande, et prépare l'appétit des investisseurs pour un module de fondation qui
 n'existe pas encore. Les objectifs de scénario sont derrière `IObjectiveSolver`
 (phase 7) ; ils observent sans rien toucher, et ce qui fait gagner ou perdre reste à
-décider (VISION.md, « Gagner »).
-n'existe pas encore. Les véhicules vivent dans le transport (`Transport/Vehicles.cs`,
+décider (VISION.md, « Gagner »). Les véhicules vivent dans le transport (`Transport/Vehicles.cs`,
 phase 5, sans façade propre) : ils remplacent la vitesse et le coût déclarés d'un
 train par ceux d'une locomotive achetée, et n'ont aucune décision d'achat — la flotte
 est déclarée par le scénario, faute d'une couche de décision du joueur.

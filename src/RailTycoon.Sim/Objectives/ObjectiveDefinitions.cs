@@ -127,8 +127,9 @@ public sealed class ObjectivesDef
 
     /// <summary>
     /// Année calendaire du tick 0, pour les échéances données par date. Absente, le
-    /// module prend celle du bloc <c>events</c> ; données toutes deux, elles doivent
-    /// être égales — un scénario n'a qu'un calendrier.
+    /// module hérite de l'année du scénario (<c>startYear</c>), résolue au chargement
+    /// par <c>ScenarioCalendar</c> ; donnée, elle doit la confirmer — un scénario n'a
+    /// qu'un calendrier.
     /// </summary>
     public int StartYear { get; set; }
 
