@@ -308,6 +308,16 @@ public static class NetworkBuilder
 
         void Flush(TrackNode node)
         {
+            // Deux arrêts consécutifs à la même gare ne font pas un trajet : le train
+            // y rachèterait ce qu'il vient de vendre, au même quai, en payant une
+            // boucle qui ne le mène nulle part. Une ligne de deux arrêts qui sont la
+            // même gare en est le cas le plus simple. Décision de l'équipe du
+            // 27 octobre 2026.
+            if (stops.Count > 0 && stops[^1].NodeIndex == node.Index)
+                throw new InvalidDataException(
+                    $"L'itinéraire « {route.Id} » s'arrête deux fois de suite à la gare « {node.Id} » : " +
+                    "deux arrêts consécutifs doivent être deux gares différentes.");
+
             if (stops.Count > 0)
             {
                 segments.Add(new RailSegment

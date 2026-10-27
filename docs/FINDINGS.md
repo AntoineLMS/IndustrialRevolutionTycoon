@@ -1701,10 +1701,13 @@ heartland, 200 213 ± 3 918 sur la sierra), six à 87 % et 80 % de l'optimum.
    encore que dans `timberford.json`.
 3. **La taille et le prix des gares** (VISION.md) : le rayon est un nombre par gare,
    sans coût. C'est là qu'il faudra que choisir une grande gare coûte.
-4. **Vendre et racheter au même arrêt.** Un train n'achète que pour vendre plus loin :
-   une grande gare qui dessert à la fois la forêt et la scierie ne lui permet pas de
-   porter les grumes de l'une à l'autre sans bouger. C'est cohérent avec « un trajet se
-   paie », mais c'est une règle, et elle se discute.
+4. **Vendre et racheter au même arrêt.** *Tranché le 27 octobre 2026 : non.* Un train
+   n'achète que pour vendre plus loin, et une ligne ne peut pas s'arrêter deux fois de
+   suite à la même gare — une ligne de deux arrêts qui sont la même gare n'est pas une
+   ligne. Sur une ligne saisie à la main, les distances strictement croissantes
+   l'interdisaient déjà ; sur le réseau, un aller-retour par un aiguillage
+   (forêt → aiguillage → forêt) est désormais refusé au chargement. Deux gares
+   différentes d'une même ville, comme à Timberford, restent une ligne.
 
 ## Questions ouvertes pour l'équipe
 

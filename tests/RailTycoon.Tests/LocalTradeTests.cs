@@ -75,6 +75,40 @@ internal static class LocalTradeTests
             Check.True(stops[1].Markets.All(m => m.SiteId == "sawmill"), "la gare de la scierie ne dessert que la scierie");
         });
 
+        runner.Add("ligne — deux arrêts consécutifs ne peuvent pas être la même gare", () =>
+        {
+            // Décision de l'équipe du 27 octobre 2026 : une ligne de deux arrêts qui
+            // sont la même gare n'est pas une ligne. Le train y rachèterait au même
+            // quai ce qu'il vient d'y vendre. Sur le réseau, un aller-retour par un
+            // aiguillage la fabriquerait sans le dire : forêt → aiguillage → forêt.
+            var scenario = Fixtures.NetworkScenario();
+            scenario.Network.Nodes.Add(new RailTycoon.Sim.Network.TrackNodeDef { Id = "aiguillage", XKm = 5, YKm = 8 });
+            scenario.Network.Edges.Add(new RailTycoon.Sim.Network.TrackEdgeDef { Id = "a-aiguillage", From = "a", To = "aiguillage" });
+            scenario.Network.Routes.Clear();
+            scenario.Network.Routes.Add(new RailTycoon.Sim.Network.TrackRouteDef
+            {
+                Id = "boucle", Name = "boucle", Nodes = { "a", "aiguillage", "a" },
+            });
+
+            string? message = null;
+            try { _ = new Simulation(scenario); }
+            catch (InvalidDataException ex) { message = ex.Message; }
+            Check.True(message is not null && message.Contains("deux fois de suite"),
+                $"l'itinéraire a → aiguillage → a doit être refusé pour cette raison, message : {message ?? "aucun"}");
+
+            // Sur une ligne saisie à la main, deux arrêts au même point kilométrique
+            // seraient la même gare : les distances strictement croissantes l'interdisent.
+            var flat = ScenarioLoader.Load(TimberfordPath());
+            flat.Lines.Single().Stops[1].DistanceKm = 0;
+            Check.Throws<InvalidDataException>(() => new Simulation(flat), "deux arrêts au même point de la ligne");
+
+            // Deux gares différentes d'une même ville, elles, font une ligne : c'est
+            // la navette de Timberford, à 12 km l'une de l'autre.
+            var stops = new Simulation(ScenarioLoader.Load(TimberfordPath())).World.Lines.Single().Stops;
+            Check.True(stops[0].CityId == stops[1].CityId && stops[0].XKm != stops[1].XKm,
+                "Timberford : deux gares distinctes dans la même ville");
+        });
+
         runner.Add("charroi — il ne passe jamais plus que sa capacité", () =>
         {
             // Sans train : tout ce qui arrive à la scierie y vient par charrette.

@@ -86,6 +86,11 @@ dans `haulage.costModel` (`Transport/TrainCost.cs`) :
   relief est un impôt, pas une géographie. Il rejoue les anciennes empreintes au bit
   près.
 
+**Une ligne relie des gares différentes** : deux arrêts consécutifs ne peuvent pas être
+la même gare, et un itinéraire qui en produirait — un aller-retour par un aiguillage —
+est refusé au chargement (décision de l'équipe du 27 octobre 2026). Deux gares d'une
+même ville sont deux gares.
+
 Un module qui touche à `LegCostFactor`, à `MoveTrain` ou à `HaulCostPerUnitAhead`
 doit garder cette égalité sous `mass`, et la neutralité au bit près sous `flat`.
 
