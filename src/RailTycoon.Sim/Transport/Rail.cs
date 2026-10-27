@@ -1,16 +1,39 @@
+using RailTycoon.Sim.Economy;
 using RailTycoon.Sim.Network;
 
 namespace RailTycoon.Sim.Transport;
 
 /// <summary>
-/// Un arrêt sur une ligne. <see cref="DistanceKm"/> est la distance cumulée
-/// depuis l'origine, mesurée sur la voie réelle quand la ligne est posée sur un
-/// relief.
+/// Un arrêt sur une ligne : une gare. <see cref="DistanceKm"/> est la distance
+/// cumulée depuis l'origine, mesurée sur la voie réelle quand la ligne est posée sur
+/// un relief.
+/// <para>
+/// Un train à l'arrêt achète et vend sur les marchés à portée de la gare
+/// (<see cref="Markets"/>) — la place d'une ville et les installations qui
+/// l'entourent —, et sur aucun autre. <see cref="CityId"/> nomme la ville de la gare ;
+/// il ne dit pas avec qui le train échange.
+/// </para>
 /// </summary>
 public sealed class RailStop
 {
     public required string CityId { get; init; }
     public required double DistanceKm { get; init; }
+
+    /// <summary>Rayon d'action déclaré par l'arrêt, ou <c>null</c> pour le défaut.</summary>
+    public double? DeclaredRadiusKm { get; init; }
+
+    /// <summary>Position de la gare sur la carte, en kilomètres.</summary>
+    public double XKm { get; internal set; }
+    public double YKm { get; internal set; }
+
+    /// <summary>Rayon d'action effectif de la gare, en kilomètres.</summary>
+    public double RadiusKm { get; internal set; }
+
+    /// <summary>
+    /// Les marchés à portée de la gare, dans l'ordre stable des villes puis de
+    /// <c>WorldState.MarketsOf</c>. Fixés à la construction du monde.
+    /// </summary>
+    public IReadOnlyList<Market> Markets { get; internal set; } = Array.Empty<Market>();
 
     /// <summary>
     /// Nœud du graphe de voies correspondant, ou -1 en mode de compatibilité.

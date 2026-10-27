@@ -241,6 +241,12 @@ public sealed class TrackNodeDef
     public double YKm { get; set; }
 
     /// <summary>
+    /// Rayon d'action de la gare de ce nœud, en kilomètres. Absent, celui de
+    /// <c>haulage.stationRadiusKm</c>.
+    /// </summary>
+    public double? StationRadiusKm { get; set; }
+
+    /// <summary>
     /// Nombre de trains qui peuvent y stationner ou s'y croiser. 1 = pas
     /// d'évitement possible. C'est l'information dont la signalisation aura besoin
     /// pour décider si deux trains peuvent se rencontrer ici.

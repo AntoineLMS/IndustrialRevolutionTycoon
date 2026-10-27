@@ -50,7 +50,8 @@ public sealed class RunStatistics
         public double FloorFraction => Samples > 0 ? (double)AtFloor / Samples : 0;
     }
 
-    private readonly Dictionary<string, Dictionary<string, MarketStats>> _markets = new();
+    /// <summary>Par marché, indexé par <see cref="RailTycoon.Sim.Economy.Market.Key"/>. Jamais énuméré directement.</summary>
+    private readonly Dictionary<string, MarketStats> _markets = new();
     private readonly Dictionary<string, double> _spreadSum = new();
     private readonly Dictionary<string, double> _utilizationSum = new();
     private int _samples;
@@ -71,13 +72,10 @@ public sealed class RunStatistics
 
         foreach (var city in world.Cities)
         {
-            if (!_markets.TryGetValue(city.Id, out var byCargo))
-                _markets[city.Id] = byCargo = new Dictionary<string, MarketStats>();
-
             foreach (var market in world.MarketsOf(city))
             {
-                if (!byCargo.TryGetValue(market.CargoId, out var stats))
-                    byCargo[market.CargoId] = stats = new MarketStats();
+                if (!_markets.TryGetValue(market.Key, out var stats))
+                    _markets[market.Key] = stats = new MarketStats();
 
                 stats.HasDemand = market.BaseDemandRate + market.IndustryDemandRate > 0;
 
@@ -109,15 +107,15 @@ public sealed class RunStatistics
         // Seuls les marchés ayant de vrais acheteurs comptent. Comparer le prix
         // chez un acheteur au prix plancher d'une ville qui ne consomme pas cette
         // marchandise ne mesure rien : cet écart existe même quand l'économie
-        // fonctionne parfaitement.
+        // fonctionne parfaitement. Un acheteur est un marché — la place d'une ville
+        // ou une usine —, pas une ville : une scierie et ses voisins ont chacun
+        // leur prix.
         foreach (string cargoId in world.CargoOrder)
         {
             double min = double.MaxValue, max = 0;
             int buyers = 0;
-            foreach (var city in world.Cities)
+            foreach (var market in Buyers(world, cargoId))
             {
-                var market = city.Market(cargoId);
-                if (market.BaseDemandRate + market.IndustryDemandRate <= 0) continue;
 
                 buyers++;
                 if (market.Price < min) min = market.Price;
@@ -132,7 +130,23 @@ public sealed class RunStatistics
         SampleMobility(world);
     }
 
-    public MarketStats Market(string cityId, string cargoId) => _markets[cityId][cargoId];
+    /// <summary>Statistiques de la place d'une ville pour cette marchandise.</summary>
+    public MarketStats Market(string cityId, string cargoId) => _markets[cityId + "/" + cargoId];
+
+    /// <summary>Statistiques d'un marché quelconque, place ou installation.</summary>
+    public MarketStats Market(RailTycoon.Sim.Economy.Market market) => _markets[market.Key];
+
+    /// <summary>
+    /// Les marchés qui consomment réellement cette marchandise — places de ville et
+    /// usines —, dans l'ordre stable des villes puis de <see cref="WorldState.MarketsOf"/>.
+    /// </summary>
+    private static IEnumerable<RailTycoon.Sim.Economy.Market> Buyers(WorldState world, string cargoId)
+    {
+        foreach (var city in world.Cities)
+            foreach (var market in world.MarketsOf(city))
+                if (market.CargoId == cargoId && market.BaseDemandRate + market.IndustryDemandRate > 0)
+                    yield return market;
+    }
 
     /// <summary>Écart de prix moyen entre la ville la moins chère et la plus chère.</summary>
     public double MeanSpread(string cargoId)
@@ -154,24 +168,16 @@ public sealed class RunStatistics
     public double MeanFloorFraction(WorldState world, string cargoId)
         => MeanOverBuyers(world, cargoId, s => s.FloorFraction);
 
-    /// <summary>Nombre de villes qui consomment réellement cette marchandise.</summary>
-    public int BuyerCount(WorldState world, string cargoId)
-    {
-        int count = 0;
-        foreach (var city in world.Cities)
-            if (Market(city.Id, cargoId).HasDemand) count++;
-        return count;
-    }
+    /// <summary>Nombre de marchés — places de ville et usines — qui consomment réellement cette marchandise.</summary>
+    public int BuyerCount(WorldState world, string cargoId) => Buyers(world, cargoId).Count();
 
     private double MeanOverBuyers(WorldState world, string cargoId, Func<MarketStats, double> select)
     {
         double sum = 0;
         int count = 0;
-        foreach (var city in world.Cities)
+        foreach (var market in Buyers(world, cargoId))
         {
-            var stats = Market(city.Id, cargoId);
-            if (!stats.HasDemand) continue;
-            sum += select(stats);
+            sum += select(Market(market));
             count++;
         }
         return count > 0 ? sum / count : 0;
@@ -236,17 +242,14 @@ public sealed class RunStatistics
             string? leader = null;
             int buyers = 0;
 
-            foreach (var city in world.Cities)
+            foreach (var market in Buyers(world, cargoId))
             {
-                var market = city.Market(cargoId);
-                if (market.BaseDemandRate + market.IndustryDemandRate <= 0) continue;
-
                 buyers++;
                 if (market.Price < min) min = market.Price;
                 // Comparaison stricte, et parcours dans l'ordre du scénario : à
                 // prix égaux la tête ne change pas, ce qui évite de compter comme
                 // mouvement un simple aléa d'énumération.
-                if (market.Price > max) { max = market.Price; leader = city.Id; }
+                if (market.Price > max) { max = market.Price; leader = market.Key; }
             }
 
             if (buyers <= 1) continue;
@@ -329,8 +332,8 @@ public sealed class RunStatistics
         // à égalité de ticks en tête, le résultat doit être le même d'une
         // exécution à l'autre.
         int best = 0;
-        foreach (var city in world.Cities)
-            if (stats.TicksInLead.TryGetValue(city.Id, out int ticks) && ticks > best)
+        foreach (var market in Buyers(world, cargoId))
+            if (stats.TicksInLead.TryGetValue(market.Key, out int ticks) && ticks > best)
                 best = ticks;
 
         return (double)best / stats.Samples;

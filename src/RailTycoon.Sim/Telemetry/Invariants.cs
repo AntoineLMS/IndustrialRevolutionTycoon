@@ -27,7 +27,7 @@ public static class Invariants
         {
             foreach (var market in world.MarketsOf(city))
             {
-                string where = $"{city.Id}/{market.CargoId}";
+                string where = market.Key;
 
                 if (double.IsNaN(market.Stock) || double.IsInfinity(market.Stock))
                     violations.Add(new("stock-fini", $"{where} : stock = {market.Stock}"));

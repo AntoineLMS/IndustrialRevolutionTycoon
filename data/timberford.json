@@ -1,0 +1,76 @@
+{
+  "id": "timberford",
+  "name": "Timberford — la navette locale",
+  "seed": 18751027,
+  "startingCash": 10000,
+  "initialCoverage": 1.0,
+
+  "//": "Une seule ville, et un train qui n'en sort jamais. Décision de l'équipe du 27 octobre 2026 : chaque installation a son propre marché, et le bois est moins cher à la forêt qu'à la scierie même quand les deux sont dans la même ville. Ce scénario existe pour une seule question — un train qui reste dans la même ville peut-il gagner de l'argent ? — et un test y répond (LocalTradeTests).",
+
+  "//geographie": "Timberford s'étire sur 12 km d'ouest en est : la forêt à l'ouest (x = 0), la place de la ville au milieu (x = 6), la scierie à l'est (x = 12). Deux gares : celle de la forêt (x = 0, rayon 7 km) dessert la forêt et la place ; celle de la scierie (x = 12, rayon 3 km) ne dessert que la scierie. Le train fait la navette : grumes de la forêt vers la scierie, planches de la scierie vers la place.",
+
+  "//charroi": "Le charroi local porte au plus 0,5 chargement par tick et par marchandise, à 1 par chargement plus 0,5 par chargement et par kilomètre : 7 de la forêt à la scierie (12 km), 4 de la scierie à la place (6 km). La forêt produit 2 chargements par tick et la scierie en scie autant : le charroi n'en porte qu'un quart, et le reste attend un train.",
+
+  "//anticipating": "Pas de bloc anticipating : ce scénario éprouve le commerce entre installations d'une même ville, pas l'anticipation des prix, et un scénario éprouve une chose à la fois.",
+  "//network": "Pas de réseau sur relief : une ligne de 12 km saisie à la main suffit, et le relief ne ferait que renchérir les deux sens de la navette sans rien apprendre de plus.",
+  "//finance": "Pas de finance : la question est de savoir si la navette rapporte, pas comment la financer.",
+  "//events": "Pas d'événements : un choc local brouillerait la seule mesure que ce scénario existe pour faire.",
+
+  "priceModel": { "coverageHorizonTicks": 15, "shape": 0.5, "minMultiplier": 0.12, "maxMultiplier": 3.0 },
+
+  "economy": {
+    "productionStorageTicks": 30,
+    "minProductionFactor": 0.1,
+    "minConsumptionResponse": 0.3,
+    "maxConsumptionResponse": 1.5,
+    "cartage": { "capacityPerTick": 0.5, "costPerLoad": 1.0, "costPerLoadKm": 0.5, "slices": 4 }
+  },
+
+  "haulage": {
+    "minMargin": 0.10,
+    "minProfitPerUnit": 1.5,
+    "priceImpactSlices": 8,
+    "minTradeQty": 0.25
+  },
+
+  "cargos": [
+    { "id": "logs",   "name": "Grumes",   "basePrice": 8,  "elasticity": 0.7, "wagon": "flat" },
+    { "id": "boards", "name": "Planches", "basePrice": 14, "elasticity": 0.8, "wagon": "flat" }
+  ],
+
+  "recipes": [
+    {
+      "id": "sawmill", "name": "Scierie",
+      "//": "Celle de heartland : 8 → 14, marge 1,75.",
+      "inputs": [ { "cargo": "logs", "qty": 1.0 } ],
+      "outputs": [ { "cargo": "boards", "qty": 1.0 } ],
+      "ratePerTick": 0.5,
+      "minMargin": 0.15
+    }
+  ],
+
+  "cities": [
+    {
+      "id": "timberford", "name": "Timberford", "population": 12000,
+      "xKm": 6, "yKm": 0,
+      "production": { "logs": 2.0 },
+      "productionSites": { "logs": { "dxKm": -6, "dyKm": 0 } },
+      "demand": { "boards": 2.0 },
+      "industries": [ { "recipe": "sawmill", "capacity": 4.0, "dxKm": 6, "dyKm": 0 } ]
+    }
+  ],
+
+  "lines": [
+    {
+      "id": "navette", "name": "Forêt — scierie",
+      "stops": [
+        { "city": "timberford", "distanceKm": 0,  "radiusKm": 7 },
+        { "city": "timberford", "distanceKm": 12, "radiusKm": 3 }
+      ]
+    }
+  ],
+
+  "trains": [
+    { "id": "t1", "line": "navette", "capacity": 24, "speedKmPerTick": 12, "costPerKm": 0.8, "startStop": 0 }
+  ]
+}

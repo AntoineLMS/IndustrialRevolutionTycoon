@@ -88,6 +88,14 @@ ajoute vraiment à la facture, relief compris. L'ancien modèle se rejoue en pas
 `haulage.costModel` à `"flat"`. Ce que le modèle fait au relief et au résultat est
 dans [docs/FINDINGS.md](docs/FINDINGS.md), « Le coût marginal réel par défaut ».
 
+Pour une ville où un train fait la navette entre la forêt et la scierie sans jamais
+en sortir — chaque installation a son propre marché, et le bois est moins cher à la
+forêt qu'à la scierie :
+
+```bash
+dotnet run --project src/RailTycoon.Harness -- --scenario data/timberford.json
+```
+
 Pour un scénario posé sur un relief, le devis de construction se lit de la même
 façon, sans rien simuler :
 
@@ -140,6 +148,7 @@ data/                      scénarios et cartes (données de conception, modifia
   ironpeak.json            chaîne minerai → fonte → acier
   terrain-*.json           cartes d'essai du réseau : plaine, vallée, col
   sierra.json              économie de heartland sur une sierra : relief et économie ensemble
+  timberford.json          une ville, deux gares, un train qui n'en sort jamais : forêt → scierie
   locomotives.json         catalogue historique, sources dans docs/SOURCES.md
 docs/                      architecture et contrats entre modules
 ```
@@ -155,7 +164,7 @@ tourner sans erreur.
 
 Le prototype est concluant : la boucle économique tient, et investir en capacité
 referme l'arbitrage dont on vivait. Sous le coût marginal réel, le profit culmine à
-quatre trains et ne s'érode que lentement au-delà : six trains en gardent 88 %, et
+quatre trains et ne s'érode que lentement au-delà : six trains en gardent 87 %, et
 cette tension devra venir d'un coût de possession des trains. Les chiffres sont
 dans [docs/FINDINGS.md](docs/FINDINGS.md).
 

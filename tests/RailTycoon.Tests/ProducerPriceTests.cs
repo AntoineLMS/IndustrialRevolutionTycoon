@@ -24,7 +24,7 @@ internal static class ProducerPriceTests
             {
                 var scenario = Fixtures.Bare("ferme");
                 scenario.Cities.Add(Fixtures.City("ferme", production: 1.0, stock: stock));
-                return new Simulation(scenario).World.CityById("ferme").Market("grain").Price;
+                return new Simulation(scenario).World.CityById("ferme").ProductionMarket("grain")!.Price;
             }
 
             Check.Near(10 * 0.5, PriceAt(0), 1e-12, "entrepôt vide : le prix d'un producteur sollicité");
@@ -58,7 +58,7 @@ internal static class ProducerPriceTests
             scenario.Trains.Add(new TrainDef { Id = "t1", Line = "l1", Capacity = 24 });
 
             var world = new Simulation(scenario).World;
-            var farm = world.CityById("ferme").Market("grain");
+            var farm = world.CityById("ferme").ProductionMarket("grain")!;
             Check.True(world.Trains[0].LoadedUnits > 1, $"le train doit avoir chargé, {world.Trains[0].LoadedUnits:0.0} chargements");
             Check.True(farm.Stock < 30, "l'entrepôt doit s'être vidé d'autant");
             Check.Near(10 * (0.5 - (0.5 - 0.12) * farm.Stock / 30), farm.Price, 1e-9,

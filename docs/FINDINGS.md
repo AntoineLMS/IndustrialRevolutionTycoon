@@ -9,9 +9,10 @@
 > chargement : voir « Le coût marginal réel par défaut », qui remesure les chiffres
 > principaux. Le même jour, le prix d'un producteur qui ne consomme pas sa
 > marchandise s'est mis à suivre son entrepôt : voir « Le prix suit l'entrepôt du
-> producteur ». Les mesures antérieures se relisent en passant `haulage.costModel` à
-> `flat` et `priceModel.producerMaxMultiplier` à la valeur de `minMultiplier`, qui
-> rejouent les anciennes empreintes au bit près.
+> producteur ». Puis chaque installation a reçu son propre marché : voir « Chaque
+> installation a son marché ». Les mesures d'avant ce dernier changement ne se
+> rejouent plus au bit près : aucun réglage ne remet la forêt et la scierie d'une ville
+> sur un même marché.
 
 ## La question posée
 
@@ -1595,6 +1596,115 @@ heartland (229 856 contre 262 186) et à 80 % sur la sierra (131 773 contre 165 
    et −19 % à réglage constant). Le mécanisme n'est pas isolé. Une piste : il anticipe
    les prix des acheteurs, mais pas ceux du départ, qu'il laisse au prix du moment
    faute de demande à projeter.
+
+## Chaque installation a son marché : un train peut vivre dans sa ville
+
+*Décision de l'équipe, 27 octobre 2026 : « il faut qu'on puisse faire des profits
+avec un train qui reste dans la même ville ; le bois sera moins cher à la forêt qu'à la
+scierie même si ces deux installations sont dans la même ville. » Charroi local limité
+et positions sur la carte, au choix de l'équipe. Même protocole que les deux sections
+précédentes.*
+
+### Ce qui change
+
+Jusqu'ici, une ville avait un seul marché par marchandise : la forêt y versait ses
+grumes, la scierie s'y servait, sans transport ni écart de prix. Désormais :
+
+- **Chaque installation a son marché** : une par marchandise produite (`production`,
+  avec son entrepôt), une par usine (ses intrants et ses produits). La place de la
+  ville reste, pour les habitants. Chacune a sa **position**, décalée du centre de la
+  ville (`productionSites`, `industries[].dxKm` et `dyKm`), au centre par défaut.
+- **Une gare dessert ce qui est à sa portée** : `haulage.stationRadiusKm` (3 km par
+  défaut), ou le rayon déclaré par l'arrêt. Un train à l'arrêt vend au marché à portée
+  qui paie le mieux, et achète à chacun de ceux qui lui rapportent.
+- **Le charroi local** (phase 0c, `economy.cartage`) laisse passer au plus 0,5
+  chargement par tick, par ville et par marchandise, du marché le moins cher vers le
+  marché acheteur le plus cher, tant que l'écart paie la charrette : 1 par
+  chargement, plus 0,5 par chargement et par kilomètre. Il ne coûte rien à la
+  compagnie ; il borne l'écart que les trains exploitent.
+
+Le prix d'une forêt suit son entrepôt, et celui de la scierie la couverture de ses
+intrants : **les deux prix diffèrent même quand la forêt et la scierie sont voisines**,
+et l'écart ne se referme que de ce que le charroi en porte.
+
+### La navette locale : `data/timberford.json`
+
+Une ville de 12 km d'ouest en est : la forêt à l'ouest, la place au milieu, la scierie à
+l'est. Deux gares — celle de la forêt (rayon 7 km) dessert la forêt et la place, celle de
+la scierie (rayon 3 km) ne dessert que la scierie — et un train qui fait la navette
+entre elles, sans jamais sortir de la ville.
+
+| | partie telle qu'écrite, 720 ticks |
+|---|---|
+| résultat net | **14 776** (mise de départ 10 000) |
+| grumes, prix moyen | ×0,49 à la forêt, ×1,07 à la scierie |
+| planches, prix moyen | ×0,49 à la scierie, ×1,00 sur la place |
+| grumes portées par le train | 1 260 chargements sur 1 262 produits |
+| planches portées par le train / par charroi | 1 106 / 158 |
+| scierie | 100 % |
+| marge au kilomètre | 1,71 |
+
+Un train qui ne sort pas de sa ville gagne de l'argent : grumes à l'aller, planches au
+retour, 12 km chaque fois.
+
+### Sur les scénarios existants
+
+Les installations y restent au centre de leur ville, et la gare de chaque ville les
+dessert toutes. Ce qui change est donc la séparation des marchés et le charroi. Pour la
+lire, le témoin est le même code avec un charroi illimité et gratuit, qui égalise les
+marchés d'une même ville à chaque tick, au plus près de l'ancien marché unique :
+
+| scénario, solveur | charroi illimité et gratuit | charroi limité (livré) | écart (apparié) | avant ce changement |
+|---|---|---|---|---|
+| heartland, référence | 263 891 ± 3 491 | **270 937 ± 3 582** | +7 047 ± 814 | 242 107 ± 4 127 |
+| heartland, anticipant | 240 454 ± 9 169 | 243 087 ± 10 195 | +2 633 ± 1 618 | 210 377 ± 7 207 |
+| sierra, référence | 167 337 ± 4 210 | **175 104 ± 3 134** | +7 767 ± 732 | 148 682 ± 3 124 |
+| sierra, anticipant | 162 363 ± 4 705 | 169 888 ± 5 207 | +7 525 ± 939 | 146 588 ± 6 879 |
+| ironpeak, référence | 241 017 ± 12 151 | 232 044 ± 3 350 | −8 974 ± 1 996 | 206 085 (une partie) |
+
+*Parties telles qu'écrites : 276 297 (heartland), 251 820 (anticipant), 176 754
+(sierra), 168 947 (anticipant), 233 740 (ironpeak).*
+
+Deux effets distincts :
+
+1. **Séparer les marchés rapporte, même sans limite de charroi** (+9 % sur heartland,
+   +12,5 % sur la sierra par rapport à avant). Une boulangerie ou une scierie vend
+   désormais sa production au prix de son entrepôt, même dans une ville qui en
+   consomme : les trains l'y achètent moins cher, et le prix producteur, qui ne
+   touchait que les lieux sans consommation locale, atteint toutes les installations.
+2. **Limiter le charroi rapporte encore un peu** (+3 % et +5 %) : l'écart qu'il ne
+   porte pas reste aux trains.
+
+Les usines, le remplissage des trains et la mobilité ne bougent pas sur heartland et la
+sierra : leurs flux locaux — la forêt de Pinegrove produit 0,35 chargement par tick —
+tiennent dans la capacité du charroi. L'écart des grumes passe de ×12,7 (charroi libre)
+à ×4,7, comme avant le changement : la scierie de Pinegrove reste servie par sa
+forêt, et celle d'Ironhill toujours à l'arrêt.
+
+**Ironpeak, lui, se réorganise** : ses flux locaux dépassent la capacité du charroi.
+La scierie de Pinewood tombe de 81 % à 27 %, celle de Cedarville monte de 1 % à 71 %,
+une fonderie de 49 % à 25 % et une aciérie de 68 % à 43 % ; les usines desservies
+passent de 66 % à 61 %. Le scénario perd 4 % contre le charroi libre, mais gagne
+13 % contre la version d'avant (233 740 contre 206 085, parties telles qu'écrites).
+
+**Le nombre de trains** garde sa forme : optimum à quatre (294 565 ± 2 717 sur
+heartland, 200 213 ± 3 918 sur la sierra), six à 87 % et 80 % de l'optimum.
+
+### Décisions laissées à l'équipe
+
+1. **La capacité du charroi (0,5 chargement par tick, par ville et par marchandise)**
+   décide de ce que les installations voisines échangent sans train. Sur heartland et
+   la sierra elle ne mord pas ; sur ironpeak, elle réorganise les usines. C'est le
+   réglage le plus lourd de ce changement.
+2. **Placer les installations des scénarios existants.** Elles sont toutes au centre de
+   leur ville, et la gare les dessert toutes : la géographie interne aux villes n'existe
+   encore que dans `timberford.json`.
+3. **La taille et le prix des gares** (VISION.md) : le rayon est un nombre par gare,
+   sans coût. C'est là qu'il faudra que choisir une grande gare coûte.
+4. **Vendre et racheter au même arrêt.** Un train n'achète que pour vendre plus loin :
+   une grande gare qui dessert à la fois la forêt et la scierie ne lui permet pas de
+   porter les grumes de l'une à l'autre sans bouger. C'est cohérent avec « un trajet se
+   paie », mais c'est une règle, et elle se discute.
 
 ## Questions ouvertes pour l'équipe
 

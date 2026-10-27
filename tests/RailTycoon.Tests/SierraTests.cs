@@ -121,10 +121,12 @@ internal static class SierraTests
             // 27 octobre 2026, grille remesurée : sur 40 trajectoires voisines, le
             // réglage livré (horizon 1) perd 2 094 ± 1 213 (−1,4 %) pour une mobilité
             // de 0,498 contre 0,312 (+60 %), le meilleur compromis de la grille
-            // (docs/FINDINGS.md, « Le prix suit l'entrepôt du producteur »). Parties
-            // telles qu'écrites : 153 652 contre 150 488. Les seuils gardent de la
-            // marge : ils protègent contre une régression, ils ne consacrent pas ces
-            // chiffres exacts.
+            // (docs/FINDINGS.md, « Le prix suit l'entrepôt du producteur »). Depuis que
+            // chaque installation a son marché, le même jour : −3 % en moyenne
+            // (169 888 contre 175 104), mobilité 0,493 contre 0,314 ; parties telles
+            // qu'écrites 168 947 contre 176 754 (−4,4 %), près du seuil. Les seuils
+            // gardent de la marge : ils protègent contre une régression, ils ne
+            // consacrent pas ces chiffres exacts.
             var scenario = ScenarioLoader.Load(SierraPath());
             var (refSim, refStats) = Run(scenario, new ReferenceEconomySolver());
             var (sim, stats) = Run(scenario, new AnticipatingEconomySolver());

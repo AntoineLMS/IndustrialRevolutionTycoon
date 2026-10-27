@@ -169,28 +169,31 @@ internal static class MarginalCostTests
             Check.Near(expectedRatio, full / empty, 1e-9, "rapport des surcoûts de relief, plein contre vide");
         });
 
-        runner.Add("coût marginal — sous flat, les masses ne sont lues nulle part et les anciennes empreintes tiennent", () =>
+        runner.Add("coût marginal — sous flat, les masses ne sont lues nulle part", () =>
         {
-            // Les empreintes de sierra et de heartland d'avant le changement de défaut,
-            // posées sous le modèle flat. Les rejouer au bit près prouve deux choses :
-            // l'ancien modèle n'a pas bougé, et des masses absurdes — jusqu'à des
-            // wagons que les marchandises ne déclarent pas — ne changent pas un bit de
-            // la partie. Elles datent aussi d'avant le prix producteur : un
-            // producerMaxMultiplier égal au plancher rend ce prix fixe, au bit près
-            // (0,12 − 0 × remplissage), comme il l'était.
-            foreach (var (file, expected) in new[] { ("sierra.json", "44876808B521C9E4"), ("heartland.json", "B966B86D3F0AF83C") })
+            // Sous le modèle flat, des masses absurdes — jusqu'à des wagons que les
+            // marchandises ne déclarent pas — ne changent pas un bit de la partie. Les
+            // empreintes d'avant le changement de défaut ne se rejouent plus : les
+            // installations ont chacune leur marché depuis le 27 octobre 2026, ce
+            // qu'aucun réglage ne défait ; la comparaison se fait donc entre deux
+            // parties sous flat, masses par défaut et masses absurdes.
+            foreach (string file in new[] { "sierra.json", "heartland.json" })
             {
-                var scenario = ScenarioLoader.Load(Path.Combine(Fixtures.RepoRoot(), "data", file));
-                scenario.Haulage.CostModel = TrainCost.FlatModel;
-                scenario.Haulage.MassCost = new MassCostDef
+                ScenarioDef Flat()
+                {
+                    var scenario = ScenarioLoader.Load(Path.Combine(Fixtures.RepoRoot(), "data", file));
+                    scenario.Haulage.CostModel = TrainCost.FlatModel;
+                    return scenario;
+                }
+                var absurd = Flat();
+                absurd.Haulage.MassCost = new MassCostDef
                 {
                     LocomotiveTonnes = 1_000, TonnesPerLoad = 50, CalibrationLoadFactor = 0.05,
                     WagonTypes = { ["box"] = new WagonTypeDef { TareTonnes = 0.5 } },
                 };
-                scenario.Haulage.MassCost.WagonTypes.Remove("gondola");
-                scenario.PriceModel.ProducerMaxMultiplier = scenario.PriceModel.MinMultiplier;
-                Check.Equal(expected, TraceFingerprint(scenario),
-                    $"{file} sous le modèle flat, masses déclarées mais ignorées");
+                absurd.Haulage.MassCost.WagonTypes.Remove("gondola");
+                Check.Equal(TraceFingerprint(Flat()), TraceFingerprint(absurd),
+                    $"{file} sous le modèle flat, masses absurdes contre masses par défaut");
             }
         });
 

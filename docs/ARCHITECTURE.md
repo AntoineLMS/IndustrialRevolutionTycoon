@@ -49,6 +49,7 @@ changement au détour d'un correctif.
 |---|---|---|
 | 0 | Remise à zéro de la télémétrie du tick | `Simulation` |
 | 0b | Événements : ouverture et extinction, tirage des aléatoires, multiplicateurs du jour publiés sur les marchés | `IEventSolver` |
+| 0c | Charroi local : une quantité bornée passe entre les marchés d'une même ville | `LocalCartage` |
 | 1 | Production primaire (fermes, mines, forêts) | `IEconomySolver` |
 | 2 | Usines : consommation des intrants, production | `IEconomySolver` |
 | 3 | Consommation des habitants, modulée par le prix | `IEconomySolver` |
@@ -91,6 +92,14 @@ raisons à cette place plutôt qu'une autre :
   la preuve demandée par la règle ci-dessus ; un test la renouvelle en jouant
   heartland-events avec son bloc plein mais désactivé.
 
+La phase 0c a été **insérée** entre 0b et 1, troisième décision de ce genre (27 octobre
+2026). Chaque installation a son propre marché ; le charroi local
+(`Economy/LocalCartage.cs`) porte au plus `economy.cartage.capacityPerTick` chargements
+par tick, par ville et par marchandise, du marché le moins cher vers le marché acheteur
+le plus cher, tant que l'écart paie la charrette. Il se place avant l'économie, sur les
+prix de la veille, pour qu'aucun solveur n'ait à le connaître : il déplace du stock,
+sans production ni consommation, et ne fixe aucun prix — la phase 4 les recalcule.
+
 L'aléa des événements est tiré sur **sa propre séquence** de
 `DeterministicRandom` (`events.randomSequence`, 11 par défaut), comme la finance
 sur la sienne (7) : activer les événements ne décale aucun autre tirage. Et chaque
@@ -116,8 +125,17 @@ prix           = prix_de_référence × multiplicateur
 À couverture 1, le multiplicateur vaut exactement 1. Stock vide, le prix monte
 vers `(forme+1)/forme` ; surabondance, il tombe au plancher.
 
+**Un marché par installation.** Chaque ville a une place, un marché par marchandise où
+achètent ses habitants, et chaque installation a les siens : une production primaire
+(ferme, mine, forêt) son entrepôt, une usine ses intrants et ses produits. La forêt et
+la scierie d'une même ville n'ont donc pas le même prix, et rien ne passe de l'une à
+l'autre sans un train ou le charroi local. Chaque marché a une position — le centre de
+la ville, décalé pour une installation — et une gare dessert les marchés à moins de
+son rayon d'action (`haulage.stationRadiusKm`, ou celui de l'arrêt). Un train à l'arrêt
+vend au marché à portée qui paie le mieux et achète à ceux qui lui rapportent.
+
 `demande_effective` additionne la consommation des habitants et celle des usines
-locales. **Une demande nulle est traitée explicitement** : un marché sans acheteur
+— chacune sur son propre marché. **Une demande nulle est traitée explicitement** : un marché sans acheteur
 vaut le prix plancher, et non un prix de pénurie. Une première version noyait ce
 cas dans un « plancher de demande » commun, ce qui donnait à toute ville vide un
 prix de pénurie même pour des marchandises qu'elle ne consomme pas ; le
@@ -139,7 +157,7 @@ qui oblige le joueur à chercher la prochaine asymétrie. La campagne de mesure 
 [FINDINGS.md](FINDINGS.md) montre que cette propriété tient à l'échelle de la
 carte : le profit total culmine à trois trains et s'effondre à six sous l'ancien
 modèle de coût `flat` ; sous `mass`, le défaut, il culmine à quatre et ne s'érode
-que lentement — six trains gardent 88 % de l'optimum (FINDINGS.md, « Le coût
+que lentement — six trains gardent 87 % de l'optimum (FINDINGS.md, « Le coût
 marginal réel par défaut »).
 
 L'horizon de couverture n'est pas un réglage cosmétique : il fixe l'échelle du

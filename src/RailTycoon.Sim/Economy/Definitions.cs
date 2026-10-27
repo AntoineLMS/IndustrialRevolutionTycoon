@@ -70,6 +70,29 @@ public sealed class IndustryDef
 {
     public string Recipe { get; set; } = "";
     public double Capacity { get; set; } = 1.0;
+
+    /// <summary>
+    /// Position de l'usine par rapport au centre de sa ville, en kilomètres. Au
+    /// centre par défaut. Voir <see cref="SiteOffsetDef"/>.
+    /// </summary>
+    public double DxKm { get; set; }
+    public double DyKm { get; set; }
+}
+
+/// <summary>
+/// Position d'une installation par rapport au centre de sa ville, en kilomètres.
+/// <para>
+/// Chaque installation — une forêt, une mine, une usine — a son propre marché : la
+/// forêt vend ses grumes, la scierie achète les siennes, et rien ne passe de l'une à
+/// l'autre sans un train ou le charroi local (<see cref="CartageDef"/>), même dans la
+/// même ville. Leur position décide quelle gare les dessert
+/// (<see cref="HaulageDef.StationRadiusKm"/>) et ce que coûte le charroi entre elles.
+/// </para>
+/// </summary>
+public sealed class SiteOffsetDef
+{
+    public double DxKm { get; set; }
+    public double DyKm { get; set; }
 }
 
 public sealed class CityDef
@@ -81,13 +104,36 @@ public sealed class CityDef
     /// <summary>Consommation de base, en chargements par tick, par marchandise.</summary>
     public Dictionary<string, double> Demand { get; set; } = new();
 
-    /// <summary>Production primaire (ferme, mine, forêt), en chargements par tick.</summary>
+    /// <summary>
+    /// Production primaire (ferme, mine, forêt), en chargements par tick. Chaque
+    /// marchandise produite est une installation à part, avec son entrepôt et son
+    /// marché.
+    /// </summary>
     public Dictionary<string, double> Production { get; set; } = new();
+
+    /// <summary>
+    /// Position des installations de production primaire, par marchandise. Une
+    /// marchandise absente est produite au centre de la ville.
+    /// </summary>
+    public Dictionary<string, SiteOffsetDef> ProductionSites { get; set; } = new();
 
     public List<IndustryDef> Industries { get; set; } = new();
 
-    /// <summary>Stock initial par marchandise. Absent = 0.</summary>
+    /// <summary>
+    /// Stock initial par marchandise. Absent = 0. Il est posé dans l'entrepôt de la
+    /// production primaire si la ville produit la marchandise, sur la place de la
+    /// ville sinon.
+    /// </summary>
     public Dictionary<string, double> InitialStock { get; set; } = new();
+
+    /// <summary>
+    /// Position du centre de la ville, en kilomètres, sur la carte du réseau. Absente,
+    /// elle est celle du premier nœud du réseau rattaché à la ville, ou à défaut celle
+    /// de son premier arrêt sur une ligne saisie à la main (l'arrêt à
+    /// <c>distanceKm</c> est au point (distanceKm, 0)).
+    /// </summary>
+    public double? XKm { get; set; }
+    public double? YKm { get; set; }
 }
 
 public sealed class StopDef
@@ -96,6 +142,12 @@ public sealed class StopDef
 
     /// <summary>Distance cumulée depuis l'origine de la ligne, en kilomètres.</summary>
     public double DistanceKm { get; set; }
+
+    /// <summary>
+    /// Rayon d'action de la gare, en kilomètres. Absent, celui de
+    /// <see cref="HaulageDef.StationRadiusKm"/>.
+    /// </summary>
+    public double? RadiusKm { get; set; }
 }
 
 public sealed class LineDef
@@ -214,6 +266,43 @@ public sealed class EconomyDef
     /// </para>
     /// </summary>
     public double RetainedCoverage { get; set; } = 1.0;
+
+    /// <summary>Le charroi local entre les installations d'une même ville. Voir <see cref="CartageDef"/>.</summary>
+    public CartageDef Cartage { get; set; } = new();
+}
+
+/// <summary>
+/// Le charroi local : ce qui passe sans train entre deux installations d'une même
+/// ville — la forêt et la scierie, la boulangerie et la place du marché.
+/// <para>
+/// Chaque installation a son propre marché, et sans charroi rien ne passerait de
+/// l'une à l'autre sans un train. Le charroi en laisse passer une quantité bornée,
+/// du marché le moins cher au plus cher, tant que l'écart de prix paie la
+/// charrette : un coût fixe par chargement, plus un coût par chargement et par
+/// kilomètre entre les deux installations. Il ne coûte rien à la compagnie — la
+/// marchandise n'appartient à personne, et le coût n'est qu'un seuil —, mais il
+/// borne l'écart que les trains peuvent exploiter : au-delà de sa capacité,
+/// l'écart reste entier, et c'est lui qui fait vivre un train qui reste dans la
+/// même ville. Décision de l'équipe du 27 octobre 2026.
+/// </para>
+/// </summary>
+public sealed class CartageDef
+{
+    /// <summary>Chargements par tick qui peuvent passer, par ville et par marchandise, toutes installations confondues.</summary>
+    public double CapacityPerTick { get; set; } = 0.5;
+
+    /// <summary>Coût d'une charrette par chargement, quelle que soit la distance.</summary>
+    public double CostPerLoad { get; set; } = 1.0;
+
+    /// <summary>Coût d'une charrette par chargement et par kilomètre entre les deux installations.</summary>
+    public double CostPerLoadKm { get; set; } = 0.5;
+
+    /// <summary>
+    /// Nombre de tranches de la capacité du tick. Le prix est recalculé entre deux
+    /// tranches, comme pour un train : la première charrette part vers le marché le
+    /// plus cher, la suivante vers celui qui l'est devenu.
+    /// </summary>
+    public int Slices { get; set; } = 4;
 }
 
 /// <summary>Paramètres du transporteur de référence.</summary>
@@ -238,6 +327,16 @@ public sealed class HaulageDef
     /// absolu, le transporteur s'épuise en micro-arbitrages déficitaires.
     /// </summary>
     public double MinProfitPerUnit { get; set; } = 1.5;
+
+    /// <summary>
+    /// Rayon d'action d'une gare, en kilomètres, quand l'arrêt ne déclare pas le sien.
+    /// Un train à l'arrêt achète et vend sur tous les marchés à cette distance de la
+    /// gare au plus — la place d'une ville et les installations qui l'entourent —, et
+    /// sur aucun autre (VISION.md, « Les ordres de train et le chargement »). Les
+    /// installations sont au centre de leur ville par défaut : à 3 km, une gare de
+    /// centre-ville les dessert toutes.
+    /// </summary>
+    public double StationRadiusKm { get; set; } = 3.0;
 
     /// <summary>
     /// Taux de remplissage escompté, utilisé pour imputer le coût kilométrique à

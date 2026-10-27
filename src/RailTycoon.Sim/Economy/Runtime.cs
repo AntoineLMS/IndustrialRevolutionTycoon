@@ -4,12 +4,28 @@ namespace RailTycoon.Sim.Economy;
 
 /// <summary>
 /// L'état d'une marchandise sur un marché local. C'est l'unité de base de toute
-/// l'économie : il y a un Market par (ville, marchandise).
+/// l'économie : il y a un Market par (ville, marchandise) sur la place de la ville,
+/// où achètent les habitants, et un par (installation, marchandise) qu'elle produit
+/// ou consomme — la forêt pour ses grumes, la scierie pour ses grumes et ses
+/// planches.
 /// </summary>
 public sealed class Market
 {
     public required string CargoId { get; init; }
     public required string CityId { get; init; }
+
+    /// <summary>Installation qui tient ce marché, ou <c>null</c> pour la place de la ville.</summary>
+    public string? SiteId { get; init; }
+
+    /// <summary>
+    /// Identifiant stable du marché : <c>ville/marchandise</c> pour la place de la
+    /// ville, <c>ville/installation/marchandise</c> pour une installation.
+    /// </summary>
+    public string Key => SiteId is null ? CityId + "/" + CargoId : CityId + "/" + SiteId + "/" + CargoId;
+
+    /// <summary>Position sur la carte, en kilomètres. Fixée par la construction du monde.</summary>
+    public double XKm { get; internal set; }
+    public double YKm { get; internal set; }
 
     /// <summary>Stock disponible, en chargements.</summary>
     public double Stock;
@@ -67,6 +83,10 @@ public sealed class Market
     public double ImportedThisTick;
     public double ExportedThisTick;
 
+    /// <summary>Ce que le charroi local a apporté et emporté ce tick (<see cref="LocalCartage"/>).</summary>
+    public double CartedInThisTick;
+    public double CartedOutThisTick;
+
     // --- Cumuls sur toute la partie, pour l'invariant de conservation.
     public double TotalProduced;
     public double TotalConsumed;
@@ -77,6 +97,8 @@ public sealed class Market
         ConsumedThisTick = 0;
         ImportedThisTick = 0;
         ExportedThisTick = 0;
+        CartedInThisTick = 0;
+        CartedOutThisTick = 0;
     }
 
     public void Produce(double qty)
@@ -130,6 +152,23 @@ public sealed class Market
         Stock += qty;
         ImportedThisTick += qty;
     }
+
+    /// <summary>Part avec le charroi local vers un autre marché de la ville. Ni production, ni consommation : un transfert.</summary>
+    public void CartOut(double qty)
+    {
+        if (qty <= 0) return;
+        double actual = Math.Min(qty, Stock);
+        Stock = Maths.SnapToZero(Stock - actual);
+        CartedOutThisTick += actual;
+    }
+
+    /// <summary>Arrive par le charroi local d'un autre marché de la ville.</summary>
+    public void CartIn(double qty)
+    {
+        if (qty <= 0) return;
+        Stock += qty;
+        CartedInThisTick += qty;
+    }
 }
 
 public sealed class Industry
@@ -137,8 +176,38 @@ public sealed class Industry
     public required RecipeDef Recipe { get; init; }
     public double Capacity;
 
+    /// <summary>Installation de l'usine : ses marchés d'intrants et de produits.</summary>
+    public Site Site { get; internal set; } = null!;
+
     /// <summary>Taux d'utilisation du dernier tick, dans [0, 1]. Sert au diagnostic d'équilibrage.</summary>
     public double Utilization;
+
+    /// <summary>Le marché où l'usine achète cet intrant.</summary>
+    public Market Input(string cargoId) => Site.Markets[cargoId];
+
+    /// <summary>Le marché où l'usine dépose ce produit.</summary>
+    public Market Output(string cargoId) => Site.Markets[cargoId];
+}
+
+/// <summary>
+/// Une installation d'une ville : la production primaire d'une marchandise (ferme,
+/// mine, forêt) ou une usine. Elle a sa position et ses propres marchés ; rien ne
+/// passe de l'un à l'autre sans un train ou le charroi local.
+/// </summary>
+public sealed class Site
+{
+    /// <summary><c>production:marchandise</c> ou l'identifiant de la recette, unique dans la ville.</summary>
+    public required string Id { get; init; }
+    public required string CityId { get; init; }
+
+    /// <summary>L'usine, ou <c>null</c> pour une production primaire.</summary>
+    public Industry? Industry { get; init; }
+
+    public double DxKm { get; init; }
+    public double DyKm { get; init; }
+
+    /// <summary>Marchés de l'installation, par marchandise. Jamais énuméré directement : voir <see cref="City.AllMarkets"/>.</summary>
+    public readonly Dictionary<string, Market> Markets = new();
 }
 
 public sealed class City
@@ -146,10 +215,43 @@ public sealed class City
     public required CityDef Def { get; init; }
     public string Id => Def.Id;
 
+    /// <summary>La place de la ville, une par marchandise : là où achètent les habitants.</summary>
     public readonly Dictionary<string, Market> Markets = new();
     public readonly List<Industry> Industries = new();
 
+    /// <summary>Installations de la ville : productions primaires dans l'ordre des marchandises, puis usines dans l'ordre du scénario.</summary>
+    public readonly List<Site> Sites = new();
+
+    /// <summary>
+    /// Tous les marchés de la ville, dans un ordre stable : la place, dans l'ordre des
+    /// marchandises, puis chaque installation dans l'ordre de <see cref="Sites"/>, ses
+    /// marchés dans l'ordre des marchandises. Rempli par la construction du monde.
+    /// </summary>
+    public readonly List<Market> AllMarkets = new();
+
+    /// <summary>Position du centre de la ville sur la carte, en kilomètres.</summary>
+    public double XKm { get; internal set; }
+    public double YKm { get; internal set; }
+
+    /// <summary>Le marché de la place de la ville pour cette marchandise.</summary>
     public Market Market(string cargoId) => Markets[cargoId];
+
+    /// <summary>
+    /// Le marché sur lequel agit un levier du module events : la production primaire
+    /// de la marchandise pour la production, la place de la ville pour la demande.
+    /// </summary>
+    public Market LeverMarket(string cargoId, string lever)
+        => lever == RailTycoon.Sim.Events.EventLever.Production
+            ? ProductionMarket(cargoId) ?? Market(cargoId)
+            : Market(cargoId);
+
+    /// <summary>Le marché de la production primaire de cette marchandise, ou <c>null</c> si la ville n'en produit pas.</summary>
+    public Market? ProductionMarket(string cargoId)
+    {
+        foreach (var site in Sites)
+            if (site.Industry is null && site.Markets.TryGetValue(cargoId, out var market)) return market;
+        return null;
+    }
 }
 
 /// <summary>

@@ -283,10 +283,11 @@ qui permet de tenir à l'échelle de dizaines de trains.
 
 Deux écarts avec le moteur actuel (`OpportunisticHaulageSolver`) :
 
-- **Le rayon d'action d'une gare est une notion nouvelle.** Aujourd'hui, un train
-  échange avec le marché de la ville où il s'arrête, et une industrie fait partie
-  de sa ville. Avec un rayon d'action, une gare se sert dans toutes les industries
-  à sa portée, et une industrie mal placée peut n'être desservie par aucune gare.
+- **Le rayon d'action d'une gare existe**, sans taille ni prix (27 octobre 2026) :
+  chaque installation a son marché et sa position, et une gare dessert les marchés
+  à sa portée. Une industrie mal placée peut n'être desservie par aucune gare ; le
+  charroi local la relie, dans la limite de sa capacité, aux autres installations de
+  sa ville.
 - **Le prochain arrêt seulement.** Le moteur actuel estime la revente sur tous les
   arrêts à venir. La règle retenue est plus simple, plus lisible pour le joueur,
   et plus myope : un train ne charge pas pour un arrêt lointain s'il ne gagne rien
@@ -442,12 +443,13 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
 1. **Fonder une compagnie.** La compagnie existe dès le premier tick, avec une mise
    de départ et un magnat fondateur à 30 % fixés par le scénario. Il manque l'apport
    des investisseurs, le score de dirigeant et la répartition au prorata.
-2. **Des industries qui appartiennent à quelqu'un.** Aujourd'hui une industrie fait
-   partie de sa ville : elle n'a ni propriétaire, ni caisse, ni coût de
+2. **Des industries qui appartiennent à quelqu'un.** Une industrie a son propre
+   marché et sa position, mais ni propriétaire, ni caisse, ni coût de
    construction. Les industries de départ peuvent rester sans propriétaire ; celles
    qu'une compagnie fonde doivent encaisser pour elle.
-3. **Le rayon d'action des gares.** Les industries doivent avoir une position sur la
-   carte, et les gares se servir dans celles qui sont à leur portée.
+3. **La taille et le prix des gares.** Les installations ont une position et les gares
+   un rayon d'action (FINDINGS.md, « Chaque installation a son marché ») ; il manque
+   que ce rayon dépende d'une taille de gare qui se paie.
 4. **Des véhicules achetés**, avec les caractéristiques du tableau ci-dessus, et un
    carburant acheté au marché. Un train est aujourd'hui déclaré par le scénario et
    ne coûte rien à acquérir.
@@ -465,7 +467,7 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
    qu'aucun bassin ne se forme de part et d'autre du col (FINDINGS.md, « Le coût
    marginal réel par défaut »).
 9. **Un coût de possession des trains**, ou une composition fixe : sous ce modèle,
-   six trains gardent 88 % du résultat de l'optimum, et la capacité en trop ne coûte
+   six trains gardent 87 % du résultat de l'optimum, et la capacité en trop ne coûte
    presque rien. C'est le coût de maintenance du tableau des véhicules qui devra
    porter cette tension.
 

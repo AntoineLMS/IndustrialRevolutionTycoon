@@ -65,12 +65,12 @@ public sealed class WorldState
     public City CityById(string id) => _citiesById[id];
     public RecipeDef Recipe(string id) => _recipesById[id];
 
-    /// <summary>Les marchés d'une ville, dans l'ordre canonique des marchandises.</summary>
-    public IEnumerable<Market> MarketsOf(City city)
-    {
-        foreach (string cargoId in CargoOrder)
-            yield return city.Markets[cargoId];
-    }
+    /// <summary>
+    /// Tous les marchés d'une ville, place et installations, dans l'ordre stable de
+    /// <see cref="City.AllMarkets"/> : la place dans l'ordre canonique des
+    /// marchandises, puis chaque installation.
+    /// </summary>
+    public IReadOnlyList<Market> MarketsOf(City city) => city.AllMarkets;
 
     internal void Register(CargoDef cargo)
     {

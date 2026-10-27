@@ -255,7 +255,10 @@ public sealed class AnticipatingEconomySolver : IEconomySolver
             double advantage = 0;
             int counted = 0;
 
-            for (int k = 0; k < city.Markets.Count; k++)
+            // Les premiers marchés d'une ville sont ceux de sa place, dans l'ordre des
+            // marchandises (City.AllMarkets) : ce sont ceux de ses habitants, les seuls
+            // qui comptent ici. Les installations viennent après.
+            for (int k = 0; k < _cargoMeanPrice.Length; k++)
             {
                 var ms = city.Markets[k];
                 if (ms.NominalDemand <= 0) continue;
@@ -435,14 +438,14 @@ public sealed class AnticipatingEconomySolver : IEconomySolver
                 double maxRuns = capacityRuns;
 
                 foreach (var input in recipe.Inputs)
-                    maxRuns = Math.Min(maxRuns, city.Market(input.Cargo).Stock / input.Qty);
+                    maxRuns = Math.Min(maxRuns, industry.Input(input.Cargo).Stock / input.Qty);
 
                 foreach (var output in recipe.Outputs)
                 {
                     double storage = output.Qty * capacityRuns * cfg.ProductionStorageTicks;
                     if (storage <= 0) continue;
                     double factor = Maths.Clamp(
-                        2.0 * (1.0 - city.Market(output.Cargo).Stock / storage), 0.0, 1.0);
+                        2.0 * (1.0 - industry.Output(output.Cargo).Stock / storage), 0.0, 1.0);
                     maxRuns = Math.Min(maxRuns, capacityRuns * factor);
                 }
 
@@ -454,7 +457,7 @@ public sealed class AnticipatingEconomySolver : IEconomySolver
 
                 double inputValue = 0;
                 foreach (var input in recipe.Inputs)
-                    inputValue += city.Market(input.Cargo).Price * input.Qty;
+                    inputValue += industry.Input(input.Cargo).Price * input.Qty;
 
                 double outputValue = 0;
                 foreach (var output in recipe.Outputs)
@@ -467,10 +470,10 @@ public sealed class AnticipatingEconomySolver : IEconomySolver
                 }
 
                 foreach (var input in recipe.Inputs)
-                    city.Market(input.Cargo).Consume(maxRuns * input.Qty);
+                    industry.Input(input.Cargo).Consume(maxRuns * input.Qty);
 
                 foreach (var output in recipe.Outputs)
-                    city.Market(output.Cargo).Produce(maxRuns * output.Qty);
+                    industry.Output(output.Cargo).Produce(maxRuns * output.Qty);
 
                 industry.Utilization = capacityRuns > 0 ? maxRuns / capacityRuns : 0;
             }

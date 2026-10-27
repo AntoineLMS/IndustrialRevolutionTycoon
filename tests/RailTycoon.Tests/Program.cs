@@ -84,7 +84,7 @@ internal static class Program
 
             var industry = sim.World.CityById("town").Industries[0];
             Check.Near(0, industry.Utilization, 1e-9, "utilisation sans intrants");
-            Check.Near(0, sim.World.CityById("town").Market("flour").TotalProduced, 1e-9, "farine produite");
+            Check.Near(0, industry.Output("flour").TotalProduced, 1e-9, "farine produite");
         });
 
         runner.Add("économie — la consommation recule quand le prix monte", () =>
@@ -114,7 +114,8 @@ internal static class Program
             scenario.Cities.Add(Fixtures.City("ferme", production: 1.0));
 
             var sim = new Simulation(scenario);
-            var market = sim.World.CityById("ferme").Market("grain");
+            // La production vit dans l'entrepôt de la ferme, pas sur la place.
+            var market = sim.World.CityById("ferme").ProductionMarket("grain")!;
 
             sim.Step();
             double firstTick = market.ProducedThisTick;
@@ -250,9 +251,16 @@ internal static class Program
             var city = Fixtures.City("millbrook", stock: 400);
             city.Industries.Add(new IndustryDef { Recipe = "mill", Capacity = 1 });
             scenario.Cities.Add(city);
+            // Le blé est sur la place de la ville, le moulin a son propre marché : le
+            // charroi doit pouvoir l'y porter en un tick pour que le test parle de la
+            // valorisation de la farine, pas de la capacité des charrettes.
+            scenario.Economy.Cartage.CapacityPerTick = 10;
 
+            // Trois ticks : le moulin juge sa rentabilité sur le prix de son blé à
+            // l'ouverture du tick, et ce prix n'apprend l'arrivée des charrettes qu'au
+            // recalcul de fin de tick.
             var sim = new Simulation(scenario);
-            sim.Step();
+            sim.Run(3);
 
             var mill = sim.World.CityById("millbrook").Industries[0];
             Check.True(mill.Utilization > 0.9,
@@ -260,7 +268,7 @@ internal static class Program
             // Le prix suit l'entrepôt du moulin : 30 ticks de sa production nominale,
             // de 0,5 × la référence à vide au plancher plein. Recalculé ici depuis les
             // données, sans passer par le modèle de prix.
-            var flour = sim.World.CityById("millbrook").Market("flour");
+            var flour = mill.Output("flour");
             double storage = 1 * 0.5 * 1 * scenario.Economy.ProductionStorageTicks;
             double fill = flour.Stock / storage;
             Check.True(fill > 0 && fill < 1, $"l'entrepôt du moulin doit être entamé, remplissage {fill:0.000}");
@@ -1091,6 +1099,10 @@ internal static class Program
         // Le prix chez un producteur qui ne consomme pas sa marchandise : il suit
         // son entrepôt.
         ProducerPriceTests.Register(runner);
+
+        // Le commerce entre installations d'une même ville : gares à rayon
+        // d'action, charroi local, et la navette de data/timberford.json.
+        LocalTradeTests.Register(runner);
 
         // ------------------------------------------------ traces de référence
         // En dernier : elles figent le comportement de tous les modules à la fois,

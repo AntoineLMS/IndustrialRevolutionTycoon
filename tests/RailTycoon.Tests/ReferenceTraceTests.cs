@@ -45,30 +45,33 @@ internal static class ReferenceTraceTests
     /// « le module n'influence pas l'économie » le vérifie déjà. heartland-events,
     /// au contraire, change l'économie : il est figé sous les deux solveurs.
     /// <para>
-    /// Toutes reposées le 27 octobre 2026, deux fois : quand le modèle de coût
-    /// « mass » est devenu le défaut, puis quand le prix d'un producteur s'est mis à
-    /// suivre son entrepôt. Elles ont toutes bougé, et c'était voulu. Celles de
-    /// heartland et de sierra d'avant ces deux changements restent vérifiées par
-    /// MarginalCostTests, qui les rejoue au bit près sous « flat » et un prix
-    /// producteur fixe.
+    /// Toutes reposées le 27 octobre 2026, trois fois : quand le modèle de coût
+    /// « mass » est devenu le défaut, quand le prix d'un producteur s'est mis à
+    /// suivre son entrepôt, puis quand chaque installation a reçu son propre marché.
+    /// Elles ont toutes bougé, et c'était voulu. Les empreintes d'avant ne se
+    /// rejouent plus : aucun réglage ne remet la forêt et la scierie d'une ville sur
+    /// un même marché.
     /// </para>
     /// </summary>
     private static readonly Case[] Cases =
     [
-        new("heartland.json", "reference", "8F4E51E4597337DD"),
-        new("heartland.json", "anticipating", "4D152E4674CAA95E"),
-        new("heartland-finance.json", "reference", "1632C86781BBF604"),
+        new("heartland.json", "reference", "2B75AF969792F3CC"),
+        new("heartland.json", "anticipating", "3C2C1129FFDEA856"),
+        new("heartland-finance.json", "reference", "D7AC070D457FFD0D"),
         // Le scénario du module events, sous les deux solveurs : chacun compose les
         // multiplicateurs du jour dans ses propres taux, et l'empreinte porte aussi
         // le journal des événements déclenchés.
-        new("heartland-events.json", "reference", "89DE74CFA5E0C98C"),
-        new("heartland-events.json", "anticipating", "9D6272469A7EC9FC"),
-        new("ironpeak.json", "reference", "6FEAB9ECB86B441F"),
-        new("terrain-plain.json", "reference", "B7FD46B0A4087810"),
-        new("terrain-valley.json", "reference", "6DF4F0E991108E4E"),
-        new("terrain-pass.json", "reference", "947A51E37B2ABD9B"),
-        new("sierra.json", "reference", "30BD159B6F236C6C"),
-        new("sierra.json", "anticipating", "7C564EA13620B26D"),
+        new("heartland-events.json", "reference", "CD7E0A8480F0CDFD"),
+        new("heartland-events.json", "anticipating", "32CFD7BFD3F18F82"),
+        new("ironpeak.json", "reference", "F086C187F9F8B10E"),
+        new("terrain-plain.json", "reference", "5F2999D90D0AA937"),
+        new("terrain-valley.json", "reference", "DDBA38044A8EFC76"),
+        new("terrain-pass.json", "reference", "B4DEA55F95E63CF0"),
+        new("sierra.json", "reference", "AFC426DAB318E577"),
+        new("sierra.json", "anticipating", "5A34F8A6E4CB1822"),
+        // Une ville, deux gares, un train qui n'en sort jamais : le commerce entre
+        // installations d'une même ville.
+        new("timberford.json", "reference", "539ED49F0C362AC9"),
     ];
 
     public static void Register(TestRunner runner)

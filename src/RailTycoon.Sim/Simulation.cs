@@ -65,6 +65,12 @@ public sealed class Simulation
         // tableau des phases, pour la raison de cette place.
         Events.Step(World, tick);
 
+        // Phase 0c — le charroi local, entre les installations d'une même ville.
+        // Avant l'économie, sur les prix de la veille, pour qu'aucun solveur n'ait à
+        // le connaître : il déplace du stock, il ne fixe aucun prix. Voir
+        // docs/ARCHITECTURE.md, tableau des phases.
+        LocalCartage.Step(World);
+
         // Phase 1 — production, consommation, formation des prix.
         Economy.Step(World, tick);
 
@@ -107,52 +113,92 @@ internal static class WorldBuilder
         {
             var city = new City { Def = cityDef };
 
-            // Chaque ville possède un marché pour chaque marchandise, même sans
-            // offre ni demande locale. Cela évite un test d'existence dans
-            // chaque boucle, et un marché à zéro a un prix élevé qui signale
-            // correctement « ici, c'est rare ».
+            // La place de chaque ville a un marché pour chaque marchandise, même sans
+            // offre ni demande locale. Cela évite un test d'existence dans chaque
+            // boucle. Les habitants y achètent ; rien n'y est produit.
             foreach (var cargo in scenario.Cargos)
             {
                 var market = new Market { CargoId = cargo.Id, CityId = cityDef.Id };
                 cityDef.Demand.TryGetValue(cargo.Id, out double demand);
-                cityDef.Production.TryGetValue(cargo.Id, out double production);
-                cityDef.InitialStock.TryGetValue(cargo.Id, out double stock);
-
                 market.BaseDemandRate = demand;
-                market.BaseProductionRate = production;
                 market.NominalDemandRate = demand;
-                market.NominalProductionRate = production;
-                market.Stock = stock;
                 city.Markets[cargo.Id] = market;
             }
 
+            // Une installation par marchandise produite, puis une par usine. Chacune a
+            // ses marchés : la forêt vend ses grumes, la scierie achète les siennes, et
+            // rien ne passe de l'une à l'autre sans un train ou le charroi local, même
+            // dans la même ville (décision de l'équipe du 27 octobre 2026).
+            double storageTicks = scenario.Economy.ProductionStorageTicks;
+            foreach (var cargo in scenario.Cargos)
+            {
+                if (!cityDef.Production.TryGetValue(cargo.Id, out double production) || production <= 0) continue;
+                cityDef.ProductionSites.TryGetValue(cargo.Id, out var offset);
+                var site = new Site
+                {
+                    Id = "production:" + cargo.Id, CityId = cityDef.Id,
+                    DxKm = offset?.DxKm ?? 0, DyKm = offset?.DyKm ?? 0,
+                };
+                site.Markets[cargo.Id] = new Market
+                {
+                    CargoId = cargo.Id, CityId = cityDef.Id, SiteId = site.Id,
+                    BaseProductionRate = production,
+                    NominalProductionRate = production,
+                    // L'entrepôt, sur le même débit nominal que le frein de production
+                    // des solveurs : c'est à lui que se mesure l'abondance chez un
+                    // producteur, donc son prix.
+                    StorageCapacity = production * storageTicks,
+                };
+                city.Sites.Add(site);
+            }
+
+            var siteIds = new HashSet<string>();
             foreach (var industryDef in cityDef.Industries)
             {
-                city.Industries.Add(new Industry
+                var industry = new Industry
                 {
                     Recipe = world.Recipe(industryDef.Recipe),
                     Capacity = industryDef.Capacity,
-                });
+                };
+                string id = industryDef.Recipe;
+                for (int k = 2; !siteIds.Add(id); k++) id = industryDef.Recipe + "#" + k;
+                var site = new Site
+                {
+                    Id = id, CityId = cityDef.Id, Industry = industry,
+                    DxKm = industryDef.DxKm, DyKm = industryDef.DyKm,
+                };
+                industry.Site = site;
+
+                // La demande de l'usine est celle de son marché d'intrants : un moulin
+                // rend le blé cher chez lui, ce qui est précisément le signal qui doit
+                // attirer le joueur.
+                double runs = industry.Recipe.RatePerTick * industry.Capacity;
+                foreach (var cargo in scenario.Cargos)
+                {
+                    double demand = industry.Recipe.Inputs.Where(i => i.Cargo == cargo.Id).Sum(i => i.Qty) * runs;
+                    double output = industry.Recipe.Outputs.Where(o => o.Cargo == cargo.Id).Sum(o => o.Qty) * runs;
+                    if (demand <= 0 && output <= 0) continue;
+                    site.Markets[cargo.Id] = new Market
+                    {
+                        CargoId = cargo.Id, CityId = cityDef.Id, SiteId = site.Id,
+                        IndustryDemandRate = demand,
+                        StorageCapacity = output * storageTicks,
+                    };
+                }
+                city.Industries.Add(industry);
+                city.Sites.Add(site);
             }
 
-            // La demande des usines locales fait partie de la demande du marché :
-            // un moulin rend le blé cher dans sa ville, ce qui est précisément le
-            // signal qui doit attirer le joueur.
-            foreach (var industry in city.Industries)
-                foreach (var input in industry.Recipe.Inputs)
-                    city.Markets[input.Cargo].IndustryDemandRate +=
-                        input.Qty * industry.Recipe.RatePerTick * industry.Capacity;
-
-            // L'entrepôt des producteurs, sur les mêmes débits nominaux que le frein
-            // de production des solveurs : c'est à lui que se mesure l'abondance là
-            // où personne ne consomme la marchandise, donc son prix.
-            double storageTicks = scenario.Economy.ProductionStorageTicks;
+            // Le stock déclaré va dans l'entrepôt de la production primaire si la
+            // ville produit la marchandise, sur la place sinon.
             foreach (var cargo in scenario.Cargos)
-                city.Markets[cargo.Id].StorageCapacity = city.Markets[cargo.Id].NominalProductionRate * storageTicks;
-            foreach (var industry in city.Industries)
-                foreach (var output in industry.Recipe.Outputs)
-                    city.Markets[output.Cargo].StorageCapacity +=
-                        output.Qty * industry.Recipe.RatePerTick * industry.Capacity * storageTicks;
+                if (cityDef.InitialStock.TryGetValue(cargo.Id, out double stock))
+                    (city.ProductionMarket(cargo.Id) ?? city.Market(cargo.Id)).Stock = stock;
+
+            foreach (var cargo in scenario.Cargos) city.AllMarkets.Add(city.Markets[cargo.Id]);
+            foreach (var site in city.Sites)
+                foreach (var cargo in scenario.Cargos)
+                    if (site.Markets.TryGetValue(cargo.Id, out var market)) city.AllMarkets.Add(market);
 
             world.Register(city);
         }
@@ -166,7 +212,7 @@ internal static class WorldBuilder
                 Id = lineDef.Id,
                 Name = lineDef.Name,
                 Stops = lineDef.Stops
-                    .Select(s => new RailStop { CityId = s.City, DistanceKm = s.DistanceKm })
+                    .Select(s => new RailStop { CityId = s.City, DistanceKm = s.DistanceKm, DeclaredRadiusKm = s.RadiusKm })
                     .ToList(),
             });
         }
@@ -176,6 +222,9 @@ internal static class WorldBuilder
         // lignes ci-dessus font foi : c'est la voie de compatibilité.
         world.Network = RailTycoon.Sim.Network.NetworkBuilder.Attach(
             scenario, world.Lines, cityId => world.Cities.Any(c => c.Id == cityId));
+
+        PlaceOnMap(scenario, world);
+        AttachStations(scenario, world);
 
         foreach (var trainDef in scenario.Trains)
         {
@@ -201,6 +250,88 @@ internal static class WorldBuilder
     }
 
     /// <summary>
+    /// Pose les villes, leurs installations et donc leurs marchés sur la carte.
+    /// <para>
+    /// Le centre d'une ville est la position que le scénario lui donne, à défaut celle
+    /// du premier nœud du réseau qui lui est rattaché, à défaut celle de son premier
+    /// arrêt sur une ligne saisie à la main — l'arrêt à <c>distanceKm</c> est au point
+    /// (distanceKm, 0) : une ligne sans relief est une droite. Une installation est
+    /// au centre de sa ville, décalée de ce que les données déclarent.
+    /// </para>
+    /// </summary>
+    private static void PlaceOnMap(ScenarioDef scenario, WorldState world)
+    {
+        foreach (var city in world.Cities)
+        {
+            (double X, double Y)? position = null;
+            if (city.Def.XKm is double x && city.Def.YKm is double y) position = (x, y);
+
+            var node = scenario.Network.Nodes.FirstOrDefault(n => n.City == city.Id);
+            if (position is null && node is not null) position = (node.XKm, node.YKm);
+
+            if (position is null)
+                foreach (var line in scenario.Lines)
+                {
+                    var stop = line.Stops.FirstOrDefault(s => s.City == city.Id);
+                    if (stop is null) continue;
+                    position = (stop.DistanceKm, 0);
+                    break;
+                }
+
+            (city.XKm, city.YKm) = position ?? (0, 0);
+
+            foreach (var market in city.Markets.Values)
+                (market.XKm, market.YKm) = (city.XKm, city.YKm);
+            foreach (var site in city.Sites)
+                foreach (var market in site.Markets.Values)
+                    (market.XKm, market.YKm) = (city.XKm + site.DxKm, city.YKm + site.DyKm);
+        }
+    }
+
+    /// <summary>
+    /// Pose les gares et leur rayon d'action. Une gare est au nœud du réseau qu'elle
+    /// occupe, ou, sur une ligne saisie à la main, au point (distanceKm, 0). Elle sert
+    /// tous les marchés à portée, dans l'ordre stable des villes ; une gare qui n'en
+    /// sert aucun est une erreur de données, signalée au chargement plutôt qu'un train
+    /// qui roule sans jamais rien échanger.
+    /// </summary>
+    private static void AttachStations(ScenarioDef scenario, WorldState world)
+    {
+        foreach (var line in world.Lines)
+            foreach (var stop in line.Stops)
+            {
+                if (stop.NodeIndex >= 0 && world.Network is { } network)
+                {
+                    var node = network.Graph.Nodes[stop.NodeIndex];
+                    (stop.XKm, stop.YKm) = (node.Position.XKm, node.Position.YKm);
+                    stop.RadiusKm = stop.DeclaredRadiusKm
+                        ?? scenario.Network.Nodes[stop.NodeIndex].StationRadiusKm
+                        ?? scenario.Haulage.StationRadiusKm;
+                }
+                else
+                {
+                    (stop.XKm, stop.YKm) = (stop.DistanceKm, 0);
+                    stop.RadiusKm = stop.DeclaredRadiusKm ?? scenario.Haulage.StationRadiusKm;
+                }
+
+                if (stop.RadiusKm < 0)
+                    throw new InvalidDataException($"La gare de '{stop.CityId}' sur la ligne '{line.Id}' a un rayon d'action négatif.");
+
+                var markets = new List<Market>();
+                foreach (var city in world.Cities)
+                    foreach (var market in world.MarketsOf(city))
+                    {
+                        double dx = market.XKm - stop.XKm, dy = market.YKm - stop.YKm;
+                        if (Math.Sqrt(dx * dx + dy * dy) <= stop.RadiusKm + 1e-9) markets.Add(market);
+                    }
+                if (markets.Count == 0)
+                    throw new InvalidDataException(
+                        $"La gare de '{stop.CityId}' sur la ligne '{line.Id}' ne dessert aucun marché à {stop.RadiusKm} km.");
+                stop.Markets = markets;
+            }
+    }
+
+    /// <summary>
     /// Remplit les stocks initiaux à une couverture donnée, pour les marchés qui
     /// ne déclarent pas de stock explicite.
     /// <para>
@@ -223,8 +354,10 @@ internal static class WorldBuilder
             foreach (var market in world.MarketsOf(city))
             {
                 // Un stock explicite dans les données est un choix de conception :
-                // on ne l'écrase pas.
-                if (city.Def.InitialStock.ContainsKey(market.CargoId)) continue;
+                // on ne l'écrase pas, sur le marché qui l'a reçu.
+                if (city.Def.InitialStock.ContainsKey(market.CargoId)
+                    && ReferenceEquals(market, city.ProductionMarket(market.CargoId) ?? city.Market(market.CargoId)))
+                    continue;
 
                 double demand = market.BaseDemandRate + market.IndustryDemandRate;
                 if (demand <= 0) continue; // rien ne se consomme ici : pas de stock d'amorçage
@@ -242,6 +375,7 @@ internal static class WorldBuilder
     private static void Validate(ScenarioDef s)
     {
         TrainCost.Validate(s);
+        LocalCartage.Validate(s.Economy.Cartage);
 
         var prices = s.PriceModel;
         if (prices.ProducerMaxMultiplier < prices.MinMultiplier || prices.ProducerMaxMultiplier > prices.MaxMultiplier)
@@ -290,6 +424,13 @@ internal static class WorldBuilder
             foreach (var ind in c.Industries)
                 if (!recipeIds.Contains(ind.Recipe))
                     throw new InvalidDataException($"La ville '{c.Id}' référence la recette inconnue '{ind.Recipe}'.");
+            // Une position d'installation sans production serait inerte sans le dire.
+            foreach (string cargoId in c.ProductionSites.Keys)
+                if (!c.Production.TryGetValue(cargoId, out double rate) || rate <= 0)
+                    throw new InvalidDataException(
+                        $"La ville '{c.Id}' place une installation de production de '{cargoId}', qu'elle ne produit pas.");
+            if (c.XKm.HasValue != c.YKm.HasValue)
+                throw new InvalidDataException($"La ville '{c.Id}' doit déclarer xKm et yKm ensemble.");
         }
 
         foreach (var line in s.Lines)

@@ -102,7 +102,7 @@ public sealed class ReferenceEventSolver : IEventSolver
             var targets = new List<EventTarget>();
             foreach (var city in cities)
                 foreach (var effect in h.Effects)
-                    if (EventLever.Nominal(city.Market(effect.Cargo), effect.On) > 0)
+                    if (EventLever.Nominal(city.LeverMarket(effect.Cargo, effect.On), effect.On) > 0)
                         targets.Add(new EventTarget(city.Id, effect.Cargo, effect.On, effect.Factor));
 
             if (targets.Count == 0)
@@ -209,7 +209,7 @@ public sealed class ReferenceEventSolver : IEventSolver
             var targets = new List<EventTarget>();
             foreach (var city in cities)
                 foreach (var effect in def.Effects)
-                    if (EventLever.Nominal(city.Market(effect.Cargo), effect.On) > 0)
+                    if (EventLever.Nominal(city.LeverMarket(effect.Cargo, effect.On), effect.On) > 0)
                         targets.Add(new EventTarget(city.Id, effect.Cargo, effect.On,
                             effect.FactorMin + severity * (effect.FactorMax - effect.FactorMin)));
 
@@ -246,7 +246,7 @@ public sealed class ReferenceEventSolver : IEventSolver
         foreach (var record in state.Active)
             foreach (var target in record.Targets)
             {
-                var market = world.CityById(target.CityId).Market(target.Cargo);
+                var market = world.CityById(target.CityId).LeverMarket(target.Cargo, target.On);
                 double factor = record.FactorAt(target, now);
                 if (target.On == EventLever.Production) market.EventProductionFactor *= factor;
                 else market.EventDemandFactor *= factor;
@@ -279,7 +279,7 @@ public sealed class ReferenceEventSolver : IEventSolver
     private static List<City> ResolveCities(
         WorldState world, string id, List<string> declared, List<EventEffectDef> effects)
     {
-        bool Grips(City city) => effects.Any(e => EventLever.Nominal(city.Market(e.Cargo), e.On) > 0);
+        bool Grips(City city) => effects.Any(e => EventLever.Nominal(city.LeverMarket(e.Cargo, e.On), e.On) > 0);
 
         if (declared.Count == 0)
             return world.Cities.Where(Grips).ToList();

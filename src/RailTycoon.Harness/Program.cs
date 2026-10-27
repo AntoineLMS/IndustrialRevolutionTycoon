@@ -349,6 +349,11 @@ internal static class Report
             Console.Write($"{w.Cargo(cargoId).Name,12}");
         Console.WriteLine();
 
+        // Sous chaque ville, ses installations : chacune a son marché, et c'est
+        // l'écart entre la forêt et la scierie, même voisines, qu'un train exploite.
+        // Une installation affiche le prix de chacun de ses marchés, acheteur ou
+        // producteur ; « · » marque une marchandise qu'elle ne tient pas.
+        bool anySite = false;
         foreach (var city in w.Cities)
         {
             Console.Write($"{city.Def.Name,-12}");
@@ -358,7 +363,19 @@ internal static class Report
                 Console.Write($"{(m.HasDemand ? m.MeanRatio.ToString("0.00", Ci) : "—"),12}");
             }
             Console.WriteLine();
+
+            foreach (var site in city.Sites)
+            {
+                anySite = true;
+                string label = site.Industry?.Recipe.Name ?? "prod. " + w.Cargo(site.Markets.Keys.Single()).Name.ToLowerInvariant();
+                Console.Write($"{"  " + label,-12}");
+                foreach (string cargoId in w.CargoOrder)
+                    Console.Write($"{(site.Markets.TryGetValue(cargoId, out var market) ? stats.Market(market).MeanRatio.ToString("0.00", Ci) : "·"),12}");
+                Console.WriteLine();
+            }
         }
+        if (anySite)
+            Console.WriteLine("  (en retrait : les installations de la ville, chacune à son propre prix)");
         Console.WriteLine();
 
         // --- Le tableau qui décide si le prototype est concluant.
@@ -704,6 +721,7 @@ internal sealed class FreightRotation
 
     // Jamais énumérés : l'affichage parcourt WorldState.CargoOrder.
     private readonly Dictionary<string, double> _delivered = new();
+    private readonly Dictionary<string, double> _carted = new();
     private readonly Dictionary<string, double> _produced = new();
 
     public int WarmupTicks { get; init; }
@@ -716,20 +734,22 @@ internal sealed class FreightRotation
             foreach (var market in world.MarketsOf(city))
             {
                 _delivered[market.CargoId] = _delivered.GetValueOrDefault(market.CargoId) + market.ImportedThisTick;
+                _carted[market.CargoId] = _carted.GetValueOrDefault(market.CargoId) + market.CartedInThisTick;
                 _produced[market.CargoId] = _produced.GetValueOrDefault(market.CargoId) + market.ProducedThisTick;
             }
     }
 
     public void Print(WorldState world)
     {
-        Console.WriteLine("Rotation du fret (après chauffe : chargements livrés ÷ produits)");
+        Console.WriteLine("Rotation du fret (après chauffe : chargements livrés par train ÷ produits ; à part, le charroi local)");
         foreach (string cargoId in world.CargoOrder)
         {
             double delivered = _delivered.GetValueOrDefault(cargoId);
             double produced = _produced.GetValueOrDefault(cargoId);
             string ratio = produced > 1e-9 ? "×" + (delivered / produced).ToString("0.0", Ci) : "—";
             Console.WriteLine($"  {world.Cargo(cargoId).Name,-13}{delivered.ToString("N0", Ci),10} livrés" +
-                              $"{produced.ToString("N0", Ci),10} produits{ratio,9}");
+                              $"{produced.ToString("N0", Ci),10} produits{ratio,9}" +
+                              $"{_carted.GetValueOrDefault(cargoId).ToString("N0", Ci),10} par charroi");
         }
         Console.WriteLine();
     }

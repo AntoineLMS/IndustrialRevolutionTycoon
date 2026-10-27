@@ -26,7 +26,7 @@ public sealed class CsvRecorder
 
     public CsvRecorder()
     {
-        _markets.AppendLine("tick,city,cargo,stock,price,coverage,produced,consumed,imported,exported");
+        _markets.AppendLine("tick,city,site,cargo,stock,price,coverage,produced,consumed,imported,exported");
         _company.AppendLine("tick,cash,revenue,cost,net_profit");
         _industries.AppendLine("tick,city,recipe,utilization");
     }
@@ -45,6 +45,7 @@ public sealed class CsvRecorder
                 double coverage = world.PriceModel.Coverage(market);
                 _markets.Append(tick.ToString(ci)).Append(',')
                         .Append(city.Id).Append(',')
+                        .Append(market.SiteId ?? "").Append(',')
                         .Append(market.CargoId).Append(',')
                         .Append(F(market.Stock)).Append(',')
                         .Append(F(market.Price)).Append(',')

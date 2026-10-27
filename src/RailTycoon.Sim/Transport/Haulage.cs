@@ -202,12 +202,25 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
 
     private void TradeAtStop(WorldState world, Train train)
     {
-        var city = world.CityById(train.Line.Stops[train.StopIndex].CityId);
-        SellHere(world, train, city);
-        BuyHere(world, train, city);
+        var stop = train.Line.Stops[train.StopIndex];
+        SellHere(world, train, stop);
+        BuyHere(world, train, stop);
     }
 
-    private void SellHere(WorldState world, Train train, City city)
+    /// <summary>
+    /// Le marché à portée de la gare qui paie le mieux cette marchandise, ou
+    /// <c>null</c> si aucun n'en tient. À prix égaux, le premier dans l'ordre de la
+    /// gare, pour que le choix soit reproductible.
+    /// </summary>
+    private static Market? BestBuyerAt(RailStop stop, string cargoId)
+    {
+        Market? best = null;
+        foreach (var market in stop.Markets)
+            if (market.CargoId == cargoId && (best is null || market.Price > best.Price)) best = market;
+        return best;
+    }
+
+    private void SellHere(WorldState world, Train train, RailStop stop)
     {
         double minMargin = world.Def.Haulage.MinMargin;
 
@@ -217,7 +230,10 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
         {
             if (!train.Cargo.TryGetValue(cargoId, out double held) || held <= 0) continue;
 
-            var market = city.Market(cargoId);
+            // Le train vend au marché de la gare qui paie le mieux : la place de la
+            // ville ou l'une des installations à portée.
+            var market = BestBuyerAt(stop, cargoId);
+            if (market is null) continue;
             double unitCost = train.UnitCost.TryGetValue(cargoId, out double c) ? c : 0;
 
             bool profitable = market.Price >= unitCost * (1.0 + minMargin);
@@ -237,39 +253,42 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
         }
     }
 
-    private void BuyHere(WorldState world, Train train, City city)
+    private void BuyHere(WorldState world, Train train, RailStop stop)
     {
         double minMargin = world.Def.Haulage.MinMargin;
         double free = train.FreeCapacity;
         if (free <= world.Def.Haulage.MinTradeQty) return;
 
-        // On évalue chaque marchandise, puis on sert d'abord la plus rentable.
-        var candidates = new List<(string CargoId, double ProfitPerUnit)>();
-        foreach (string cargoId in world.CargoOrder)
+        // On évalue chaque marché à portée de la gare, puis on sert d'abord le plus
+        // rentable. Une marchandise peut s'acheter à plusieurs installations : la
+        // forêt et la place de la ville ne la vendent pas au même prix.
+        var candidates = new List<(Market Market, double ProfitPerUnit)>();
+        foreach (var market in stop.Markets)
         {
-            var market = city.Market(cargoId);
             if (Sellable(world, market) <= world.Def.Haulage.MinTradeQty) continue;
 
-            double bestAhead = BestPriceAhead(world, train, cargoId);
-            double haulCost = HaulCostPerUnitAhead(world, train, cargoId);
+            double bestAhead = BestPriceAhead(world, train, market.CargoId);
+            double haulCost = HaulCostPerUnitAhead(world, train, market.CargoId);
             double profit = bestAhead - market.Price * (1.0 + minMargin) - haulCost;
-            if (profit >= world.Def.Haulage.MinProfitPerUnit) candidates.Add((cargoId, profit));
+            if (profit >= world.Def.Haulage.MinProfitPerUnit) candidates.Add((market, profit));
         }
 
-        // Tri stable et total : marge décroissante, puis identifiant croissant
-        // pour départager. Sans ce second critère, deux marchandises de marge
-        // identique pourraient être servies dans un ordre arbitraire.
+        // Tri stable et total : marge décroissante, puis marchandise et marché par
+        // identifiant croissant pour départager. Sans ces critères, deux marchés de
+        // marge identique pourraient être servis dans un ordre arbitraire.
         candidates.Sort((a, b) =>
         {
             int cmp = b.ProfitPerUnit.CompareTo(a.ProfitPerUnit);
-            return cmp != 0 ? cmp : string.CompareOrdinal(a.CargoId, b.CargoId);
+            if (cmp != 0) return cmp;
+            cmp = string.CompareOrdinal(a.Market.CargoId, b.Market.CargoId);
+            return cmp != 0 ? cmp : string.CompareOrdinal(a.Market.Key, b.Market.Key);
         });
 
-        foreach (var (cargoId, _) in candidates)
+        foreach (var (market, _) in candidates)
         {
             if (free <= world.Def.Haulage.MinTradeQty) break;
 
-            var market = city.Market(cargoId);
+            string cargoId = market.CargoId;
             double wanted = Math.Min(free, Sellable(world, market));
 
             // La compagnie n'achète qu'avec ce qu'elle a, plus le découvert que le
@@ -306,7 +325,8 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
 
     /// <summary>
     /// Meilleur prix observable sur les arrêts situés en aval, dans le sens de
-    /// marche courant, terminus inclus.
+    /// marche courant, terminus inclus — sur le meilleur marché à portée de chaque
+    /// gare.
     /// <para>
     /// C'est une information que le joueur a aussi (les prix sont affichés), mais
     /// le trader l'exploite sans anticiper que ses propres livraisons vont faire
@@ -322,7 +342,7 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
              i >= 0 && i < stops.Count;
              i += train.Direction)
         {
-            double price = world.CityById(stops[i].CityId).Market(cargoId).Price;
+            double price = BestBuyerAt(stops[i], cargoId)?.Price ?? 0;
             if (price > best) best = price;
         }
         return best;
@@ -350,7 +370,7 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
              i >= 0 && i < stops.Count;
              i += train.Direction)
         {
-            double price = world.CityById(stops[i].CityId).Market(cargoId).Price;
+            double price = BestBuyerAt(stops[i], cargoId)?.Price ?? 0;
             if (price > best) { best = price; bestIndex = i; }
         }
         if (bestIndex < 0) return 0;

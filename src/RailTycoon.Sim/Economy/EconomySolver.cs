@@ -140,7 +140,7 @@ public sealed class ReferenceEconomySolver : IEconomySolver
                 // Limite imposée par les intrants disponibles.
                 foreach (var input in recipe.Inputs)
                 {
-                    double available = city.Market(input.Cargo).Stock;
+                    double available = industry.Input(input.Cargo).Stock;
                     maxRuns = Math.Min(maxRuns, available / input.Qty);
                 }
 
@@ -152,7 +152,7 @@ public sealed class ReferenceEconomySolver : IEconomySolver
                     double storage = output.Qty * capacityRuns * cfg.ProductionStorageTicks;
                     if (storage <= 0) continue;
                     double factor = Maths.Clamp(
-                        2.0 * (1.0 - city.Market(output.Cargo).Stock / storage), 0.0, 1.0);
+                        2.0 * (1.0 - industry.Output(output.Cargo).Stock / storage), 0.0, 1.0);
                     maxRuns = Math.Min(maxRuns, capacityRuns * factor);
                 }
 
@@ -175,7 +175,7 @@ public sealed class ReferenceEconomySolver : IEconomySolver
                 // l'économie, pas ce qu'en donnerait un voisin qui n'en veut pas.
                 double inputValue = 0;
                 foreach (var input in recipe.Inputs)
-                    inputValue += city.Market(input.Cargo).Price * input.Qty;
+                    inputValue += industry.Input(input.Cargo).Price * input.Qty;
 
                 double outputValue = 0;
                 foreach (var output in recipe.Outputs)
@@ -188,10 +188,10 @@ public sealed class ReferenceEconomySolver : IEconomySolver
                 }
 
                 foreach (var input in recipe.Inputs)
-                    city.Market(input.Cargo).Consume(maxRuns * input.Qty);
+                    industry.Input(input.Cargo).Consume(maxRuns * input.Qty);
 
                 foreach (var output in recipe.Outputs)
-                    city.Market(output.Cargo).Produce(maxRuns * output.Qty);
+                    industry.Output(output.Cargo).Produce(maxRuns * output.Qty);
 
                 industry.Utilization = capacityRuns > 0 ? maxRuns / capacityRuns : 0;
             }
