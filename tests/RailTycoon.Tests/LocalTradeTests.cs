@@ -7,8 +7,9 @@ namespace RailTycoon.Tests;
 /// <summary>
 /// Le commerce entre installations d'une même ville. Décision de l'équipe du
 /// 27 octobre 2026 : chaque installation a son marché et sa position, le bois est
-/// moins cher à la forêt qu'à la scierie même dans la même ville, un charroi local
-/// limité passe sans train, et une gare ne sert que ce qui est à sa portée. Le
+/// moins cher à la forêt qu'à la scierie même dans la même ville, tout peut passer
+/// par charrette, mais à 15 km par jour, et une gare sert ce qui est à sa portée, y
+/// compris les charrettes qui y passent. Le
 /// scénario de référence est <c>data/timberford.json</c> : une ville, deux gares,
 /// un train qui n'en sort jamais.
 /// </summary>
@@ -35,9 +36,10 @@ internal static class LocalTradeTests
                     Check.True(false, $"tick {sim.World.Tick.Index} : {violations[0].Rule} — {violations[0].Detail}");
             }
 
-            // Mesuré le 27 octobre 2026 : 14 776 de résultat, 1 260 chargements de
-            // grumes portés de la forêt à la scierie, la scierie à 100 %. Le seuil
-            // protège contre une régression, il ne consacre pas ce chiffre.
+            // Mesuré le 27 octobre 2026 : 15 275 de résultat, 1 260 chargements de
+            // grumes portés de la forêt à la scierie, 718 de planches captés sur les
+            // charrettes qui partent de la scierie vers la place, la scierie à 100 %.
+            // Le seuil protège contre une régression, il ne consacre pas ce chiffre.
             double profit = sim.World.Company.NetProfit;
             Check.True(profit > 5_000, $"la navette doit rapporter, résultat {profit:0}");
             var sawmill = sim.World.CityById("timberford").Industries.Single();
@@ -109,29 +111,52 @@ internal static class LocalTradeTests
                 "Timberford : deux gares distinctes dans la même ville");
         });
 
-        runner.Add("charroi — il ne passe jamais plus que sa capacité", () =>
+        runner.Add("charroi — une charrette met le temps du trajet, à 15 km par jour", () =>
         {
-            // Sans train : tout ce qui arrive à la scierie y vient par charrette.
+            // Sans train, et la forêt reculée à 45 km de la scierie : trois jours de
+            // route. La charrette avance d'un jour à l'autre, et ne livre qu'à l'arrivée.
+            var scenario = ScenarioLoader.Load(TimberfordPath());
+            scenario.Trains.Clear();
+            scenario.Cities.Single().ProductionSites["logs"].DxKm = -39;
+            scenario.Cities.Single().InitialStock["logs"] = 20;
+            // À 0,5 par km, 45 km coûtent 23,5 par chargement, plus que ne vaut l'écart :
+            // aucune charrette ne partirait. Le test parle du temps, pas du prix.
+            scenario.Economy.Cartage.CostPerLoadKm = 0.05;
+            var sim = new Simulation(scenario);
+            var sawmill = sim.World.CityById("timberford").Industries.Single().Input("logs");
+
+            sim.Step();
+            var cart = sim.World.Cartage.Shipments.FirstOrDefault(c => c.CargoId == "logs" && ReferenceEquals(c.To, sawmill));
+            Check.True(cart is not null, "une charrette de grumes doit partir vers la scierie");
+            Check.Near(45, cart!.DistanceKm, 1e-9, "la forêt est à 45 km de la scierie");
+            Check.Near(0, cart.TravelledKm, 1e-12, "partie aujourd'hui, elle n'a pas encore roulé");
+
+            sim.Step();
+            Check.Near(15, cart.TravelledKm, 1e-9, "un jour de route");
+            sim.Step();
+            Check.Near(30, cart.TravelledKm, 1e-9, "deux jours de route");
+            Check.True(sim.World.Cartage.Shipments.Contains(cart), "encore en route");
+            Check.Near(0, sim.World.Cartage.Delivered("logs"), 1e-12, "rien n'est livré avant l'arrivée");
+
+            sim.Step();
+            Check.True(!sim.World.Cartage.Shipments.Contains(cart), "arrivée au troisième jour");
+            Check.True(sim.World.Cartage.Delivered("logs") > 0, "la charrette a livré la scierie");
+        });
+
+        runner.Add("charroi — tout peut passer par charrette, sans limite de quantité", () =>
+        {
+            // Sans train : tout ce que la scierie reçoit y vient par charrette, et elle
+            // reçoit presque tout ce que la forêt produit.
             var scenario = ScenarioLoader.Load(TimberfordPath());
             scenario.Trains.Clear();
             var sim = new Simulation(scenario);
+            sim.Run(Ticks);
             var city = sim.World.CityById("timberford");
-            double capacity = scenario.Economy.Cartage.CapacityPerTick;
-
-            double carted = 0;
-            for (int i = 0; i < Ticks; i++)
-            {
-                sim.Step();
-                foreach (string cargoId in sim.World.CargoOrder)
-                {
-                    double tick = sim.World.MarketsOf(city).Where(m => m.CargoId == cargoId).Sum(m => m.CartedInThisTick);
-                    Check.True(tick <= capacity + 1e-9,
-                        $"tick {sim.World.Tick.Index}, {cargoId} : {tick:0.###} chargements par charroi pour {capacity}");
-                    if (cargoId == "logs") carted += tick;
-                }
-            }
-            Check.True(carted > 0.9 * capacity * Ticks,
-                $"l'écart forêt → scierie doit occuper le charroi presque tout le temps, {carted:0} chargements");
+            double produced = city.ProductionMarket("logs")!.TotalProduced;
+            double delivered = sim.World.Cartage.Delivered("logs");
+            Check.True(delivered > 0.8 * produced,
+                $"{delivered:0} chargements de grumes livrés par charrette pour {produced:0} produits");
+            Check.True(city.Industries.Single().Utilization > 0.5, "la scierie tourne sans train");
         });
 
         runner.Add("charroi — il s'arrête quand l'écart de prix ne paie plus la charrette", () =>
@@ -141,20 +166,51 @@ internal static class LocalTradeTests
             scenario.Economy.Cartage.CostPerLoadKm = 100;
             var sim = new Simulation(scenario);
             sim.Run(100);
-            var city = sim.World.CityById("timberford");
-            Check.Near(0, city.ProductionMarket("logs")!.CartedOutThisTick, 1e-12,
+            Check.Near(0, sim.World.Cartage.Dispatched("logs"), 1e-12,
                 "à 1 200 la charrette sur 12 km, aucune grume ne doit quitter la forêt");
+        });
+
+        runner.Add("captage — un train capte une charrette dans le rayon de sa gare, au prix qu'elle y coûte", () =>
+        {
+            // Une charrette de grumes posée à la main, à 1 km de la forêt sur la route
+            // de la scierie, à 1 km par jour : elle reste dans le rayon de la gare de la
+            // forêt (7 km). Le train part de la scierie et arrive à la forêt dans le
+            // tick. Elle lui coûte son prix de départ plus le charroi parcouru :
+            // 2 + 1 + 0,5 × 1 = 3,5, moins que la forêt, vide, qui vend à 4.
+            var scenario = ScenarioLoader.Load(TimberfordPath());
+            scenario.Economy.Cartage.SpeedKmPerTick = 1;
+            scenario.Trains.Single().StartStop = 1;
+            var sim = new Simulation(scenario);
+            var city = sim.World.CityById("timberford");
+            var cart = new CartShipment
+            {
+                CargoId = "logs", From = city.ProductionMarket("logs")!, To = city.Industries.Single().Input("logs"),
+                DistanceKm = 12, SourcePrice = 2.0, Quantity = 5,
+            };
+            sim.World.Cartage.Shipments.Add(cart);
+            double initial = Invariants.InitialStockTotal(sim.World) + 5;
+
+            sim.Step();
+            Check.Near(3.5, cart.PriceHere(scenario.Economy.Cartage), 1e-12, "prix à la gare : départ et charroi parcouru");
+            Check.Near(0, cart.Quantity, 1e-12, "le train doit avoir chargé toute la charrette");
+            Check.Near(5, sim.World.Cartage.Captured("logs"), 1e-12, "cinq chargements captés");
+            var violations = Invariants.Check(sim.World, initial);
+            Check.True(violations.Count == 0, violations.Count > 0 ? violations[0].Detail : "");
         });
 
         runner.Add("charroi et gares — des données absurdes sont refusées au chargement", () =>
         {
-            var negative = ScenarioLoader.Load(TimberfordPath());
-            negative.Economy.Cartage.CapacityPerTick = -1;
-            Check.Throws<InvalidDataException>(() => new Simulation(negative), "une capacité de charroi négative");
+            var still = ScenarioLoader.Load(TimberfordPath());
+            still.Economy.Cartage.SpeedKmPerTick = 0;
+            Check.Throws<InvalidDataException>(() => new Simulation(still), "une charrette qui n'avance pas");
 
-            var noSlice = ScenarioLoader.Load(TimberfordPath());
-            noSlice.Economy.Cartage.Slices = 0;
-            Check.Throws<InvalidDataException>(() => new Simulation(noSlice), "un charroi sans tranche");
+            var empty = ScenarioLoader.Load(TimberfordPath());
+            empty.Economy.Cartage.LoadsPerCart = 0;
+            Check.Throws<InvalidDataException>(() => new Simulation(empty), "une charrette sans chargement");
+
+            var negative = ScenarioLoader.Load(TimberfordPath());
+            negative.Economy.Cartage.CostPerLoadKm = -1;
+            Check.Throws<InvalidDataException>(() => new Simulation(negative), "un charroi à coût négatif");
 
             var blind = ScenarioLoader.Load(TimberfordPath());
             blind.Lines.Single().Stops[1].RadiusKm = 0.5;

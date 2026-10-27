@@ -89,8 +89,9 @@ ajoute vraiment à la facture, relief compris. L'ancien modèle se rejoue en pas
 dans [docs/FINDINGS.md](docs/FINDINGS.md), « Le coût marginal réel par défaut ».
 
 Pour une ville où un train fait la navette entre la forêt et la scierie sans jamais
-en sortir — chaque installation a son propre marché, et le bois est moins cher à la
-forêt qu'à la scierie :
+en sortir — chaque installation a son propre marché, le bois est moins cher à la
+forêt qu'à la scierie, tout peut passer par charrette mais à 15 km par jour, et le
+train capte les charrettes qui traversent le rayon de ses gares :
 
 ```bash
 dotnet run --project src/RailTycoon.Harness -- --scenario data/timberford.json
@@ -164,7 +165,7 @@ tourner sans erreur.
 
 Le prototype est concluant : la boucle économique tient, et investir en capacité
 referme l'arbitrage dont on vivait. Sous le coût marginal réel, le profit culmine à
-quatre trains et ne s'érode que lentement au-delà : six trains en gardent 87 %, et
+quatre trains et ne s'érode que lentement au-delà : six trains en gardent 86 %, et
 cette tension devra venir d'un coût de possession des trains. Les chiffres sont
 dans [docs/FINDINGS.md](docs/FINDINGS.md).
 

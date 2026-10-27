@@ -285,9 +285,9 @@ Deux écarts avec le moteur actuel (`OpportunisticHaulageSolver`) :
 
 - **Le rayon d'action d'une gare existe**, sans taille ni prix (27 octobre 2026) :
   chaque installation a son marché et sa position, et une gare dessert les marchés
-  à sa portée. Une industrie mal placée peut n'être desservie par aucune gare ; le
-  charroi local la relie, dans la limite de sa capacité, aux autres installations de
-  sa ville.
+  à sa portée, y compris les charrettes qui y passent. Une industrie mal placée peut
+  n'être desservie par aucune gare ; tout peut lui parvenir ou partir de chez elle
+  par charrette, à 15 km par jour et bien plus cher qu'en train.
 - **Le prochain arrêt seulement.** Le moteur actuel estime la revente sur tous les
   arrêts à venir. La règle retenue est plus simple, plus lisible pour le joueur,
   et plus myope : un train ne charge pas pour un arrêt lointain s'il ne gagne rien
@@ -467,7 +467,7 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
    qu'aucun bassin ne se forme de part et d'autre du col (FINDINGS.md, « Le coût
    marginal réel par défaut »).
 9. **Un coût de possession des trains**, ou une composition fixe : sous ce modèle,
-   six trains gardent 87 % du résultat de l'optimum, et la capacité en trop ne coûte
+   six trains gardent 86 % du résultat de l'optimum, et la capacité en trop ne coûte
    presque rien. C'est le coût de maintenance du tableau des véhicules qui devra
    porter cette tension.
 

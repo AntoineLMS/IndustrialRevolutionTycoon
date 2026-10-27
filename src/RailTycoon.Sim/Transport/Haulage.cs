@@ -253,53 +253,88 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
         }
     }
 
+    /// <summary>
+    /// Ce qu'un train peut acheter à l'arrêt : un marché à portée de la gare, ou une
+    /// charrette qui passe dans son rayon d'action.
+    /// </summary>
+    private sealed record Offer(string CargoId, string Key, double Price, double Available,
+        Market? Market, CartShipment? Cart);
+
+    private List<Offer> OffersAt(WorldState world, RailStop stop)
+    {
+        var offers = new List<Offer>();
+        foreach (var market in stop.Markets)
+            offers.Add(new Offer(market.CargoId, market.Key, market.Price, Sellable(world, market), market, null));
+
+        // Les charrettes dans le rayon de la gare, au prix qu'elles coûtent ici : leur
+        // prix de départ, plus le charroi déjà parcouru. Décision de l'équipe du
+        // 27 octobre 2026. Dans l'ordre de leur départ, pour que le choix soit
+        // reproductible.
+        var cfg = world.Def.Economy.Cartage;
+        var shipments = world.Cartage.Shipments;
+        for (int i = 0; i < shipments.Count; i++)
+        {
+            var cart = shipments[i];
+            if (cart.Quantity <= 1e-12) continue;
+            var (x, y) = cart.Position;
+            double dx = x - stop.XKm, dy = y - stop.YKm;
+            if (Math.Sqrt(dx * dx + dy * dy) > stop.RadiusKm + 1e-9) continue;
+            offers.Add(new Offer(cart.CargoId, "charrette:" + i.ToString("D6", System.Globalization.CultureInfo.InvariantCulture),
+                cart.PriceHere(cfg), cart.Quantity, null, cart));
+        }
+        return offers;
+    }
+
     private void BuyHere(WorldState world, Train train, RailStop stop)
     {
         double minMargin = world.Def.Haulage.MinMargin;
         double free = train.FreeCapacity;
         if (free <= world.Def.Haulage.MinTradeQty) return;
 
-        // On évalue chaque marché à portée de la gare, puis on sert d'abord le plus
-        // rentable. Une marchandise peut s'acheter à plusieurs installations : la
-        // forêt et la place de la ville ne la vendent pas au même prix.
-        var candidates = new List<(Market Market, double ProfitPerUnit)>();
-        foreach (var market in stop.Markets)
+        // On évalue chaque offre à portée de la gare — marchés et charrettes —, puis
+        // on sert d'abord la plus rentable. Une marchandise peut s'acheter à plusieurs
+        // endroits : la forêt, la place de la ville et la charrette qui passe ne la
+        // vendent pas au même prix.
+        var candidates = new List<(Offer Offer, double ProfitPerUnit)>();
+        foreach (var offer in OffersAt(world, stop))
         {
-            if (Sellable(world, market) <= world.Def.Haulage.MinTradeQty) continue;
+            if (offer.Available <= world.Def.Haulage.MinTradeQty) continue;
 
-            double bestAhead = BestPriceAhead(world, train, market.CargoId);
-            double haulCost = HaulCostPerUnitAhead(world, train, market.CargoId);
-            double profit = bestAhead - market.Price * (1.0 + minMargin) - haulCost;
-            if (profit >= world.Def.Haulage.MinProfitPerUnit) candidates.Add((market, profit));
+            double bestAhead = BestPriceAhead(world, train, offer.CargoId);
+            double haulCost = HaulCostPerUnitAhead(world, train, offer.CargoId);
+            double profit = bestAhead - offer.Price * (1.0 + minMargin) - haulCost;
+            if (profit >= world.Def.Haulage.MinProfitPerUnit) candidates.Add((offer, profit));
         }
 
-        // Tri stable et total : marge décroissante, puis marchandise et marché par
-        // identifiant croissant pour départager. Sans ces critères, deux marchés de
-        // marge identique pourraient être servis dans un ordre arbitraire.
+        // Tri stable et total : marge décroissante, puis marchandise et offre par
+        // identifiant croissant pour départager. Sans ces critères, deux offres de
+        // marge identique pourraient être servies dans un ordre arbitraire.
         candidates.Sort((a, b) =>
         {
             int cmp = b.ProfitPerUnit.CompareTo(a.ProfitPerUnit);
             if (cmp != 0) return cmp;
-            cmp = string.CompareOrdinal(a.Market.CargoId, b.Market.CargoId);
-            return cmp != 0 ? cmp : string.CompareOrdinal(a.Market.Key, b.Market.Key);
+            cmp = string.CompareOrdinal(a.Offer.CargoId, b.Offer.CargoId);
+            return cmp != 0 ? cmp : string.CompareOrdinal(a.Offer.Key, b.Offer.Key);
         });
 
-        foreach (var (market, _) in candidates)
+        foreach (var (offer, _) in candidates)
         {
             if (free <= world.Def.Haulage.MinTradeQty) break;
 
-            string cargoId = market.CargoId;
-            double wanted = Math.Min(free, Sellable(world, market));
+            string cargoId = offer.CargoId;
+            double wanted = Math.Min(free, offer.Available);
 
             // La compagnie n'achète qu'avec ce qu'elle a, plus le découvert que le
             // module finance lui accorde. Sans finance, ce découvert vaut zéro et
             // la règle est celle d'avant : pas d'achat de fret à crédit.
             if (world.Company.SpendableCash <= 0) break;
-            double affordable = market.Price > 0 ? world.Company.SpendableCash / market.Price : wanted;
+            double affordable = offer.Price > 0 ? world.Company.SpendableCash / offer.Price : wanted;
             wanted = Math.Min(wanted, affordable);
             if (wanted <= world.Def.Haulage.MinTradeQty) continue;
 
-            var (bought, cost) = TakeFromMarket(world, market, cargoId, wanted);
+            var (bought, cost) = offer.Market is { } market
+                ? TakeFromMarket(world, market, cargoId, wanted)
+                : TakeFromCart(world, offer.Cart!, offer.Price, wanted);
             if (bought <= 0) continue;
 
             world.Company.PayForCargo(cost);
@@ -312,6 +347,20 @@ public sealed class OpportunisticHaulageSolver : IHaulageSolver
 
             free = train.FreeCapacity;
         }
+    }
+
+    /// <summary>
+    /// Charge sur le train une partie d'une charrette, au prix qu'elle coûte à la gare.
+    /// Pas d'effet de prix : la charrette n'est pas un marché, son prix est celui de
+    /// son chargement.
+    /// </summary>
+    private static (double Bought, double Cost) TakeFromCart(WorldState world, CartShipment cart, double price, double qty)
+    {
+        double taken = Math.Min(qty, cart.Quantity);
+        if (taken <= 0) return (0, 0);
+        cart.Quantity = Maths.SnapToZero(cart.Quantity - taken);
+        world.Cartage.AddCaptured(cart.CargoId, taken);
+        return (taken, taken * price);
     }
 
     /// <summary>

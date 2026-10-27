@@ -49,7 +49,7 @@ changement au détour d'un correctif.
 |---|---|---|
 | 0 | Remise à zéro de la télémétrie du tick | `Simulation` |
 | 0b | Événements : ouverture et extinction, tirage des aléatoires, multiplicateurs du jour publiés sur les marchés | `IEventSolver` |
-| 0c | Charroi local : une quantité bornée passe entre les marchés d'une même ville | `LocalCartage` |
+| 0c | Charroi : les charrettes en route avancent et livrent, de nouvelles partent entre deux marchés de la carte | `Cartage` |
 | 1 | Production primaire (fermes, mines, forêts) | `IEconomySolver` |
 | 2 | Usines : consommation des intrants, production | `IEconomySolver` |
 | 3 | Consommation des habitants, modulée par le prix | `IEconomySolver` |
@@ -93,10 +93,14 @@ raisons à cette place plutôt qu'une autre :
   heartland-events avec son bloc plein mais désactivé.
 
 La phase 0c a été **insérée** entre 0b et 1, troisième décision de ce genre (27 octobre
-2026). Chaque installation a son propre marché ; le charroi local
-(`Economy/LocalCartage.cs`) porte au plus `economy.cartage.capacityPerTick` chargements
-par tick, par ville et par marchandise, du marché le moins cher vers le marché acheteur
-le plus cher, tant que l'écart paie la charrette. Il se place avant l'économie, sur les
+2026). Chaque installation a son propre marché, et tout peut passer de l'un à l'autre
+par charrette (`Economy/Cartage.cs`), dans une ville ou d'une ville à l'autre, sans
+limite de quantité : une charrette part du marché le moins cher vers le marché acheteur
+le plus cher tant que l'écart de prix paie le trajet — 1 par chargement plus 0,5 par
+kilomètre, en ligne droite —, en comptant à l'arrivée ce qui y roule déjà. Elle avance
+de 15 km par jour et ne livre qu'au bout du trajet ; ce qui est en route compte dans le
+bilan matière. Un train à l'arrêt peut capter une charrette qui passe dans le rayon de
+sa gare, au prix qu'elle coûte là : son prix de départ plus le charroi parcouru. Il se place avant l'économie, sur les
 prix de la veille, pour qu'aucun solveur n'ait à le connaître : il déplace du stock,
 sans production ni consommation, et ne fixe aucun prix — la phase 4 les recalcule.
 
@@ -129,7 +133,7 @@ vers `(forme+1)/forme` ; surabondance, il tombe au plancher.
 achètent ses habitants, et chaque installation a les siens : une production primaire
 (ferme, mine, forêt) son entrepôt, une usine ses intrants et ses produits. La forêt et
 la scierie d'une même ville n'ont donc pas le même prix, et rien ne passe de l'une à
-l'autre sans un train ou le charroi local. Chaque marché a une position — le centre de
+l'autre sans un train ou une charrette. Chaque marché a une position — le centre de
 la ville, décalé pour une installation — et une gare dessert les marchés à moins de
 son rayon d'action (`haulage.stationRadiusKm`, ou celui de l'arrêt). Un train à l'arrêt
 vend au marché à portée qui paie le mieux et achète à ceux qui lui rapportent.
@@ -157,7 +161,7 @@ qui oblige le joueur à chercher la prochaine asymétrie. La campagne de mesure 
 [FINDINGS.md](FINDINGS.md) montre que cette propriété tient à l'échelle de la
 carte : le profit total culmine à trois trains et s'effondre à six sous l'ancien
 modèle de coût `flat` ; sous `mass`, le défaut, il culmine à quatre et ne s'érode
-que lentement — six trains gardent 87 % de l'optimum (FINDINGS.md, « Le coût
+que lentement — six trains gardent 86 % de l'optimum (FINDINGS.md, « Le coût
 marginal réel par défaut »).
 
 L'horizon de couverture n'est pas un réglage cosmétique : il fixe l'échelle du

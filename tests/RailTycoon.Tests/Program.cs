@@ -251,16 +251,13 @@ internal static class Program
             var city = Fixtures.City("millbrook", stock: 400);
             city.Industries.Add(new IndustryDef { Recipe = "mill", Capacity = 1 });
             scenario.Cities.Add(city);
-            // Le blé est sur la place de la ville, le moulin a son propre marché : le
-            // charroi doit pouvoir l'y porter en un tick pour que le test parle de la
-            // valorisation de la farine, pas de la capacité des charrettes.
-            scenario.Economy.Cartage.CapacityPerTick = 10;
-
-            // Trois ticks : le moulin juge sa rentabilité sur le prix de son blé à
-            // l'ouverture du tick, et ce prix n'apprend l'arrivée des charrettes qu'au
-            // recalcul de fin de tick.
+            // Le blé est sur la place de la ville, le moulin a son propre marché : il y
+            // arrive par charrette, partie un jour, livrée le lendemain. Quatre ticks :
+            // le moulin juge aussi sa rentabilité sur le prix de son blé à l'ouverture
+            // du tick, qui n'apprend l'arrivée des charrettes qu'au recalcul de fin de
+            // tick.
             var sim = new Simulation(scenario);
-            sim.Run(3);
+            sim.Run(4);
 
             var mill = sim.World.CityById("millbrook").Industries[0];
             Check.True(mill.Utilization > 0.9,
@@ -1101,7 +1098,8 @@ internal static class Program
         ProducerPriceTests.Register(runner);
 
         // Le commerce entre installations d'une même ville : gares à rayon
-        // d'action, charroi local, et la navette de data/timberford.json.
+        // d'action, charroi et captage des charrettes, et la navette de
+        // data/timberford.json.
         LocalTradeTests.Register(runner);
 
         // ------------------------------------------------ traces de référence

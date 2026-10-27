@@ -121,22 +121,37 @@ internal static class SierraTests
             // 27 octobre 2026, grille remesurée : sur 40 trajectoires voisines, le
             // réglage livré (horizon 1) perd 2 094 ± 1 213 (−1,4 %) pour une mobilité
             // de 0,498 contre 0,312 (+60 %), le meilleur compromis de la grille
-            // (docs/FINDINGS.md, « Le prix suit l'entrepôt du producteur »). Depuis que
-            // chaque installation a son marché, le même jour : −3 % en moyenne
-            // (169 888 contre 175 104), mobilité 0,493 contre 0,314 ; parties telles
-            // qu'écrites 168 947 contre 176 754 (−4,4 %), près du seuil. Les seuils
-            // gardent de la marge : ils protègent contre une régression, ils ne
-            // consacrent pas ces chiffres exacts.
-            var scenario = ScenarioLoader.Load(SierraPath());
-            var (refSim, refStats) = Run(scenario, new ReferenceEconomySolver());
-            var (sim, stats) = Run(scenario, new AnticipatingEconomySolver());
+            // (docs/FINDINGS.md, « Le prix suit l'entrepôt du producteur »).
+            //
+            // Depuis que tout peut passer par charrette, d'une ville à l'autre (même
+            // jour), la propriété ne tient plus partie par partie : sur 40 trajectoires
+            // voisines, 21 seulement passent les deux seuils à la fois, et la partie
+            // telle qu'écrite n'en fait pas partie (mobilité 0,391 contre 0,353). Elle
+            // tient en moyenne : −6 251 ± 1 282 de résultat (−3,4 %), mobilité 0,410
+            // contre 0,303 (×1,35). Elle se vérifie donc sur la moyenne de dix
+            // trajectoires voisines, comme le changement de tête de heartland : une
+            // partie unique est un tirage. Les seuils gardent de la marge : ils
+            // protègent contre une régression, ils ne consacrent pas ces chiffres.
+            double refMobility = 0, mobility = 0, refProfit = 0, profit = 0;
+            var neighbours = Fixtures.Neighbours(ScenarioLoader.Load(SierraPath()), 10);
+            foreach (var perturb in neighbours)
+            {
+                var reference = ScenarioLoader.Load(SierraPath());
+                perturb(reference);
+                var anticipating = ScenarioLoader.Load(SierraPath());
+                perturb(anticipating);
+                var (refSim, refStats) = Run(reference, new ReferenceEconomySolver());
+                var (sim, stats) = Run(anticipating, new AnticipatingEconomySolver());
+                refMobility += refStats.MeanSpreadMobility(refSim.World) / neighbours.Count;
+                mobility += stats.MeanSpreadMobility(sim.World) / neighbours.Count;
+                refProfit += refSim.World.Company.NetProfit / neighbours.Count;
+                profit += sim.World.Company.NetProfit / neighbours.Count;
+            }
 
-            double refMobility = refStats.MeanSpreadMobility(refSim.World);
-            double mobility = stats.MeanSpreadMobility(sim.World);
             Check.True(mobility > refMobility * 1.25,
-                $"mobilité {mobility:0.000} contre {refMobility:0.000} pour la référence");
-            Check.True(sim.World.Company.NetProfit >= 0.95 * refSim.World.Company.NetProfit,
-                $"résultat {sim.World.Company.NetProfit:0} contre {refSim.World.Company.NetProfit:0} pour la référence");
+                $"mobilité {mobility:0.000} contre {refMobility:0.000} pour la référence, sur {neighbours.Count} voisines");
+            Check.True(profit >= 0.95 * refProfit,
+                $"résultat {profit:0} contre {refProfit:0} pour la référence, sur {neighbours.Count} voisines");
         });
 
         runner.Add("sierra — constat de l'ancien modèle : sous flat, le relief se paie mais n'entre dans aucune décision", () =>

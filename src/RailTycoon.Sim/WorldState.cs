@@ -59,6 +59,9 @@ public sealed class WorldState
     private readonly Dictionary<string, CargoDef> _cargosById = new();
     private readonly Dictionary<string, RecipeDef> _recipesById = new();
 
+    /// <summary>Les charrettes en route, et ce que le charroi a fait depuis le début. Voir <see cref="Cartage"/>.</summary>
+    public CartageState Cartage { get; } = new();
+
     public SimTick Tick { get; internal set; }
 
     public CargoDef Cargo(string id) => _cargosById[id];

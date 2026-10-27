@@ -65,6 +65,15 @@ public static class Invariants
                     $"train {train.Id} : {train.LoadedUnits:0.##} chargements pour une capacité de {train.Capacity:0.##}"));
         }
 
+        // Ce qui est sur la route, en charrette, compte aussi.
+        foreach (var shipment in world.Cartage.Shipments)
+        {
+            if (shipment.Quantity < -epsilon)
+                violations.Add(new("charrette-positive",
+                    $"charrette {shipment.From.Key} → {shipment.To.Key} : {shipment.Quantity:0.######}"));
+            inTransit += shipment.Quantity;
+        }
+
         // Bilan matière : rien n'apparaît ni ne disparaît en dehors de la
         // production et de la consommation. Le transport ne fait que déplacer.
         double expected = initialStockTotal + producedTotal - consumedTotal;

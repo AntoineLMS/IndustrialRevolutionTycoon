@@ -83,7 +83,7 @@ public sealed class Market
     public double ImportedThisTick;
     public double ExportedThisTick;
 
-    /// <summary>Ce que le charroi local a apporté et emporté ce tick (<see cref="LocalCartage"/>).</summary>
+    /// <summary>Ce que les charrettes ont livré ici et emporté d'ici ce tick (<see cref="Cartage"/>).</summary>
     public double CartedInThisTick;
     public double CartedOutThisTick;
 
@@ -153,7 +153,7 @@ public sealed class Market
         ImportedThisTick += qty;
     }
 
-    /// <summary>Part avec le charroi local vers un autre marché de la ville. Ni production, ni consommation : un transfert.</summary>
+    /// <summary>Part sur une charrette. Ni production, ni consommation : la marchandise prend la route.</summary>
     public void CartOut(double qty)
     {
         if (qty <= 0) return;
@@ -162,7 +162,7 @@ public sealed class Market
         CartedOutThisTick += actual;
     }
 
-    /// <summary>Arrive par le charroi local d'un autre marché de la ville.</summary>
+    /// <summary>Arrive par charrette d'un autre marché.</summary>
     public void CartIn(double qty)
     {
         if (qty <= 0) return;
@@ -192,7 +192,7 @@ public sealed class Industry
 /// <summary>
 /// Une installation d'une ville : la production primaire d'une marchandise (ferme,
 /// mine, forêt) ou une usine. Elle a sa position et ses propres marchés ; rien ne
-/// passe de l'un à l'autre sans un train ou le charroi local.
+/// passe de l'un à l'autre sans un train ou une charrette.
 /// </summary>
 public sealed class Site
 {

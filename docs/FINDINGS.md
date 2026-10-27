@@ -10,7 +10,8 @@
 > principaux. Le même jour, le prix d'un producteur qui ne consomme pas sa
 > marchandise s'est mis à suivre son entrepôt : voir « Le prix suit l'entrepôt du
 > producteur ». Puis chaque installation a reçu son propre marché : voir « Chaque
-> installation a son marché ». Les mesures d'avant ce dernier changement ne se
+> installation a son marché » ; et le charroi est devenu lent et sans plafond : voir
+> « Le charroi : tout passe, plus lentement ». Les mesures d'avant ce dernier changement ne se
 > rejouent plus au bit près : aucun réglage ne remet la forêt et la scierie d'une ville
 > sur un même marché.
 
@@ -1692,8 +1693,9 @@ heartland, 200 213 ± 3 918 sur la sierra), six à 87 % et 80 % de l'optimum.
 
 ### Décisions laissées à l'équipe
 
-1. **La capacité du charroi (0,5 chargement par tick, par ville et par marchandise)**
-   décide de ce que les installations voisines échangent sans train. Sur heartland et
+1. *Remplacé le 27 octobre 2026 : le charroi n'a plus de plafond, il est lent* (voir la
+   section suivante). **La capacité du charroi (0,5 chargement par tick, par ville et par
+   marchandise)** décidait de ce que les installations voisines échangent sans train. Sur heartland et
    la sierra elle ne mord pas ; sur ironpeak, elle réorganise les usines. C'est le
    réglage le plus lourd de ce changement.
 2. **Placer les installations des scénarios existants.** Elles sont toutes au centre de
@@ -1708,6 +1710,98 @@ heartland, 200 213 ± 3 918 sur la sierra), six à 87 % et 80 % de l'optimum.
    l'interdisaient déjà ; sur le réseau, un aller-retour par un aiguillage
    (forêt → aiguillage → forêt) est désormais refusé au chargement. Deux gares
    différentes d'une même ville, comme à Timberford, restent une ligne.
+
+## Le charroi : tout passe, plus lentement, et les gares captent les charrettes
+
+*Décisions de l'équipe, 27 octobre 2026 : « tout peut passer par des charrois, sauf que
+c'est plus lent ; si une gare est présente, les trains qui la desservent peuvent capter
+les marchandises dans son rayon d'action, y compris dans des charrois. » Les charrettes
+vont aussi d'une ville à l'autre, à 15 km par jour, et un train paie une charrette « le
+prix que ça coûte à la gare ». Même protocole que les sections précédentes. Remplace le
+charroi plafonné de la section précédente.*
+
+### Le modèle
+
+- **Plus de plafond.** Une charrette part, chaque jour, du marché le moins cher vers le
+  marché acheteur le plus cher de toute la carte, tant que l'écart de prix paie le
+  trajet : 1 par chargement plus 0,5 par chargement et par kilomètre, en ligne droite.
+  Elle porte 0,5 chargement, et les départs se décident une charrette à la fois, prix
+  réévalués entre deux.
+- **Le prix d'arrivée compte ce qui roule déjà.** Sans cela, la marchandise mettant
+  des jours à arriver, chaque jour enverrait de quoi combler la même pénurie.
+- **15 km par jour**, huit fois plus lent qu'un train. La marchandise est sur la route
+  pendant le trajet, et le bilan matière l'y compte.
+- **Le captage.** Un train à l'arrêt peut acheter une charrette qui passe dans le rayon
+  de sa gare, au prix qu'elle coûte là : son prix au départ, plus le charroi parcouru
+  jusqu'au point où il la trouve. *Lecture de la réponse « le prix que ça coûte à la
+  gare » : le coût de la marchandise rendue à la gare, pas le prix d'arrivée.*
+
+Le coût au kilomètre borne la distance de lui-même. Une charrette ne paie son trajet que
+si l'écart de prix dépasse 1 + 0,5 × la distance : 23,5 à 45 km, 76 à 150 km. Le blé (10)
+et le charbon (14) ne passent donc presque jamais d'une ville à l'autre ; la fonte (46)
+et l'acier (78) le peuvent.
+
+### Ce qui passe par charrette
+
+| scénario | dans une ville | d'une ville à l'autre | captés par un train |
+|---|---|---|---|
+| heartland | grumes et nourriture, quelques centaines de chargements | 4 chargements (farine) | 224 de nourriture |
+| sierra | idem | 7 chargements (farine) | 322 de nourriture |
+| ironpeak | minerai, grumes, charbon, acier : plusieurs milliers | fonte Emberford → Steelford (468), charbon et nourriture de Blackseam vers Forgeton (162 et 124) | 736 de fonte, 734 d'acier |
+| timberford | planches de la scierie vers la place | — | 718 de planches |
+
+*Partie telle qu'écrite, 720 ticks.*
+
+Sur les cartes de heartland et de la sierra, les villes sont trop loin les unes des
+autres et les marchandises trop bon marché : le charroi y reste une affaire de ville.
+Sur ironpeak, plus serrée et plus chère, il double une partie des lignes, et les trains
+captent au passage plus de fonte et d'acier qu'il n'en arrive par la route.
+
+### Résultats
+
+| scénario, solveur | charroi plafonné (section précédente) | charroi lent et sans plafond |
+|---|---|---|
+| heartland, référence | 270 937 ± 3 582 | **279 598 ± 3 179** |
+| heartland, anticipant | 243 087 ± 10 195 | 241 570 ± 8 218 |
+| sierra, référence | 175 104 ± 3 134 | **184 989 ± 4 361** |
+| sierra, anticipant | 169 888 ± 5 207 | 178 738 ± 6 012 |
+| ironpeak, référence | 232 044 ± 3 350 | 237 926 ± 14 200 |
+
+*Parties telles qu'écrites : 274 420, 237 227, 185 605, 181 222, 230 622 ;
+timberford 15 275 (contre 14 776).*
+
+- **Les résultats montent de 3 à 6 % sous la référence.** Les trains y gagnent des
+  charrettes à capter, qu'ils ne trouveraient sur aucun marché ; la part de ce gain qui
+  vient du captage, et celle qui vient de la fin du plafond, n'a pas été isolée.
+- **Ironpeak retrouve ses usines** : 67 % en moyenne (contre 61 % sous le plafond, 66 %
+  sans limite ni coût). La scierie de Pinewood revient à 87 %. Mais sa dispersion
+  double (± 14 200) : les charrettes de fonte et d'acier y concurrencent les trains, et
+  le résultat dépend de qui passe le premier.
+- **Le nombre de trains** garde sa forme : optimum à quatre (299 955 ± 3 279 sur
+  heartland, 208 045 ± 2 758 sur la sierra), six à 86 % et 78 % de l'optimum.
+- **La plaine et la vallée** ne bougent pas au bit près : leurs deux villes sont trop
+  loin pour qu'une charrette de blé paie son trajet. Le col, si (−27 827 contre −27 744).
+
+### Ce que le changement a dérangé
+
+- **Le bloc `anticipating` de la sierra** : la propriété « de la mobilité pour moins de
+  5 % de résultat » ne tient plus partie par partie. Sur 40 trajectoires voisines, 21
+  passent les deux seuils, et la partie telle qu'écrite n'en est pas (mobilité 0,391
+  contre 0,353). Elle tient en moyenne : −6 251 ± 1 282 (−3,4 %), mobilité ×1,35. Son
+  test se vérifie désormais sur dix voisines, comme le changement de tête de heartland.
+- **Le moulin du test de régression** reçoit son blé de la place par charrette, en un
+  jour : le test tourne quatre ticks au lieu de trois.
+
+### Décisions laissées à l'équipe
+
+1. **Le prix d'une charrette captée.** « Le prix que ça coûte à la gare » est lu comme
+   le prix au départ plus le charroi parcouru. L'autre lecture — le prix du marché de
+   la ville de la gare — ferait du captage une affaire moins sûre pour le train.
+2. **Les routes.** Les charrettes vont en ligne droite, à vitesse et coût uniformes,
+   montagne comprise. Le relief de la sierra ne les gêne pas ; il devrait.
+3. **Qui conduit les charrettes.** Elles n'appartiennent à personne, et le charroi ne
+   rapporte rien à la compagnie. Une compagnie de roulage, ou une compagnie de chemin de
+   fer qui fait aussi rouler des charrettes vers ses gares, serait un autre jeu.
 
 ## Questions ouvertes pour l'équipe
 

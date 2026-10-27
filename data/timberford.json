@@ -9,7 +9,7 @@
 
   "//geographie": "Timberford s'étire sur 12 km d'ouest en est : la forêt à l'ouest (x = 0), la place de la ville au milieu (x = 6), la scierie à l'est (x = 12). Deux gares : celle de la forêt (x = 0, rayon 7 km) dessert la forêt et la place ; celle de la scierie (x = 12, rayon 3 km) ne dessert que la scierie. Le train fait la navette : grumes de la forêt vers la scierie, planches de la scierie vers la place.",
 
-  "//charroi": "Le charroi local porte au plus 0,5 chargement par tick et par marchandise, à 1 par chargement plus 0,5 par chargement et par kilomètre : 7 de la forêt à la scierie (12 km), 4 de la scierie à la place (6 km). La forêt produit 2 chargements par tick et la scierie en scie autant : le charroi n'en porte qu'un quart, et le reste attend un train.",
+  "//charroi": "Tout peut passer par charrette, sans limite de quantité, mais à 15 km par jour et à 1 par chargement plus 0,5 par chargement et par kilomètre : 7 de la forêt à la scierie (12 km), un jour de route ; 4 de la scierie à la place (6 km). Le train fait le même trajet pour 0,4 par chargement, et capte au passage les charrettes qui traversent le rayon de ses gares.",
 
   "//anticipating": "Pas de bloc anticipating : ce scénario éprouve le commerce entre installations d'une même ville, pas l'anticipation des prix, et un scénario éprouve une chose à la fois.",
   "//network": "Pas de réseau sur relief : une ligne de 12 km saisie à la main suffit, et le relief ne ferait que renchérir les deux sens de la navette sans rien apprendre de plus.",
@@ -23,7 +23,7 @@
     "minProductionFactor": 0.1,
     "minConsumptionResponse": 0.3,
     "maxConsumptionResponse": 1.5,
-    "cartage": { "capacityPerTick": 0.5, "costPerLoad": 1.0, "costPerLoadKm": 0.5, "slices": 4 }
+    "cartage": { "speedKmPerTick": 15, "costPerLoad": 1.0, "costPerLoadKm": 0.5, "loadsPerCart": 0.5 }
   },
 
   "haulage": {

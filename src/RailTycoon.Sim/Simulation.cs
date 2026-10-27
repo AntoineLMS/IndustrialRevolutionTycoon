@@ -65,11 +65,11 @@ public sealed class Simulation
         // tableau des phases, pour la raison de cette place.
         Events.Step(World, tick);
 
-        // Phase 0c — le charroi local, entre les installations d'une même ville.
-        // Avant l'économie, sur les prix de la veille, pour qu'aucun solveur n'ait à
-        // le connaître : il déplace du stock, il ne fixe aucun prix. Voir
-        // docs/ARCHITECTURE.md, tableau des phases.
-        LocalCartage.Step(World);
+        // Phase 0c — le charroi : les charrettes en route avancent et livrent, de
+        // nouvelles partent. Avant l'économie, sur les prix de la veille, pour qu'aucun
+        // solveur n'ait à le connaître : il déplace du stock, il ne fixe aucun prix.
+        // Voir docs/ARCHITECTURE.md, tableau des phases.
+        Cartage.Step(World);
 
         // Phase 1 — production, consommation, formation des prix.
         Economy.Step(World, tick);
@@ -127,7 +127,7 @@ internal static class WorldBuilder
 
             // Une installation par marchandise produite, puis une par usine. Chacune a
             // ses marchés : la forêt vend ses grumes, la scierie achète les siennes, et
-            // rien ne passe de l'une à l'autre sans un train ou le charroi local, même
+            // rien ne passe de l'une à l'autre sans un train ou une charrette, même
             // dans la même ville (décision de l'équipe du 27 octobre 2026).
             double storageTicks = scenario.Economy.ProductionStorageTicks;
             foreach (var cargo in scenario.Cargos)
@@ -375,7 +375,7 @@ internal static class WorldBuilder
     private static void Validate(ScenarioDef s)
     {
         TrainCost.Validate(s);
-        LocalCartage.Validate(s.Economy.Cartage);
+        Cartage.Validate(s.Economy.Cartage);
 
         var prices = s.PriceModel;
         if (prices.ProducerMaxMultiplier < prices.MinMultiplier || prices.ProducerMaxMultiplier > prices.MaxMultiplier)

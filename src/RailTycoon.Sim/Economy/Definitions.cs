@@ -84,7 +84,7 @@ public sealed class IndustryDef
 /// <para>
 /// Chaque installation — une forêt, une mine, une usine — a son propre marché : la
 /// forêt vend ses grumes, la scierie achète les siennes, et rien ne passe de l'une à
-/// l'autre sans un train ou le charroi local (<see cref="CartageDef"/>), même dans la
+/// l'autre sans un train ou une charrette (<see cref="CartageDef"/>), même dans la
 /// même ville. Leur position décide quelle gare les dessert
 /// (<see cref="HaulageDef.StationRadiusKm"/>) et ce que coûte le charroi entre elles.
 /// </para>
@@ -267,42 +267,52 @@ public sealed class EconomyDef
     /// </summary>
     public double RetainedCoverage { get; set; } = 1.0;
 
-    /// <summary>Le charroi local entre les installations d'une même ville. Voir <see cref="CartageDef"/>.</summary>
+    /// <summary>Le charroi, entre tous les marchés de la carte. Voir <see cref="CartageDef"/>.</summary>
     public CartageDef Cartage { get; set; } = new();
 }
 
 /// <summary>
-/// Le charroi local : ce qui passe sans train entre deux installations d'une même
-/// ville — la forêt et la scierie, la boulangerie et la place du marché.
+/// Le charroi : ce qui passe sans train, par charrettes, d'un marché à n'importe quel
+/// autre — de la forêt à la scierie d'une même ville, ou d'une ville à sa voisine.
 /// <para>
-/// Chaque installation a son propre marché, et sans charroi rien ne passerait de
-/// l'une à l'autre sans un train. Le charroi en laisse passer une quantité bornée,
-/// du marché le moins cher au plus cher, tant que l'écart de prix paie la
-/// charrette : un coût fixe par chargement, plus un coût par chargement et par
-/// kilomètre entre les deux installations. Il ne coûte rien à la compagnie — la
-/// marchandise n'appartient à personne, et le coût n'est qu'un seuil —, mais il
-/// borne l'écart que les trains peuvent exploiter : au-delà de sa capacité,
-/// l'écart reste entier, et c'est lui qui fait vivre un train qui reste dans la
-/// même ville. Décision de l'équipe du 27 octobre 2026.
+/// Tout peut passer par charrette, sans limite de quantité ; c'est seulement plus lent
+/// et plus cher qu'un train. Une charrette part du marché le moins cher vers le marché
+/// acheteur le plus cher tant que l'écart de prix paie le trajet —
+/// <see cref="CostPerLoad"/> plus <see cref="CostPerLoadKm"/> par kilomètre, en ligne
+/// droite —, en comptant à l'arrivée ce qui y roule déjà. Elle avance de
+/// <see cref="SpeedKmPerTick"/> par jour, et la marchandise n'arrive qu'au bout du
+/// trajet. Le charroi ne coûte rien à la compagnie : la marchandise n'appartient à
+/// personne, et le coût n'est qu'un seuil. Une charrette qui passe dans le rayon d'une
+/// gare peut être captée par un train à l'arrêt, au prix qu'elle coûte à la gare : son
+/// prix de départ, plus le charroi déjà parcouru. Décisions de l'équipe du 27 octobre
+/// 2026.
 /// </para>
 /// </summary>
 public sealed class CartageDef
 {
-    /// <summary>Chargements par tick qui peuvent passer, par ville et par marchandise, toutes installations confondues.</summary>
-    public double CapacityPerTick { get; set; } = 0.5;
+    /// <summary>Kilomètres parcourus par jour. 15 : une charrette lourde sur les routes de l'époque, huit fois plus lente qu'un train.</summary>
+    public double SpeedKmPerTick { get; set; } = 15;
 
     /// <summary>Coût d'une charrette par chargement, quelle que soit la distance.</summary>
     public double CostPerLoad { get; set; } = 1.0;
 
-    /// <summary>Coût d'une charrette par chargement et par kilomètre entre les deux installations.</summary>
+    /// <summary>Coût d'une charrette par chargement et par kilomètre, en ligne droite entre les deux marchés.</summary>
     public double CostPerLoadKm { get; set; } = 0.5;
 
     /// <summary>
-    /// Nombre de tranches de la capacité du tick. Le prix est recalculé entre deux
-    /// tranches, comme pour un train : la première charrette part vers le marché le
-    /// plus cher, la suivante vers celui qui l'est devenu.
+    /// Chargements par charrette. Les départs se décident charrette par charrette : le
+    /// prix est réévalué entre deux, à l'arrivée comme au départ, si bien que la
+    /// première part vers le marché le plus cher et la suivante vers celui qui l'est
+    /// devenu.
     /// </summary>
-    public int Slices { get; set; } = 4;
+    public double LoadsPerCart { get; set; } = 0.5;
+
+    /// <summary>
+    /// Garde-fou : départs au plus par marchandise et par jour, sur toute la carte. Il
+    /// ne doit jamais mordre en régime normal ; il empêche une donnée absurde de faire
+    /// boucler un tick.
+    /// </summary>
+    public int MaxCartsPerTick { get; set; } = 400;
 }
 
 /// <summary>Paramètres du transporteur de référence.</summary>
