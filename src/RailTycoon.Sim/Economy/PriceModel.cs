@@ -33,6 +33,12 @@ public interface IPriceModel
 /// l'horizon, le prix est celui de référence. Stock vide, le prix grimpe vers
 /// (forme+1)/forme ; surabondance, il s'effondre vers le plancher.
 /// <para>
+/// Là où personne ne consomme la marchandise, il n'y a pas de couverture. Chez un
+/// producteur, le prix suit alors le remplissage de son entrepôt : de
+/// <c>producerMaxMultiplier</c> entrepôt vide au plancher entrepôt plein. Ailleurs,
+/// il vaut le plancher.
+/// </para>
+/// <para>
 /// C'est ce qui produit la boucle de jeu de Railroad Tycoon : livrer une
 /// marchandise fait monter l'offre locale, donc baisser le prix, donc se refermer
 /// l'arbitrage qu'on exploitait. Le joueur doit constamment trouver la prochaine
@@ -72,8 +78,18 @@ public sealed class HyperbolicPriceModel : IPriceModel
         // consomme pas. Le transporteur y voyait des destinations lucratives et
         // acheminait blé et farine vers une ville qui n'en consommait pas un
         // gramme, où le fret s'accumulait sans jamais trouver preneur.
+        //
+        // Un producteur, lui, a un entrepôt, et la quantité qu'il y garde dit si la
+        // marchandise abonde : plus il y en a, moins c'est cher, comme partout. Sans
+        // ce cas, une mine vidée par les trains vendait son dernier chargement au
+        // prix du premier, et l'occasion ne se refermait qu'à l'arrivée.
         double demand = market.BaseDemandRate + market.IndustryDemandRate;
-        if (demand <= 0) return cargo.BasePrice * _cfg.MinMultiplier;
+        if (demand <= 0)
+        {
+            if (market.StorageCapacity <= 0) return cargo.BasePrice * _cfg.MinMultiplier;
+            double fill = Maths.Clamp(market.Stock / market.StorageCapacity, 0.0, 1.0);
+            return cargo.BasePrice * (_cfg.ProducerMaxMultiplier - (_cfg.ProducerMaxMultiplier - _cfg.MinMultiplier) * fill);
+        }
 
         double coverage = Coverage(market);
         double multiplier = (_cfg.Shape + 1.0) / (_cfg.Shape + coverage);

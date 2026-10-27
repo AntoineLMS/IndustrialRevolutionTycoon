@@ -7,8 +7,11 @@
 > marginal réel » inclus sont mesurées sous lui, sauf mention contraire. Depuis, le
 > défaut est `mass`, avec une tare par type de wagon et un wagon qui suit son
 > chargement : voir « Le coût marginal réel par défaut », qui remesure les chiffres
-> principaux. Les mesures antérieures se relisent en passant `haulage.costModel` à
-> `flat`, qui rejoue les anciennes empreintes au bit près.
+> principaux. Le même jour, le prix d'un producteur qui ne consomme pas sa
+> marchandise s'est mis à suivre son entrepôt : voir « Le prix suit l'entrepôt du
+> producteur ». Les mesures antérieures se relisent en passant `haulage.costModel` à
+> `flat` et `priceModel.producerMaxMultiplier` à la valeur de `minMultiplier`, qui
+> rejouent les anciennes empreintes au bit près.
 
 ## La question posée
 
@@ -1290,7 +1293,8 @@ Aucune n'est tranchée ici ; le modèle est livré en opt-in, sur la seule
 *Décision de l'équipe, 27 octobre 2026, en réponse aux décisions 1 et 3 ci-dessus.
 Scénarios `heartland` et `sierra`, 720 ticks, 90 de chauffe exclus, ensembles de 40
 trajectoires voisines selon le protocole de la section précédente, solveur de
-référence sauf mention contraire.*
+référence sauf mention contraire. Mesuré avec un prix producteur fixe au plancher,
+avant la section suivante, qui remesure les chiffres principaux.*
 
 ### Ce qui a été décidé, et ce que cela change au modèle
 
@@ -1479,6 +1483,118 @@ deviennent ce qui la porte.
    instable (± 14 199 à 0,2).
 4. **Le bloc `anticipating` de la sierra** perd 3 % de résultat : l'accepter pour sa
    mobilité, ou le retirer.
+
+## Le prix suit l'entrepôt du producteur
+
+*Décision de l'équipe, 27 octobre 2026 : « la quantité de produits disponibles à un
+endroit fait évoluer les prix ; plus il y en a, moins c'est cher. » Même protocole que
+la section précédente, sous le modèle de coût `mass`.*
+
+### Ce qui manquait
+
+Le prix suivait déjà la quantité partout où une marchandise se consomme : couverture
+= stock ÷ (demande locale × 15 ticks). Mais un lieu qui produit une marchandise sans
+la consommer — une ferme pour son blé, une mine pour son charbon, un moulin pour sa
+farine — la vendait au plancher, 0,12 × la référence, **que son entrepôt soit plein
+ou vide**. C'était la correction du bug 3 de la première campagne (un marché sans
+acheteur avait un prix de pénurie), et elle avait coupé le lien entre quantité et
+prix chez les producteurs. Conséquence : un train qui vidait la mine payait le dernier
+chargement au prix du premier, et l'occasion ne se refermait qu'à l'arrivée, alors que
+VISION.md la décrit fermée des deux côtés.
+
+### Le modèle
+
+Le producteur n'a pas de couverture, mais il a un entrepôt : `productionStorageTicks`
+(30) ticks de sa production nominale, primaire et industrielle — le même que celui
+qui freine sa production. Le prix suit son remplissage, en ligne droite :
+
+```
+remplissage = stock / entrepôt                        borné à [0, 1]
+prix        = référence × (0,5 − (0,5 − 0,12) × remplissage)
+```
+
+Entrepôt vide, 0,5 × la référence (`priceModel.producerMaxMultiplier`, décision de
+l'équipe) ; plein, le plancher. 0,5 reste sous le prix d'un acheteur à l'équilibre. Le
+prix est recalculé à chaque tranche d'un achat, si bien qu'un train qui se sert fait
+monter le prix de ce qu'il achète ensuite. Un lieu qui ne produit ni ne consomme la
+marchandise reste au plancher.
+
+Un train peut vendre à un producteur, décision de l'équipe elle aussi, tant que le
+prix y dépasse son prix de revient de sa marge : la règle de vente n'a pas changé.
+
+### Résultat : la compagnie paie le départ plus cher
+
+| scénario, solveur | prix producteur fixe | prix qui suit l'entrepôt | écart (apparié) |
+|---|---|---|---|
+| heartland, référence | 261 047 ± 3 615 | **242 107 ± 4 127** | −18 941 ± 966 (−7 %) |
+| heartland, anticipant | 242 180 ± 6 819 | 210 377 ± 7 207 | −31 803 ± 1 417 (−13 %) |
+| sierra, référence | 165 308 ± 4 834 | **148 682 ± 3 124** | −16 626 ± 749 (−10 %) |
+| sierra, anticipant (horizon 2) | 159 810 ± 9 475 | 130 098 ± 8 987 | −29 712 ± 2 195 (−19 %) |
+
+*Parties telles qu'écrites : 243 559 (heartland), 216 533 (anticipant), 150 488
+(sierra), 153 652 (anticipant, horizon 1, voir plus bas). ironpeak, partie telle
+qu'écrite : 206 085 contre 266 868, non mesuré en ensemble.*
+
+C'est l'effet attendu : la part de l'écart de prix que la compagnie captait chez les
+producteurs leur revient. Les prix moyens chez les producteurs montent de ×0,12 à :
+blé ×0,29 à 0,31, charbon ×0,37 à 0,39, farine ×0,39 à 0,48, planches à la scierie
+×0,46 à 0,47. Les écarts entre villes se resserrent, puisque le départ remonte :
+
+| marchandise | heartland, écart | sierra, écart |
+|---|---|---|
+| blé | ×2,33 → ×2,09 | ×2,45 → ×1,95 |
+| farine | ×1,59 → ×1,31 | ×1,54 → ×1,35 |
+| nourriture | ×1,36 → ×1,33 | ×1,39 → ×1,37 |
+| planches | ×4,16 → ×3,54 | ×3,95 → ×3,61 |
+| charbon | ×10,90 → ×9,30 | ×10,34 → ×9,84 |
+
+Ce qui ne bouge pas : l'utilisation des usines (78 %), le remplissage des trains,
+et les scieries lointaines, toujours à 0 % — leurs grumes viennent d'une forêt dont la
+ville a sa propre scierie, donc d'un marché qui consomme, que la règle ne touche pas.
+La mobilité des écarts baisse sous la référence (0,393 → 0,331 sur heartland, 0,370
+→ 0,312 sur la sierra).
+
+**Les ventes aux producteurs** existent, et restent marginales : 1,3 % des
+livraisons après chauffe sur heartland (991 chargements sur 76 274), 1,2 % sur la
+sierra. Ce sont presque toutes du charbon ramené à la mine (928 et 804 chargements) :
+acheté bon marché dans une ville de l'ouest, revendu à la mine quand son entrepôt est
+bas. Il remplit l'entrepôt, donc ralentit la production de la mine et fait baisser son
+prix ; aucun bouclage n'a été observé, mais c'est la ligne « rotation du fret » du
+tableau de diagnostic à surveiller.
+
+**Le nombre de trains** garde sa forme : optimum à quatre, six à 88 % de l'optimum sur
+heartland (229 856 contre 262 186) et à 80 % sur la sierra (131 773 contre 165 192).
+
+| trains | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| heartland | 58 870 | 171 903 | 242 107 | **262 186** | 240 448 | 229 856 |
+| sierra | −7 106 | 88 211 | 148 682 | **165 192** | 144 282 | 131 773 |
+
+### Ce que le changement a dérangé
+
+- **Le bloc `anticipating` de la sierra** perdait 12,5 % à horizon 2 (−18 584 ± 1 615).
+  Grille remesurée : l'horizon 1 (poids 1, lissage 0,15) perd 2 094 ± 1 213 (−1,4 %)
+  pour une mobilité de 0,498 contre 0,312 (+60 %), et c'est le réglage livré
+  désormais. Ses voisins de grille perdent 7 000 environ : le paysage est bruité.
+- **Le changement de tête sous l'anticipant, sur heartland**, se vérifie maintenant
+  sur dix trajectoires voisines. La partie telle qu'écrite est la seule sur 41 où il
+  ne dépasse pas la référence de trois points (24,6 % contre 22,0 %) ; sur 40
+  voisines, 26,0 % contre 20,8 %, et 39 au-dessus du seuil.
+- **Toutes les empreintes** ont bougé une seconde fois.
+
+### Décisions laissées à l'équipe
+
+1. **Le blé, le charbon et la farine sont aidés, les grumes et la nourriture non** :
+   leur lieu de production consomme aussi, donc leur prix y suit la couverture de la
+   ville, pas l'entrepôt du producteur. Séparer, dans une ville, le marché du
+   producteur de celui des habitants et des usines locales est la question suivante.
+2. **0,5 est-il le bon prix d'un producteur vide ?** Il fixe la part de l'écart que la
+   compagnie laisse aux producteurs : plus haut, la compagnie gagne moins et les
+   écarts se ferment davantage.
+3. **Le solveur anticipant** paie le prix producteur plus cher que la référence (−13 %
+   et −19 % à réglage constant). Le mécanisme n'est pas isolé. Une piste : il anticipe
+   les prix des acheteurs, mais pas ceux du départ, qu'il laisse au prix du moment
+   faute de demande à projeter.
 
 ## Questions ouvertes pour l'équipe
 

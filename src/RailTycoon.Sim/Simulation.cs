@@ -143,6 +143,17 @@ internal static class WorldBuilder
                     city.Markets[input.Cargo].IndustryDemandRate +=
                         input.Qty * industry.Recipe.RatePerTick * industry.Capacity;
 
+            // L'entrepôt des producteurs, sur les mêmes débits nominaux que le frein
+            // de production des solveurs : c'est à lui que se mesure l'abondance là
+            // où personne ne consomme la marchandise, donc son prix.
+            double storageTicks = scenario.Economy.ProductionStorageTicks;
+            foreach (var cargo in scenario.Cargos)
+                city.Markets[cargo.Id].StorageCapacity = city.Markets[cargo.Id].NominalProductionRate * storageTicks;
+            foreach (var industry in city.Industries)
+                foreach (var output in industry.Recipe.Outputs)
+                    city.Markets[output.Cargo].StorageCapacity +=
+                        output.Qty * industry.Recipe.RatePerTick * industry.Capacity * storageTicks;
+
             world.Register(city);
         }
 
@@ -231,6 +242,12 @@ internal static class WorldBuilder
     private static void Validate(ScenarioDef s)
     {
         TrainCost.Validate(s);
+
+        var prices = s.PriceModel;
+        if (prices.ProducerMaxMultiplier < prices.MinMultiplier || prices.ProducerMaxMultiplier > prices.MaxMultiplier)
+            throw new InvalidDataException(
+                $"priceModel.producerMaxMultiplier ({prices.ProducerMaxMultiplier}) doit être entre " +
+                $"minMultiplier ({prices.MinMultiplier}) et maxMultiplier ({prices.MaxMultiplier}).");
 
         if (s.Cargos.Count == 0)
             throw new InvalidDataException("Le scénario ne déclare aucune marchandise.");

@@ -5,7 +5,7 @@
   "startingCash": 100000,
   "initialCoverage": 1.0,
 
-  "//cout": "Modèle de coût mass, le défaut depuis le 27 octobre 2026 : chaque marchandise déclare son wagon (cargos[].wagon), dont la tare entre dans ce qu'un chargement coûte à porter. Résultat à trois trains : 261 994 sous la référence (261 047 ± 3 615 sur 40 trajectoires voisines) ; optimum à quatre trains (276 787 ± 3 463). Les chiffres des autres commentaires sont ceux de l'ancien modèle flat, qui les rejoue au bit près en passant haulage.costModel à flat (docs/FINDINGS.md, « Le coût marginal réel par défaut »).",
+  "//cout": "Modèle de coût mass, le défaut depuis le 27 octobre 2026 : chaque marchandise déclare son wagon (cargos[].wagon), dont la tare entre dans ce qu'un chargement coûte à porter. Le prix d'un producteur qui ne consomme pas sa marchandise suit son entrepôt, de 0,5 × la référence à vide au plancher plein (priceModel.producerMaxMultiplier). Résultat à trois trains : 243 559 sous la référence (242 107 ± 4 127 sur 40 trajectoires voisines) ; optimum à quatre trains (262 186 ± 3 042). Les chiffres des autres commentaires sont ceux de l'ancien modèle flat, qui les rejoue au bit près en passant haulage.costModel à flat (docs/FINDINGS.md, « Le coût marginal réel par défaut »).",
 
   "//horizon": "15 jours, pas 30. L'horizon fixe l'échelle du stock qui compte, donc ce qu'un seul train peut changer en arrivant. À 30 jours, amener le blé de Millbrook sous le seuil de rentabilité de son moulin demandait 31 chargements pour une capacité de 24 : aucune livraison ne pouvait démarrer l'usine, et le moulin restait à 7 %. À 15 jours il en faut 16, et un train suffit à débloquer un site — ce qui est la décision que le joueur doit pouvoir prendre.",
 

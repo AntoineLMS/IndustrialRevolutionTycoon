@@ -234,9 +234,10 @@ internal static class Program
 
         runner.Add("régression — une usine tourne même si sa production n'a aucun acheteur local", () =>
         {
-            // Un moulin ne consomme pas sa farine : chez lui, elle est au prix
-            // plancher. Valoriser sa production au prix local revenait à conclure
-            // que moudre n'est jamais rentable, et toutes les usines s'arrêtaient.
+            // Un moulin ne consomme pas sa farine : chez lui, elle est bon marché, et
+            // d'autant plus que son entrepôt est plein. Valoriser sa production au
+            // prix local revenait à conclure que moudre n'est jamais rentable, et
+            // toutes les usines s'arrêtaient.
             var scenario = Fixtures.Bare("moulin-sans-client-local");
             scenario.Cargos.Add(new CargoDef { Id = "flour", Name = "Farine", BasePrice = 34 });
             scenario.Recipes.Add(new RecipeDef
@@ -256,8 +257,15 @@ internal static class Program
             var mill = sim.World.CityById("millbrook").Industries[0];
             Check.True(mill.Utilization > 0.9,
                 $"le moulin doit tourner avec du blé abondant, utilisation = {mill.Utilization:0.00}");
-            Check.Near(0.12 * 34, sim.World.CityById("millbrook").Market("flour").Price, 1e-6,
-                "la farine reste au plancher chez le moulin, et c'est normal");
+            // Le prix suit l'entrepôt du moulin : 30 ticks de sa production nominale,
+            // de 0,5 × la référence à vide au plancher plein. Recalculé ici depuis les
+            // données, sans passer par le modèle de prix.
+            var flour = sim.World.CityById("millbrook").Market("flour");
+            double storage = 1 * 0.5 * 1 * scenario.Economy.ProductionStorageTicks;
+            double fill = flour.Stock / storage;
+            Check.True(fill > 0 && fill < 1, $"l'entrepôt du moulin doit être entamé, remplissage {fill:0.000}");
+            Check.Near(34 * (0.5 - (0.5 - 0.12) * fill), flour.Price, 1e-9,
+                "la farine vaut chez le moulin ce que dit le remplissage de son entrepôt");
         });
 
         runner.Add("régression — l'économie de référence reste vivante", () =>
@@ -575,11 +583,25 @@ internal static class Program
                 $"mobilité de l'amplitude {mobility:0.000} contre {refMobility:0.000} pour la " +
                 "référence — la dispersion ne respire pas assez plus");
 
-            double refChurn = refStats.MeanLeaderChurn(refSim.World);
-            double churn = stats.MeanLeaderChurn(sim.World);
+            // Le changement de tête se lit sur dix trajectoires voisines, pas sur la
+            // partie telle qu'écrite. Depuis que le prix d'un producteur suit son
+            // entrepôt (27 octobre 2026), cette partie est la seule sur 41 où
+            // l'anticipant ne dépasse pas la référence de trois points (24,6 % contre
+            // 22,0 %) ; sur 40 voisines, 26,0 % contre 20,8 % en moyenne, et 39 au-dessus
+            // du seuil. Une partie unique est un tirage : c'est la leçon de FINDINGS.md.
+            double refChurn = 0, churn = 0;
+            var neighbours = Fixtures.Neighbours(ScenarioLoader.Load(Fixtures.HeartlandPath()), 10);
+            foreach (var perturb in neighbours)
+            {
+                var (r, rs) = RunHeartland(new ReferenceEconomySolver(), perturb);
+                var (a, s) = RunHeartland(new AnticipatingEconomySolver(), perturb);
+                refChurn += rs.MeanLeaderChurn(r.World) / neighbours.Count;
+                churn += s.MeanLeaderChurn(a.World) / neighbours.Count;
+            }
             Check.True(churn > refChurn + 0.03,
                 $"changement de ville la plus chère {churn * 100:0.0} % contre " +
-                $"{refChurn * 100:0.0} % pour la référence — le meilleur débouché ne bouge pas assez");
+                $"{refChurn * 100:0.0} % pour la référence, en moyenne sur {neighbours.Count} " +
+                "trajectoires voisines — le meilleur débouché ne bouge pas assez");
 
             // La nourriture était la marchandise la plus uniforme du scénario, et
             // c'était une question ouverte de FINDINGS.md : dix acheteurs nourris au
@@ -1066,6 +1088,10 @@ internal static class Program
         // et l'ancien modèle « flat » rejoué au bit près.
         MarginalCostTests.Register(runner);
 
+        // Le prix chez un producteur qui ne consomme pas sa marchandise : il suit
+        // son entrepôt.
+        ProducerPriceTests.Register(runner);
+
         // ------------------------------------------------ traces de référence
         // En dernier : elles figent le comportement de tous les modules à la fois,
         // et un échec ici se lit mieux une fois les invariants de chacun passés.
@@ -1082,9 +1108,12 @@ internal static class Program
     /// exactement le même protocole, sans quoi la comparaison ne mesure que le
     /// protocole.
     /// </summary>
-    private static (Simulation Sim, RunStatistics Stats) RunHeartland(IEconomySolver solver)
+    private static (Simulation Sim, RunStatistics Stats) RunHeartland(
+        IEconomySolver solver, Action<ScenarioDef>? perturb = null)
     {
-        var sim = new Simulation(ScenarioLoader.Load(Fixtures.HeartlandPath()), solver);
+        var scenario = ScenarioLoader.Load(Fixtures.HeartlandPath());
+        perturb?.Invoke(scenario);
+        var sim = new Simulation(scenario, solver);
         var stats = new RunStatistics { WarmupTicks = 90 };
         for (int i = 0; i < 720; i++)
         {

@@ -123,6 +123,15 @@ cas dans un « plancher de demande » commun, ce qui donnait à toute ville vide
 prix de pénurie même pour des marchandises qu'elle ne consomme pas ; le
 transporteur y acheminait du blé qui n'y trouvait jamais preneur.
 
+**Chez un producteur qui ne consomme pas sa marchandise**, il n'y a pas de couverture,
+mais il y a un entrepôt : `economy.productionStorageTicks` ticks de sa production
+nominale (`Market.StorageCapacity`). Le prix suit son remplissage, de
+`producerMaxMultiplier` (0,5) entrepôt vide au plancher entrepôt plein : plus il y en
+a, moins c'est cher, au départ comme à l'arrivée. Un train qui se sert fait donc
+monter le prix de départ, tranche par tranche. Un marché qui ne produit ni ne consomme
+la marchandise garde le plancher. Voir [FINDINGS.md](FINDINGS.md), « Le prix suit
+l'entrepôt du producteur ».
+
 **La propriété qui fait le jeu** : livrer sur un marché augmente son stock, donc
 sa couverture, donc fait baisser le prix qu'on exploitait. L'arbitrage se referme
 tout seul. C'est ce qui empêche une ligne rentable de l'être pour l'éternité, et

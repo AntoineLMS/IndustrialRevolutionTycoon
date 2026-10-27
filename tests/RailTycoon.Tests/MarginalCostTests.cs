@@ -175,7 +175,9 @@ internal static class MarginalCostTests
             // posées sous le modèle flat. Les rejouer au bit près prouve deux choses :
             // l'ancien modèle n'a pas bougé, et des masses absurdes — jusqu'à des
             // wagons que les marchandises ne déclarent pas — ne changent pas un bit de
-            // la partie.
+            // la partie. Elles datent aussi d'avant le prix producteur : un
+            // producerMaxMultiplier égal au plancher rend ce prix fixe, au bit près
+            // (0,12 − 0 × remplissage), comme il l'était.
             foreach (var (file, expected) in new[] { ("sierra.json", "44876808B521C9E4"), ("heartland.json", "B966B86D3F0AF83C") })
             {
                 var scenario = ScenarioLoader.Load(Path.Combine(Fixtures.RepoRoot(), "data", file));
@@ -186,6 +188,7 @@ internal static class MarginalCostTests
                     WagonTypes = { ["box"] = new WagonTypeDef { TareTonnes = 0.5 } },
                 };
                 scenario.Haulage.MassCost.WagonTypes.Remove("gondola");
+                scenario.PriceModel.ProducerMaxMultiplier = scenario.PriceModel.MinMultiplier;
                 Check.Equal(expected, TraceFingerprint(scenario),
                     $"{file} sous le modèle flat, masses déclarées mais ignorées");
             }

@@ -75,6 +75,29 @@ internal static class Fixtures
         return scenario;
     }
 
+    /// <summary>
+    /// Les trajectoires voisines d'un scénario, selon le protocole des mesures de
+    /// docs/FINDINGS.md : une seule demande d'une seule ville multipliée par 1,001 ou
+    /// 0,999, dans l'ordre des villes puis des marchandises du scénario, toute la
+    /// partie durant. Une partie unique est un tirage ; une propriété du scénario se
+    /// vérifie sur ses voisines.
+    /// </summary>
+    public static IReadOnlyList<Action<ScenarioDef>> Neighbours(ScenarioDef scenario, int count)
+    {
+        var list = new List<Action<ScenarioDef>>();
+        for (int i = 0; i < scenario.Cities.Count; i++)
+            foreach (var cargo in scenario.Cargos.Select(c => c.Id))
+                if (scenario.Cities[i].Demand.ContainsKey(cargo))
+                    foreach (double factor in new[] { 1.001, 0.999 })
+                    {
+                        int city = i;
+                        string id = cargo;
+                        double f = factor;
+                        list.Add(s => s.Cities[city].Demand[id] *= f);
+                    }
+        return list.Take(count).ToList();
+    }
+
     public static CityDef City(string id, double demand = 0, double production = 0, double stock = 0)
     {
         var city = new CityDef { Id = id, Name = id };

@@ -38,6 +38,16 @@ public sealed class Market
     public double NominalProductionRate { get; internal set; }
 
     /// <summary>
+    /// Capacité de l'entrepôt des sites qui produisent cette marchandise ici, en
+    /// chargements : production primaire nominale et production nominale des usines
+    /// locales, chacune sur <c>economy.productionStorageTicks</c> ticks. Nulle là où
+    /// rien ne la produit. C'est la mesure de l'abondance chez un producteur qui ne
+    /// consomme pas sa marchandise (<see cref="HyperbolicPriceModel"/>). Fixée à la
+    /// construction du monde, comme les entrepôts eux-mêmes.
+    /// </summary>
+    public double StorageCapacity { get; internal set; }
+
+    /// <summary>
     /// Multiplicateur du jour publié par le module events (phase 0b) sur la
     /// production primaire, et que le solveur économique compose dans
     /// <see cref="BaseProductionRate"/>. Vaut 1 exactement quand aucun événement

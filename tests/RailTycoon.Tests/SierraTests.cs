@@ -117,14 +117,14 @@ internal static class SierraTests
         {
             // Ce que revendique le commentaire du bloc. Sous le modèle de coût flat
             // (mesures du 27 septembre 2026), il battait la référence en résultat et
-            // en mobilité. Sous le modèle mass, devenu le défaut le 27 octobre 2026,
-            // aucun réglage de la grille ne bat plus la référence en résultat : sur 40
-            // trajectoires voisines, le réglage livré perd 5 498 ± 1 615 (−3,3 %) pour
-            // une mobilité de 0,547 contre 0,370 (+48 %), et c'est le meilleur
-            // compromis de la grille (docs/FINDINGS.md, « Le coût marginal réel par
-            // défaut »). Parties telles qu'écrites : 165 176 contre 171 157, mobilités
-            // 0,549 et 0,381. Les seuils gardent de la marge : ils protègent contre une
-            // régression, ils ne consacrent pas ces chiffres exacts.
+            // en mobilité. Sous le modèle mass et le prix producteur, défauts depuis le
+            // 27 octobre 2026, grille remesurée : sur 40 trajectoires voisines, le
+            // réglage livré (horizon 1) perd 2 094 ± 1 213 (−1,4 %) pour une mobilité
+            // de 0,498 contre 0,312 (+60 %), le meilleur compromis de la grille
+            // (docs/FINDINGS.md, « Le prix suit l'entrepôt du producteur »). Parties
+            // telles qu'écrites : 153 652 contre 150 488. Les seuils gardent de la
+            // marge : ils protègent contre une régression, ils ne consacrent pas ces
+            // chiffres exacts.
             var scenario = ScenarioLoader.Load(SierraPath());
             var (refSim, refStats) = Run(scenario, new ReferenceEconomySolver());
             var (sim, stats) = Run(scenario, new AnticipatingEconomySolver());

@@ -153,6 +153,23 @@ public sealed class PriceModelDef
     public double Shape { get; set; } = 0.5;
     public double MinMultiplier { get; set; } = 0.12;
     public double MaxMultiplier { get; set; } = 3.0;
+
+    /// <summary>
+    /// Prix, en multiple du prix de référence, d'une marchandise chez un producteur
+    /// qui ne la consomme pas, quand son entrepôt est vide. Entrepôt plein, elle
+    /// vaut <see cref="MinMultiplier"/> ; entre les deux, le prix suit le
+    /// remplissage en ligne droite : plus il y en a, moins c'est cher.
+    /// <para>
+    /// Le producteur n'a pas de consommation qui donnerait une couverture, mais il a
+    /// un entrepôt (<see cref="EconomyDef.ProductionStorageTicks"/>), et c'est lui
+    /// qui dit si la marchandise abonde. Sans cette règle, une mine vidée par les
+    /// trains vendait son dernier chargement au prix du premier, et l'occasion ne se
+    /// refermait qu'à l'arrivée. 0,5 reste sous le prix d'un acheteur à l'équilibre
+    /// (1) : un producteur sollicité devient cher, il ne devient pas un acheteur.
+    /// Décision de l'équipe du 27 octobre 2026.
+    /// </para>
+    /// </summary>
+    public double ProducerMaxMultiplier { get; set; } = 0.5;
 }
 
 /// <summary>Paramètres du solveur économique de référence.</summary>
