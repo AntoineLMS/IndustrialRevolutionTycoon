@@ -278,8 +278,13 @@ public sealed class EconomyDef
 /// Tout peut passer par charrette, sans limite de quantité ; c'est seulement plus lent
 /// et plus cher qu'un train. Une charrette part du marché le moins cher vers le marché
 /// acheteur le plus cher tant que l'écart de prix paie le trajet —
-/// <see cref="CostPerLoad"/> plus <see cref="CostPerLoadKm"/> par kilomètre, en ligne
-/// droite —, en comptant à l'arrivée ce qui y roule déjà. Elle avance de
+/// <see cref="CostPerLoad"/> plus <see cref="CostPerLoadKm"/> par kilomètre de route —,
+/// en comptant à l'arrivée ce qui y roule déjà. La route suit le terrain : sur une
+/// carte à relief, la charrette prend le chemin le moins pénible, où chaque mètre
+/// gravi compte <see cref="ClimbKmPerMetre"/> kilomètre de plus, où une pente au-delà
+/// de <see cref="MaxGradePercent"/> ne passe pas, et où franchir un fleuve à gué
+/// compte <see cref="RiverCrossingKm"/> : elle longe les vallées et les fleuves, et
+/// passe les cols. Sans relief déclaré, elle va en ligne droite. Elle avance de
 /// <see cref="SpeedKmPerTick"/> par jour, et la marchandise n'arrive qu'au bout du
 /// trajet. Le charroi ne coûte rien à la compagnie : la marchandise n'appartient à
 /// personne, et le coût n'est qu'un seuil. Une charrette qui passe dans le rayon d'une
@@ -296,8 +301,27 @@ public sealed class CartageDef
     /// <summary>Coût d'une charrette par chargement, quelle que soit la distance.</summary>
     public double CostPerLoad { get; set; } = 1.0;
 
-    /// <summary>Coût d'une charrette par chargement et par kilomètre, en ligne droite entre les deux marchés.</summary>
+    /// <summary>Coût d'une charrette par chargement et par kilomètre de route, montées et gués compris.</summary>
     public double CostPerLoadKm { get; set; } = 0.5;
+
+    /// <summary>
+    /// Kilomètres de route que vaut un mètre gravi. Une montée ralentit la charrette
+    /// autant qu'elle la renchérit : la vitesse et le coût se comptent sur la même
+    /// distance. 0,02 : cent mètres de montée valent deux kilomètres de plat
+    /// [estimé, docs/SOURCES.md, « Routes des charrettes »]. La descente ne coûte rien
+    /// de plus.
+    /// </summary>
+    public double ClimbKmPerMetre { get; set; } = 0.02;
+
+    /// <summary>Pente, en pourcent, au-delà de laquelle une charrette chargée ne passe pas [estimé].</summary>
+    public double MaxGradePercent { get; set; } = 10;
+
+    /// <summary>
+    /// Kilomètres de route que vaut le passage d'un fleuve à gué : le détour jusqu'au
+    /// gué, l'attente, le déchargement [estimé]. Une charrette ne franchit donc un
+    /// fleuve qu'une fois, et le longe sinon.
+    /// </summary>
+    public double RiverCrossingKm { get; set; } = 5;
 
     /// <summary>
     /// Chargements par charrette. Les départs se décident charrette par charrette : le

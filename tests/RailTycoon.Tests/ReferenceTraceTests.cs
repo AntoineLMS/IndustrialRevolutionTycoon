@@ -50,7 +50,8 @@ internal static class ReferenceTraceTests
     /// marché par installation, puis le charroi lent et sans limite, d'une ville à
     /// l'autre, que les trains captent. Elles ont toutes bougé, et c'était voulu —
     /// sauf la plaine et la vallée au dernier changement : leurs deux villes sont trop
-    /// loin pour qu'une charrette de blé paie son trajet. Les empreintes d'avant ne se
+    /// loin pour qu'une charrette de blé paie son trajet. Quand les charrettes ont
+    /// suivi le terrain, seules les cartes à relief ont bougé : le col et la sierra. Les empreintes d'avant ne se
     /// rejouent plus : aucun réglage ne remet la forêt et la scierie d'une ville sur
     /// un même marché.
     /// </para>
@@ -68,9 +69,9 @@ internal static class ReferenceTraceTests
         new("ironpeak.json", "reference", "DD524E9A56B7A943"),
         new("terrain-plain.json", "reference", "5F2999D90D0AA937"),
         new("terrain-valley.json", "reference", "DDBA38044A8EFC76"),
-        new("terrain-pass.json", "reference", "682E611A2E7D5595"),
-        new("sierra.json", "reference", "47198375B615FA53"),
-        new("sierra.json", "anticipating", "9BA103ED484850E8"),
+        new("terrain-pass.json", "reference", "664AC088E2B0B1F1"),
+        new("sierra.json", "reference", "A9BEF9BA08986F15"),
+        new("sierra.json", "anticipating", "FC846852DF0ACEFC"),
         // Une ville, deux gares, un train qui n'en sort jamais : le commerce entre
         // installations d'une même ville.
         new("timberford.json", "reference", "CBC2302C94B8BFB3"),

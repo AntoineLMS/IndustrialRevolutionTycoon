@@ -185,7 +185,7 @@ internal static class LocalTradeTests
             var cart = new CartShipment
             {
                 CargoId = "logs", From = city.ProductionMarket("logs")!, To = city.Industries.Single().Input("logs"),
-                DistanceKm = 12, SourcePrice = 2.0, Quantity = 5,
+                Route = RailTycoon.Sim.Economy.CartRoute.Straight(new(0, 0), new(12, 0)), SourcePrice = 2.0, Quantity = 5,
             };
             sim.World.Cartage.Shipments.Add(cart);
             double initial = Invariants.InitialStockTotal(sim.World) + 5;

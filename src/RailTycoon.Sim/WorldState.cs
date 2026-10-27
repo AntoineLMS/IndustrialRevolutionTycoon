@@ -42,6 +42,13 @@ public sealed class WorldState
     public RailTycoon.Sim.Network.IRailNetwork? Network { get; internal set; }
 
     /// <summary>
+    /// Le relief de la carte, celui du réseau s'il y en a un, ou celui que le scénario
+    /// déclare sans réseau ; <c>null</c> sur une carte sans relief. Les charrettes y
+    /// cherchent leur route.
+    /// </summary>
+    public RailTycoon.Sim.Network.HeightField? Terrain { get; internal set; }
+
+    /// <summary>
     /// L'état financier : société, emprunts, actionnaires, concurrents. Vide tant
     /// qu'un scénario n'active pas le module, ce qui laisse les scénarios
     /// existants inchangés. Rempli par <see cref="IFinanceSolver.Initialize"/>.

@@ -19,16 +19,18 @@ public sealed class MapPointDef
 /// <summary>
 /// Une forme du relief, ajoutée à la carte de hauteurs.
 /// <para>
-/// Deux primitives suffisent à décrire une plaine, une vallée et un col :
-/// <c>ridge</c> (une crête linéaire, d'amplitude négative pour un sillon) et
-/// <c>bowl</c> (une cuvette radiale, d'amplitude positive pour un mamelon). Les
+/// Trois primitives décrivent une plaine, une vallée, un col et un fleuve :
+/// <c>ridge</c> (une crête linéaire, d'amplitude négative pour un sillon),
+/// <c>bowl</c> (une cuvette radiale, d'amplitude positive pour un mamelon) et
+/// <c>river</c> (un fleuve : une ligne brisée qui creuse sa vallée, et que les
+/// charrettes ne franchissent qu'à gué, au prix d'un détour). Les
 /// décrire analytiquement plutôt que par une grille de nombres rend les cartes de
 /// test lisibles : on voit dans les données pourquoi un tracé coûte cher.
 /// </para>
 /// </summary>
 public sealed class TerrainFeatureDef
 {
-    /// <summary>« ridge » (crête linéaire) ou « bowl » (cuvette radiale).</summary>
+    /// <summary>« ridge » (crête linéaire), « bowl » (cuvette radiale) ou « river » (fleuve).</summary>
     public string Kind { get; set; } = "ridge";
 
     /// <summary>Hauteur ajoutée au sommet de la forme. Négative pour creuser.</summary>
@@ -46,6 +48,13 @@ public sealed class TerrainFeatureDef
     /// <summary>Centre de la cuvette, pour <c>bowl</c>.</summary>
     public double XKm { get; set; }
     public double YKm { get; set; }
+
+    /// <summary>
+    /// Cours du fleuve, pour <c>river</c>, d'amont en aval : au moins deux points.
+    /// <see cref="AmplitudeM"/>, négative, est la profondeur de sa vallée sur son axe,
+    /// et <see cref="HalfWidthKm"/> sa demi-largeur.
+    /// </summary>
+    public List<MapPointDef> Points { get; set; } = new();
 }
 
 /// <summary>

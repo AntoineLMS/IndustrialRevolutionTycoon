@@ -1102,6 +1102,9 @@ internal static class Program
         // data/timberford.json.
         LocalTradeTests.Register(runner);
 
+        // Les routes des charrettes, qui suivent le terrain.
+        CartRouteTests.Register(runner);
+
         // ------------------------------------------------ traces de référence
         // En dernier : elles figent le comportement de tous les modules à la fois,
         // et un échec ici se lit mieux une fois les invariants de chacun passés.

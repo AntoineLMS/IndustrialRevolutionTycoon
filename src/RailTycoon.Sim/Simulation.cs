@@ -223,6 +223,11 @@ internal static class WorldBuilder
         world.Network = RailTycoon.Sim.Network.NetworkBuilder.Attach(
             scenario, world.Lines, cityId => world.Cities.Any(c => c.Id == cityId));
 
+        world.Terrain = world.Network?.Terrain
+            ?? (scenario.Network.Terrain is { } terrain
+                ? RailTycoon.Sim.Network.TerrainFactory.Build(terrain, scenario.Seed)
+                : null);
+
         PlaceOnMap(scenario, world);
         AttachStations(scenario, world);
 

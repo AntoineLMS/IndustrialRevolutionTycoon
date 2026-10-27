@@ -11,8 +11,11 @@ public sealed class CartShipment
     public required Market From { get; init; }
     public required Market To { get; init; }
 
-    /// <summary>Longueur du trajet, en ligne droite, en kilomètres.</summary>
-    public required double DistanceKm { get; init; }
+    /// <summary>La route qu'elle suit : le terrain, ou la ligne droite sur une carte sans relief.</summary>
+    public required CartRoute Route { get; init; }
+
+    /// <summary>Longueur du trajet, en kilomètres de route : montées et gués compris.</summary>
+    public double DistanceKm => Route.LengthKm;
 
     /// <summary>Prix d'un chargement au marché de départ, au moment du départ.</summary>
     public required double SourcePrice { get; init; }
@@ -20,16 +23,16 @@ public sealed class CartShipment
     /// <summary>Chargements encore sur la charrette.</summary>
     public double Quantity;
 
-    /// <summary>Kilomètres déjà parcourus.</summary>
+    /// <summary>Kilomètres de route déjà parcourus.</summary>
     public double TravelledKm;
 
-    /// <summary>Position actuelle sur la carte, sur la droite qui va du départ à l'arrivée.</summary>
+    /// <summary>Position actuelle sur la carte, le long de sa route.</summary>
     public (double XKm, double YKm) Position
     {
         get
         {
-            double t = DistanceKm > 0 ? Math.Min(1.0, TravelledKm / DistanceKm) : 0;
-            return (From.XKm + (To.XKm - From.XKm) * t, From.YKm + (To.YKm - From.YKm) * t);
+            var point = Route.PointAt(TravelledKm);
+            return (point.XKm, point.YKm);
         }
     }
 
@@ -45,6 +48,9 @@ public sealed class CartageState
 {
     /// <summary>Charrettes en route, dans l'ordre de leur départ.</summary>
     public List<CartShipment> Shipments { get; } = new();
+
+    /// <summary>Les routes des charrettes, calculées une fois par couple de marchés.</summary>
+    internal CartRouter? Router;
 
     // Jamais énumérés : les lectures passent par une marchandise.
     private readonly Dictionary<string, double> _dispatched = new();
@@ -104,6 +110,7 @@ public static class Cartage
     {
         var cfg = world.Def.Economy.Cartage;
         var state = world.Cartage;
+        state.Router ??= new CartRouter(world.Terrain, cfg);
 
         Advance(state, cfg);
         Dispatch(world, state, cfg);
@@ -163,7 +170,7 @@ public static class Cartage
                         if (ReferenceEquals(buyer, source)) continue;
                         if (buyer.BaseDemandRate + buyer.IndustryDemandRate <= 0) continue;
                         double gain = PriceWithIncoming(world, cargo, buyer, incoming.GetValueOrDefault(buyer))
-                                    - sourcePrice - Cost(cfg, source, buyer);
+                                    - sourcePrice - Cost(world, source, buyer);
                         if (gain > bestGain) { bestGain = gain; from = source; to = buyer; fromPrice = sourcePrice; }
                     }
                 }
@@ -175,7 +182,7 @@ public static class Cartage
                 state.Shipments.Add(new CartShipment
                 {
                     CargoId = cargoId, From = from, To = to,
-                    DistanceKm = Distance(from, to), SourcePrice = fromPrice, Quantity = qty,
+                    Route = state.Router!.Route(from, to), SourcePrice = fromPrice, Quantity = qty,
                 });
                 state.AddDispatched(cargoId, qty);
             }
@@ -193,15 +200,23 @@ public static class Cartage
         return world.PriceModel.PriceFor(cargo, probe);
     }
 
-    public static double Distance(Market from, Market to)
+    /// <summary>La route d'une charrette entre deux marchés, qui suit le terrain.</summary>
+    public static CartRoute Route(WorldState world, Market from, Market to)
     {
-        double dx = to.XKm - from.XKm, dy = to.YKm - from.YKm;
-        return Math.Sqrt(dx * dx + dy * dy);
+        var state = world.Cartage;
+        state.Router ??= new CartRouter(world.Terrain, world.Def.Economy.Cartage);
+        return state.Router.Route(from, to);
     }
 
-    /// <summary>Ce que coûte une charrette par chargement entre deux marchés.</summary>
-    public static double Cost(CartageDef cfg, Market from, Market to)
-        => cfg.CostPerLoad + cfg.CostPerLoadKm * Distance(from, to);
+    /// <summary>
+    /// Ce que coûte une charrette par chargement entre deux marchés, sur sa route.
+    /// Infini si aucune route ne passe — une pente trop raide partout.
+    /// </summary>
+    public static double Cost(WorldState world, Market from, Market to)
+    {
+        var cfg = world.Def.Economy.Cartage;
+        return cfg.CostPerLoad + cfg.CostPerLoadKm * Route(world, from, to).LengthKm;
+    }
 
     /// <summary>Refuse au chargement un charroi aux réglages absurdes.</summary>
     public static void Validate(CartageDef cfg)
@@ -214,5 +229,9 @@ public static class Cartage
             throw new InvalidDataException("economy.cartage.loadsPerCart doit être strictement positif.");
         if (cfg.MaxCartsPerTick < 0)
             throw new InvalidDataException("economy.cartage.maxCartsPerTick ne peut pas être négatif.");
+        if (cfg.ClimbKmPerMetre < 0 || cfg.RiverCrossingKm < 0)
+            throw new InvalidDataException("economy.cartage : une montée ou un gué ne peut pas raccourcir la route.");
+        if (cfg.MaxGradePercent <= 0)
+            throw new InvalidDataException("economy.cartage.maxGradePercent doit être strictement positif.");
     }
 }

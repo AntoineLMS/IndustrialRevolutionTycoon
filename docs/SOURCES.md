@@ -300,6 +300,25 @@ fixe le prix de la tonne-kilomètre ; le calcul est dans FINDINGS.md. Il valait 
 quand les wagons faisaient partie de la tare fixe du train ; il se remesure à chaque
 changement de masses ou de `costPerKm`.
 
+## Routes des charrettes — `economy.cartage`
+
+Le charroi (FINDINGS.md, « Le charroi » et « Les charrettes suivent le terrain ») a
+besoin de quatre valeurs physiques. Aucune n'a été cherchée dans une source : elles
+sont **[estimé]**, par ordre de grandeur, et chacune est un réglage du scénario.
+
+- **Vitesse — 15 km par jour.** Un chariot lourd tiré par des chevaux ou des bœufs, sur
+  les routes de terre de l'époque. Choisie par l'équipe parmi 15 et 30 km par jour :
+  huit fois plus lent qu'un train à 120 km par jour.
+- **Montée — 0,02 km par mètre gravi.** Cent mètres de montée valent deux kilomètres de
+  plat. Pour comparaison, la règle de Naismith pour un marcheur compte une heure pour
+  600 m de dénivelé contre 5 km à plat, soit 0,008 km par mètre ; un attelage chargé
+  peine davantage. La descente ne compte rien de plus — le freinage n'est pas modélisé.
+- **Pente maximale — 10 %.** Au-delà, une charrette chargée ne passe pas ; elle
+  contourne. Les routes de montagne de l'époque se tenaient sous cette pente par des
+  lacets, que la grille du relief ne représente pas à l'échelle d'une maille.
+- **Gué — 5 km.** Le détour jusqu'au gué, l'attente, le passage. Un fleuve se franchit
+  partout au même prix : il n'y a ni gués nommés, ni ponts ouverts aux charrettes.
+
 ## Second scénario — `data/ironpeak.json`
 
 Aucune valeur de ce fichier n'est une donnée historique au sens strict : ce

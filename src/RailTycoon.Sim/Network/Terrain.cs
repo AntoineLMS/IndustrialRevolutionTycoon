@@ -42,7 +42,15 @@ public sealed class HeightField
     public double WidthKm => (Columns - 1) * CellSizeKm;
     public double HeightKm => (Rows - 1) * CellSizeKm;
 
-    public HeightField(int columns, int rows, double cellSizeKm, double[] elevations)
+    /// <summary>
+    /// Les fleuves de la carte, chacun une ligne brisée d'amont en aval. Le relief en
+    /// porte déjà la vallée ; ils sont gardés ici pour ce qui doit savoir où passe
+    /// l'eau — les charrettes, qui ne la franchissent qu'à gué.
+    /// </summary>
+    public IReadOnlyList<IReadOnlyList<GeoPoint>> Rivers { get; }
+
+    public HeightField(int columns, int rows, double cellSizeKm, double[] elevations,
+        IReadOnlyList<IReadOnlyList<GeoPoint>>? rivers = null)
     {
         if (columns < 2 || rows < 2)
             throw new InvalidDataException("Le relief doit compter au moins deux colonnes et deux rangées.");
@@ -56,6 +64,7 @@ public sealed class HeightField
         Rows = rows;
         CellSizeKm = cellSizeKm;
         _elevations = elevations;
+        Rivers = rivers ?? Array.Empty<IReadOnlyList<GeoPoint>>();
     }
 
     public double ElevationAtCell(int column, int row)
@@ -144,7 +153,11 @@ public static class TerrainFactory
         ApplyFeatures(def, columns, rows, elevations);
         if (def.Noise is not null) ApplyNoise(def.Noise, def.CellSizeKm, columns, rows, elevations, scenarioSeed);
 
-        return new HeightField(columns, rows, def.CellSizeKm, elevations);
+        var rivers = def.Features
+            .Where(f => f.Kind == "river")
+            .Select(f => (IReadOnlyList<GeoPoint>)f.Points.Select(p => new GeoPoint(p.XKm, p.YKm)).ToList())
+            .ToList();
+        return new HeightField(columns, rows, def.CellSizeKm, elevations, rivers);
     }
 
     private static double[] ParseExplicit(TerrainDef def, out int columns, out int rows)
@@ -181,6 +194,9 @@ public static class TerrainFactory
         {
             if (feature.HalfWidthKm <= 0)
                 throw new InvalidDataException("Une forme de relief doit avoir une portée strictement positive.");
+            if (feature.Kind == "river" && feature.Points.Count < 2)
+                throw new InvalidDataException("Un fleuve doit déclarer au moins deux points, d'amont en aval.");
+            var course = feature.Points.Select(p => new GeoPoint(p.XKm, p.YKm)).ToList();
 
             for (int y = 0; y < rows; y++)
             {
@@ -194,8 +210,9 @@ public static class TerrainFactory
                             point,
                             new GeoPoint(feature.X1Km, feature.Y1Km),
                             new GeoPoint(feature.X2Km, feature.Y2Km)),
+                        "river" => DistanceToPolyline(point, course),
                         _ => throw new InvalidDataException(
-                            $"Forme de relief inconnue : « {feature.Kind} » (attendu « ridge » ou « bowl »)."),
+                            $"Forme de relief inconnue : « {feature.Kind} » (attendu « ridge », « bowl » ou « river »)."),
                     };
                     elevations[y * columns + x] += feature.AmplitudeM * Bell(distance / feature.HalfWidthKm);
                 }
@@ -264,6 +281,27 @@ public static class TerrainFactory
     }
 
     private static double Smooth(double t) => t * t * (3.0 - 2.0 * t);
+
+    public static double DistanceToPolyline(GeoPoint point, IReadOnlyList<GeoPoint> points)
+    {
+        double best = double.MaxValue;
+        for (int i = 1; i < points.Count; i++)
+            best = Math.Min(best, DistanceToSegment(point, points[i - 1], points[i]));
+        return best;
+    }
+
+    /// <summary>Vrai si les segments [a, b] et [c, d] se coupent, extrémités comprises.</summary>
+    public static bool SegmentsIntersect(GeoPoint a, GeoPoint b, GeoPoint c, GeoPoint d)
+    {
+        double d1 = GeoPoint.Cross(b - a, c - a), d2 = GeoPoint.Cross(b - a, d - a);
+        double d3 = GeoPoint.Cross(d - c, a - c), d4 = GeoPoint.Cross(d - c, b - c);
+        if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
+        bool OnSegment(GeoPoint p, GeoPoint q, GeoPoint r, double cross)
+            => Math.Abs(cross) < 1e-12
+               && Math.Min(p.XKm, q.XKm) - 1e-12 <= r.XKm && r.XKm <= Math.Max(p.XKm, q.XKm) + 1e-12
+               && Math.Min(p.YKm, q.YKm) - 1e-12 <= r.YKm && r.YKm <= Math.Max(p.YKm, q.YKm) + 1e-12;
+        return OnSegment(a, b, c, d1) || OnSegment(a, b, d, d2) || OnSegment(c, d, a, d3) || OnSegment(c, d, b, d4);
+    }
 
     public static double DistanceToSegment(GeoPoint point, GeoPoint a, GeoPoint b)
     {

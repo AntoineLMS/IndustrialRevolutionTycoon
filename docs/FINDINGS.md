@@ -11,7 +11,8 @@
 > marchandise s'est mis à suivre son entrepôt : voir « Le prix suit l'entrepôt du
 > producteur ». Puis chaque installation a reçu son propre marché : voir « Chaque
 > installation a son marché » ; et le charroi est devenu lent et sans plafond : voir
-> « Le charroi : tout passe, plus lentement ». Les mesures d'avant ce dernier changement ne se
+> « Le charroi : tout passe, plus lentement » ; et les charrettes suivent le terrain :
+> voir « Les charrettes suivent le terrain ». Les mesures d'avant ce dernier changement ne se
 > rejouent plus au bit près : aucun réglage ne remet la forêt et la scierie d'une ville
 > sur un même marché.
 
@@ -1797,11 +1798,70 @@ timberford 15 275 (contre 14 776).*
 1. **Le prix d'une charrette captée.** « Le prix que ça coûte à la gare » est lu comme
    le prix au départ plus le charroi parcouru. L'autre lecture — le prix du marché de
    la ville de la gare — ferait du captage une affaire moins sûre pour le train.
-2. **Les routes.** Les charrettes vont en ligne droite, à vitesse et coût uniformes,
-   montagne comprise. Le relief de la sierra ne les gêne pas ; il devrait.
+2. **Les routes.** *Tranché le 27 octobre 2026 : les charrettes suivent le terrain*
+   (section suivante). Elles allaient en ligne droite, montagne comprise.
 3. **Qui conduit les charrettes.** Elles n'appartiennent à personne, et le charroi ne
    rapporte rien à la compagnie. Une compagnie de roulage, ou une compagnie de chemin de
    fer qui fait aussi rouler des charrettes vers ses gares, serait un autre jeu.
+
+## Les charrettes suivent le terrain
+
+*Décision de l'équipe, 27 octobre 2026 : « les charrettes doivent suivre le terrain —
+suivre les cours de fleuve, les reliefs. » Même protocole que les sections précédentes.*
+
+### Le modèle
+
+Sur une carte à relief, une charrette ne va plus en ligne droite : elle prend le chemin
+le moins pénible sur la grille du relief, de nœud en nœud vers ses huit voisins
+(`Economy/CartRouter.cs`). Un pas vaut sa longueur, plus :
+
+- **0,02 km par mètre gravi** (`climbKmPerMetre`) : cent mètres de montée valent deux
+  kilomètres de plat, en temps comme en coût. La descente ne coûte rien de plus.
+- **un passage à gué de 5 km** (`riverCrossingKm`) s'il franchit un fleuve.
+
+Un pas plus raide que **10 %** (`maxGradePercent`) ne passe pas. Départ et arrivée se
+raccordent au nœud le plus proche. La charrette longe donc les vallées et les fleuves,
+passe les cols, contourne ce qui est trop raide, et ne franchit un fleuve qu'une fois.
+Elle avance sur sa route — une charrette qui contourne une crête par le nord passe
+par le nord, et c'est là qu'une gare peut la capter —, et sa distance de route fait son
+temps et son coût. Sans relief déclaré, la route reste la ligne droite. Les valeurs sont
+estimées : [SOURCES.md](SOURCES.md), « Routes des charrettes ».
+
+**Le fleuve est une forme nouvelle du relief** (`kind: "river"`) : une ligne brisée,
+d'amont en aval, qui creuse sa vallée — une profondeur sur son axe et une demi-largeur,
+comme une crête inversée — et que les charrettes ne franchissent qu'à gué. Le réseau
+ferré n'en voit que la vallée : un pont s'y construit si le remblai le demande, comme
+ailleurs. **Aucune carte livrée n'a encore de fleuve** ; les tests en posent sur une
+carte de 21 km sur 11.
+
+### Sur les cartes livrées
+
+Seules la sierra et la carte du col ont un relief. Sur la sierra, le col est sur l'axe
+de la ligne : les charrettes passent par lui, et leur route s'allonge des montées
+(Pinecrest → Cedarton : 355 km sur la carte, 376 de route vers l'est, 381 vers l'ouest ;
+Fordham → Eastgate : 197 et 218). Le charroi entre villes y était déjà presque nul :
+
+| sierra | charrettes en ligne droite | charrettes sur le terrain |
+|---|---|---|
+| référence | 184 989 ± 4 361 | 185 889 ± 3 701 |
+| anticipant | 178 738 ± 6 012 | 181 756 ± 6 011 |
+
+*Parties telles qu'écrites : 183 430 et 189 418. Le col : −27 860 contre −27 827.*
+
+Le bloc `anticipating` de la sierra garde sa propriété en moyenne : −4 133 ± 1 189 de
+résultat (−2,2 %), mobilité 0,440 contre 0,312 ; sur les dix voisines du test, ×1,47
+pour −2,9 %.
+
+### Décisions laissées à l'équipe
+
+1. **Mettre des fleuves sur les cartes.** Le modèle les connaît, aucune carte n'en a.
+   En ajouter un à la sierra changerait aussi son réseau — la vallée creusée déplace
+   le devis et les rampes — et toutes ses mesures.
+2. **Les gués et les ponts.** Un fleuve se passe partout au même prix. Des gués nommés,
+   ou les ponts du réseau ferré ouverts aux charrettes, feraient converger les routes
+   vers des points de passage — là où une gare capterait le plus.
+3. **Le transport par eau.** Les fleuves ne portent rien : ni péniches, ni flottage du
+   bois. C'était le grand concurrent du chemin de fer au XIXᵉ siècle.
 
 ## Questions ouvertes pour l'équipe
 

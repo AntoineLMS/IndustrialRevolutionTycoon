@@ -97,7 +97,10 @@ La phase 0c a été **insérée** entre 0b et 1, troisième décision de ce genr
 par charrette (`Economy/Cartage.cs`), dans une ville ou d'une ville à l'autre, sans
 limite de quantité : une charrette part du marché le moins cher vers le marché acheteur
 le plus cher tant que l'écart de prix paie le trajet — 1 par chargement plus 0,5 par
-kilomètre, en ligne droite —, en comptant à l'arrivée ce qui y roule déjà. Elle avance
+kilomètre de route —, en comptant à l'arrivée ce qui y roule déjà. Sur une carte à
+relief, la route suit le terrain (`Economy/CartRouter.cs`) : plus court chemin sur la
+grille du relief, où une montée allonge la route, une pente trop raide ne passe pas et
+un fleuve ne se franchit qu'à gué. Elle avance
 de 15 km par jour et ne livre qu'au bout du trajet ; ce qui est en route compte dans le
 bilan matière. Un train à l'arrêt peut capter une charrette qui passe dans le rayon de
 sa gare, au prix qu'elle coûte là : son prix de départ plus le charroi parcouru. Il se place avant l'économie, sur les

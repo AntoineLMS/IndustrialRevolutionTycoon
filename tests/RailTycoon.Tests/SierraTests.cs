@@ -128,7 +128,9 @@ internal static class SierraTests
             // voisines, 21 seulement passent les deux seuils à la fois, et la partie
             // telle qu'écrite n'en fait pas partie (mobilité 0,391 contre 0,353). Elle
             // tient en moyenne : −6 251 ± 1 282 de résultat (−3,4 %), mobilité 0,410
-            // contre 0,303 (×1,35). Elle se vérifie donc sur la moyenne de dix
+            // contre 0,303 (×1,35) ; et depuis que les charrettes suivent le terrain,
+            // −4 133 ± 1 189 (−2,2 %), mobilité 0,440 contre 0,312, toujours 21 parties
+            // sur 40 au-dessus des deux seuils. Elle se vérifie donc sur la moyenne de dix
             // trajectoires voisines, comme le changement de tête de heartland : une
             // partie unique est un tirage. Les seuils gardent de la marge : ils
             // protègent contre une régression, ils ne consacrent pas ces chiffres.
