@@ -5,6 +5,8 @@
   "startingCash": 100000,
   "initialCoverage": 1.0,
 
+  "//cout": "Modèle de coût mass, le défaut depuis le 27 octobre 2026, comme heartland.json dont ce scénario reprend l'économie au caractère près. Les chiffres des autres commentaires, sauf //marge, sont ceux de l'ancien modèle flat (docs/FINDINGS.md, « Le coût marginal réel par défaut »).",
+
   "//horizon": "15 jours, pas 30. L'horizon fixe l'échelle du stock qui compte, donc ce qu'un seul train peut changer en arrivant. À 30 jours, amener le blé de Millbrook sous le seuil de rentabilité de son moulin demandait 31 chargements pour une capacité de 24 : aucune livraison ne pouvait démarrer l'usine, et le moulin restait à 7 %. À 15 jours il en faut 16, et un train suffit à débloquer un site — ce qui est la décision que le joueur doit pouvoir prendre.",
 
   "priceModel": {
@@ -24,7 +26,6 @@
   "haulage": {
     "minMargin": 0.10,
     "minProfitPerUnit": 1.5,
-    "expectedLoadFactor": 0.6,
     "priceImpactSlices": 8,
     "minTradeQty": 0.25
   },
@@ -94,12 +95,12 @@
 
     "tycoon": {
       "//": "Le magnat démarre fondateur : 30 % du capital et une caisse personnelle modeste. C'est la disproportion qui rend le jeu intéressant — sa fortune dépend du cours, pas de la trésorerie de la société.",
-      "//marge": "Il finance 65 % de ses achats à crédit et le courtier liquide au-delà de 70 % : il vit donc en permanence près du seuil, et une baisse du cours suffit à déclencher l'appel de marge. C'est ce qui rend l'achat à crédit dangereux plutôt que gratuitement multiplicateur.",
+      "//marge": "Il finance 60 % de ses achats à crédit et le courtier liquide au-delà de 70 % : il vit donc en permanence près du seuil, et une baisse du cours suffit à déclencher l'appel de marge. C'est ce qui rend l'achat à crédit dangereux plutôt que gratuitement multiplicateur. 65 % jusqu'au 27 octobre 2026 : sous le modèle de coût mass, devenu le défaut, le cours tombe de 3,10 à 0,50 entre les ticks 76 et 101, juste après ses achats à crédit, et l'appel de marge liquidait toute sa ligne — ruiné au tick 101, il ne touchait plus aucun dividende, et le scénario n'éprouvait plus leur versement. À 60 %, il subit cinq appels de marge et finit avec 8 420 actions au premier dividende ; à 55 % sept appels, à 50 % cinq.",
       "startingCash": 25000,
       "startingShares": 30000,
       "tradeIntervalTicks": 30,
       "buyBudgetFraction": 0.6,
-      "marginInitialRatio": 0.65,
+      "marginInitialRatio": 0.60,
       "marginMaintenanceRatio": 0.70,
       "marginAnnualRatePercent": 9,
       "sellAboveCostRatio": 1.6,
@@ -149,12 +150,12 @@
   "//prix": "Chaque maillon ajoute environ 70 % de valeur au prix de référence. Cette marge n'est pas décorative : elle est la réserve dans laquelle l'usine peut absorber un intrant devenu cher avant de s'arrêter. Trop mince (le moulin à 10 % du premier jet), l'usine ne démarre jamais ; trop large (la scierie à 350 %), elle tourne quoi qu'il arrive et le prix de ses intrants cesse de compter.",
 
   "cargos": [
-    { "id": "grain",  "name": "Blé",         "basePrice": 10, "elasticity": 0.4 },
-    { "id": "flour",  "name": "Farine",      "basePrice": 34, "elasticity": 0.5 },
-    { "id": "food",   "name": "Nourriture",  "basePrice": 58, "elasticity": 0.3 },
-    { "id": "logs",   "name": "Grumes",      "basePrice": 8,  "elasticity": 0.7 },
-    { "id": "boards", "name": "Planches",    "basePrice": 14, "elasticity": 0.8 },
-    { "id": "coal",   "name": "Charbon",     "basePrice": 14, "elasticity": 0.2 }
+    { "id": "grain",  "name": "Blé",         "basePrice": 10, "elasticity": 0.4, "wagon": "box" },
+    { "id": "flour",  "name": "Farine",      "basePrice": 34, "elasticity": 0.5, "wagon": "box" },
+    { "id": "food",   "name": "Nourriture",  "basePrice": 58, "elasticity": 0.3, "wagon": "box" },
+    { "id": "logs",   "name": "Grumes",      "basePrice": 8,  "elasticity": 0.7, "wagon": "flat" },
+    { "id": "boards", "name": "Planches",    "basePrice": 14, "elasticity": 0.8, "wagon": "flat" },
+    { "id": "coal",   "name": "Charbon",     "basePrice": 14, "elasticity": 0.2, "wagon": "gondola" }
   ],
 
   "recipes": [

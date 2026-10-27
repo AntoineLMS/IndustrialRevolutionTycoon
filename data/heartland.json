@@ -5,6 +5,8 @@
   "startingCash": 100000,
   "initialCoverage": 1.0,
 
+  "//cout": "Modèle de coût mass, le défaut depuis le 27 octobre 2026 : chaque marchandise déclare son wagon (cargos[].wagon), dont la tare entre dans ce qu'un chargement coûte à porter. Résultat à trois trains : 261 994 sous la référence (261 047 ± 3 615 sur 40 trajectoires voisines) ; optimum à quatre trains (276 787 ± 3 463). Les chiffres des autres commentaires sont ceux de l'ancien modèle flat, qui les rejoue au bit près en passant haulage.costModel à flat (docs/FINDINGS.md, « Le coût marginal réel par défaut »).",
+
   "//horizon": "15 jours, pas 30. L'horizon fixe l'échelle du stock qui compte, donc ce qu'un seul train peut changer en arrivant. À 30 jours, amener le blé de Millbrook sous le seuil de rentabilité de son moulin demandait 31 chargements pour une capacité de 24 : aucune livraison ne pouvait démarrer l'usine, et le moulin restait à 7 %. À 15 jours il en faut 16, et un train suffit à débloquer un site — ce qui est la décision que le joueur doit pouvoir prendre.",
 
   "priceModel": {
@@ -24,7 +26,6 @@
   "haulage": {
     "minMargin": 0.10,
     "minProfitPerUnit": 1.5,
-    "expectedLoadFactor": 0.6,
     "priceImpactSlices": 8,
     "minTradeQty": 0.25
   },
@@ -57,12 +58,12 @@
   "//prix": "Chaque maillon ajoute environ 70 % de valeur au prix de référence. Cette marge n'est pas décorative : elle est la réserve dans laquelle l'usine peut absorber un intrant devenu cher avant de s'arrêter. Trop mince (le moulin à 10 % du premier jet), l'usine ne démarre jamais ; trop large (la scierie à 350 %), elle tourne quoi qu'il arrive et le prix de ses intrants cesse de compter.",
 
   "cargos": [
-    { "id": "grain",  "name": "Blé",         "basePrice": 10, "elasticity": 0.4 },
-    { "id": "flour",  "name": "Farine",      "basePrice": 34, "elasticity": 0.5 },
-    { "id": "food",   "name": "Nourriture",  "basePrice": 58, "elasticity": 0.3 },
-    { "id": "logs",   "name": "Grumes",      "basePrice": 8,  "elasticity": 0.7 },
-    { "id": "boards", "name": "Planches",    "basePrice": 14, "elasticity": 0.8 },
-    { "id": "coal",   "name": "Charbon",     "basePrice": 14, "elasticity": 0.2 }
+    { "id": "grain",  "name": "Blé",         "basePrice": 10, "elasticity": 0.4, "wagon": "box" },
+    { "id": "flour",  "name": "Farine",      "basePrice": 34, "elasticity": 0.5, "wagon": "box" },
+    { "id": "food",   "name": "Nourriture",  "basePrice": 58, "elasticity": 0.3, "wagon": "box" },
+    { "id": "logs",   "name": "Grumes",      "basePrice": 8,  "elasticity": 0.7, "wagon": "flat" },
+    { "id": "boards", "name": "Planches",    "basePrice": 14, "elasticity": 0.8, "wagon": "flat" },
+    { "id": "coal",   "name": "Charbon",     "basePrice": 14, "elasticity": 0.2, "wagon": "gondola" }
   ],
 
   "recipes": [

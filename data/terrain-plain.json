@@ -5,6 +5,8 @@
   "startingCash": 100000,
   "initialCoverage": 1.0,
 
+  "//cout": "Modèle de coût mass, le défaut depuis le 27 octobre 2026 : le blé voyage en wagon couvert. Le devis de construction ne dépend pas du modèle de coût ; les résultats d'exploitation cités ailleurs sont ceux de l'ancien modèle flat.",
+
   "//": "Carte de référence n° 1. Un large bombement et une rugosité de quelques dizaines de mètres, rien qui dépasse la pente maximale sur plus d'une maille. Le devis doit donc être presque entièrement de la pose de voie : c'est le plancher auquel les deux autres cartes se comparent.",
 
   "//anticipating": "Carte d'essai du module réseau : elle chiffre un tracé, elle ne mesure pas l'économie. Pas de bloc anticipating, donc le solveur anticipant y rendrait la trace de la référence. Le scénario qui fera tourner relief et économie ensemble sera un scénario neuf, pas une mutation de cette carte, dont le devis sert de référence aux tests.",
@@ -16,7 +18,7 @@
   "priceModel": { "coverageHorizonTicks": 15, "shape": 0.5, "minMultiplier": 0.12, "maxMultiplier": 3.0 },
 
   "cargos": [
-    { "id": "grain", "name": "Blé", "basePrice": 10, "elasticity": 0.4 }
+    { "id": "grain", "name": "Blé", "basePrice": 10, "elasticity": 0.4, "wagon": "box" }
   ],
 
   "cities": [

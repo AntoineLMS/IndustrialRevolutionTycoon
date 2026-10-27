@@ -44,27 +44,29 @@ internal static class ReferenceTraceTests
     /// l'anticipant, sa trace des marchés est celle de heartland, et le test
     /// « le module n'influence pas l'économie » le vérifie déjà. heartland-events,
     /// au contraire, change l'économie : il est figé sous les deux solveurs.
+    /// <para>
+    /// Toutes posées le 27 octobre 2026, quand le modèle de coût « mass » est devenu
+    /// le défaut : elles ont toutes bougé ce jour-là, et c'était voulu. Celles de
+    /// heartland et de sierra sous l'ancien modèle « flat » restent vérifiées par
+    /// MarginalCostTests, qui les rejoue au bit près.
+    /// </para>
     /// </summary>
     private static readonly Case[] Cases =
     [
-        new("heartland.json", "reference", "B966B86D3F0AF83C"),
-        new("heartland.json", "anticipating", "29EE085518F1B2B0"),
-        new("heartland-finance.json", "reference", "227CB2EF4504BDBE"),
+        new("heartland.json", "reference", "70F3AC0E86DEE0C1"),
+        new("heartland.json", "anticipating", "520FABFE9DBE9FA1"),
+        new("heartland-finance.json", "reference", "28D92C05D20BAB10"),
         // Le scénario du module events, sous les deux solveurs : chacun compose les
         // multiplicateurs du jour dans ses propres taux, et l'empreinte porte aussi
         // le journal des événements déclenchés.
-        new("heartland-events.json", "reference", "58116D2D6C28310A"),
-        new("heartland-events.json", "anticipating", "E151A952D595E431"),
-        new("ironpeak.json", "reference", "76B80943D1BEA4B7"),
-        new("terrain-plain.json", "reference", "385B9C85FF4583DB"),
-        new("terrain-valley.json", "reference", "20F02CD65C227C94"),
-        new("terrain-pass.json", "reference", "597B843F8505881B"),
-        new("sierra.json", "reference", "44876808B521C9E4"),
-        new("sierra.json", "anticipating", "B80E7C2F7DFBD1A5"),
-        // La même sierra sous le modèle de coût « mass » : le relief y entre dans les
-        // décisions, donc chaque solveur y joue sa propre partie.
-        new("sierra-marginal.json", "reference", "3A328BE0FBB30F59"),
-        new("sierra-marginal.json", "anticipating", "64BC50252805D975"),
+        new("heartland-events.json", "reference", "3402096CD6B60216"),
+        new("heartland-events.json", "anticipating", "A890CC0E8E5BA901"),
+        new("ironpeak.json", "reference", "FDADDF67017B313D"),
+        new("terrain-plain.json", "reference", "F7A85C7F6DD69E34"),
+        new("terrain-valley.json", "reference", "D8F91410D5E42D92"),
+        new("terrain-pass.json", "reference", "712858CFE8EE7258"),
+        new("sierra.json", "reference", "B91A6CDF3C257E8F"),
+        new("sierra.json", "anticipating", "D06BC8E6CB1F09C9"),
     ];
 
     public static void Register(TestRunner runner)

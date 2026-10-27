@@ -5,6 +5,8 @@
   "startingCash": 100000,
   "initialCoverage": 1.0,
 
+  "//cout": "Modèle de coût mass, le défaut depuis le 27 octobre 2026 : le blé voyage en wagon couvert. Le devis de construction ne dépend pas du modèle de coût ; les résultats d'exploitation cités ailleurs sont ceux de l'ancien modèle flat.",
+
   "//": "Carte de référence n° 3. Même relief et même graine que terrain-valley.json : la chaîne est-ouest, le col à x = 56, le sillon au sud. Ici la ligne traverse la chaîne du sud au nord, toujours sur soixante kilomètres.",
 
   "//routes": "Deux itinéraires sur la même carte, et c'est le cœur de l'arbitrage : « main » franchit la chaîne au col, « crest » la franchit quatorze kilomètres plus à l'ouest, là où rien ne l'abaisse. Même longueur, même relief, deux devis qui n'ont rien à voir. Un troisième choix — contourner par la vallée — coûte le devis de terrain-valley.json plus le raccordement.",
@@ -18,7 +20,7 @@
   "priceModel": { "coverageHorizonTicks": 15, "shape": 0.5, "minMultiplier": 0.12, "maxMultiplier": 3.0 },
 
   "cargos": [
-    { "id": "grain", "name": "Blé", "basePrice": 10, "elasticity": 0.4 }
+    { "id": "grain", "name": "Blé", "basePrice": 10, "elasticity": 0.4, "wagon": "box" }
   ],
 
   "cities": [

@@ -439,13 +439,13 @@ internal static class Report
         // L'entretien des voies est retiré avant : il est dû que les trains roulent
         // ou non, et n'a rien à voir avec le relief.
         // Sous le modèle de coût « mass », les mêmes kilomètres à plat se paient avec
-        // la charge réellement portée : la part fixe sur les kilomètres, la part par
-        // chargement sur les chargements-kilomètres. Sous « flat », la seconde est
-        // nulle et la formule est celle d'avant.
+        // la masse réellement portée : la locomotive sur les kilomètres, les
+        // chargements et leurs wagons sur les tonnes-kilomètres. Sous « flat », la
+        // seconde part est nulle et la formule est celle d'avant.
         double flatCost = w.Trains.Sum(t =>
         {
             var rates = RailTycoon.Sim.Transport.TrainCost.Rates(w.Def.Haulage, t);
-            return t.TotalKmTravelled * rates.FixedPerKm + t.TotalLoadKm * rates.PerLoadKm;
+            return t.TotalKmTravelled * rates.FixedPerKm + t.TotalTonneKm * rates.PerTonneKm;
         });
         double trainCost = co.TotalOperatingCost - co.TotalTrackUpkeep;
         if (w.Network is not null && flatCost > 0)

@@ -93,21 +93,20 @@ public sealed class RailLine
     /// kilomètre. Le transport n'a pas à savoir pourquoi.
     /// </para>
     /// <para>
-    /// <b>Ce que ce facteur ne fait pas, mesuré sur data/sierra.json.</b> Il est
-    /// facturé (<c>OpportunisticHaulageSolver.MoveTrain</c>) mais n'entre dans
-    /// aucune décision : le coût imputé qui décide d'un achat se calcule sur la
-    /// distance plate. Il ne rétrécit donc <em>pas</em> le rayon économique des
-    /// marchandises à bas prix, contrairement à ce qu'annonçait ce commentaire : la
-    /// trace des marchés est la même au bit près que le relief coûte ou non. C'est un
-    /// impôt sur le kilomètre-train, pas une géographie. Les options et leurs
-    /// chiffres sont dans docs/FINDINGS.md, « Relief et économie ensemble ».
+    /// <b>Sous le modèle de coût <c>mass</c></b> (<c>haulage.costModel</c>, défaut),
+    /// ce facteur entre dans la facture <em>et</em> dans la décision, par une seule
+    /// formule (<see cref="TrainCost"/>) : il multiplie la part de la locomotive et
+    /// celle de chaque chargement, et le transporteur décide sur la seconde. La trace
+    /// des marchés dépend donc du relief — docs/FINDINGS.md, « Le coût marginal réel
+    /// par défaut ».
     /// </para>
     /// <para>
-    /// <b>Sous le modèle de coût <c>mass</c></b> (<c>haulage.costModel</c>, opt-in),
-    /// ce même facteur entre dans la facture <em>et</em> dans la décision, par une
-    /// seule formule (<see cref="TrainCost"/>) : il multiplie la part fixe du train et
-    /// la part de chaque chargement, et le transporteur décide sur la seconde. Là, il
-    /// fait une géographie — docs/FINDINGS.md, « Le coût marginal réel ».
+    /// <b>Sous l'ancien modèle <c>flat</c></b>, mesuré sur data/sierra.json, il est
+    /// facturé (<c>OpportunisticHaulageSolver.MoveTrain</c>) mais n'entre dans aucune
+    /// décision : le coût imputé qui décide d'un achat s'y calcule sur la distance
+    /// plate, et la trace des marchés est la même au bit près que le relief coûte ou
+    /// non. Un impôt sur le kilomètre-train, pas une géographie : docs/FINDINGS.md,
+    /// « Relief et économie ensemble ».
     /// </para>
     /// </summary>
     public double LegCostFactor(int fromIndex, int toIndex)

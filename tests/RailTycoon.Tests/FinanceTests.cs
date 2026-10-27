@@ -581,6 +581,10 @@ internal static class FinanceTests
         });
         // 120 km par tick à 8 le kilomètre : 960 de perte par tick, et un coût
         // kilométrique tel que le transporteur ne trouve jamais un achat rentable.
+        // Sous le modèle de coût flat, explicitement : la perte doit être fixe, que
+        // le train porte quelque chose ou non. Sous mass, le défaut, un train vide
+        // ne paierait que sa locomotive, le huitième de ce coût.
+        scenario.Haulage.CostModel = RailTycoon.Sim.Transport.TrainCost.FlatModel;
         scenario.Trains.Add(new TrainDef
         {
             Id = "t1", Line = "l1", Capacity = 24, SpeedKmPerTick = 120, CostPerKm = 8.0,

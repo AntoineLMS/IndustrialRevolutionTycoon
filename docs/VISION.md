@@ -246,7 +246,9 @@ bon pour ce jeu :
 - **C'est lui qui fait la boucle de jeu.** Livrer une marchandise fait baisser son
   prix à destination et monter son prix au départ : l'occasion se referme d'elle-même.
   La première campagne de mesure l'a établi : le profit culmine à trois trains et
-  s'effondre à six.
+  s'effondre à six. Sous le coût marginal réel, devenu le défaut, il culmine à
+  quatre et s'érode bien plus lentement (voir le point 9 de « Écart avec la
+  simulation d'aujourd'hui »).
 - **Il donne un prix à chaque décision.** Un chargement se refuse s'il ne rapporte
   pas ce qu'il coûte à porter. C'est la condition pour que le relief, la distance et
   la locomotive pèsent sur le jeu (voir le chantier du coût marginal dans
@@ -330,8 +332,10 @@ Ce qui distingue deux locomotives :
 *Déjà en place* : un catalogue de 15 locomotives historiques, de 1829 à 1945, sourcé
 dans [SOURCES.md](SOURCES.md), avec leur effort de traction. Il n'est pas encore
 branché : la vitesse et le coût d'un train sont saisis à la main. Le modèle de coût
-« mass » (FINDINGS.md, « Le coût marginal réel ») connaît déjà la masse d'une
-locomotive et de ses wagons.
+« mass », le défaut (FINDINGS.md, « Le coût marginal réel par défaut »), connaît
+déjà la masse d'une locomotive et la tare de quatre types de wagons — couvert,
+tombereau, plat, citerne. Chaque marchandise voyage dans le sien ; le wagon est
+attelé à l'achat et dételé à la vente.
 
 **Décidé, en connaissance de cause** : le prix local vaut même quand la ville n'a
 pas de carburant en stock. Une ville sans charbon affiche le prix plafond (trois
@@ -454,11 +458,16 @@ Ce que la vision demande et que le code n'a pas encore, par ordre de dépendance
    financières moyennées. Puis le vote d'éviction, le rachat par offre sur les
    actions, et des taux d'emprunt qui dépendent de la situation.
 7. **Des objectifs de scénario.**
-8. **Un relief qui pèse.** Le coût marginal réel existe, en option
-   (`haulage.costModel = "mass"`) : il crée deux bassins de part et d'autre du col
-   sans détruire de valeur, mais seulement au-delà d'une traction de 0,12 à 0,15.
-   En faire le défaut est une décision ouverte (FINDINGS.md, « Le coût marginal
-   réel »).
+8. **Un relief qui pèse.** Le coût marginal réel est le défaut depuis le 27 octobre
+   2026 (`haulage.costModel = "mass"`) : le relief entre dans les décisions du
+   transporteur, mais le wagon qui suit son chargement rend presque tout le coût
+   marginal, si bien que le rayon des marchandises bon marché est court partout, et
+   qu'aucun bassin ne se forme de part et d'autre du col (FINDINGS.md, « Le coût
+   marginal réel par défaut »).
+9. **Un coût de possession des trains**, ou une composition fixe : sous ce modèle,
+   six trains gardent 88 % du résultat de l'optimum, et la capacité en trop ne coûte
+   presque rien. C'est le coût de maintenance du tableau des véhicules qui devra
+   porter cette tension.
 
 ## Questions ouvertes, en un coup d'œil
 

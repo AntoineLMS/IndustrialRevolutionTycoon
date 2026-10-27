@@ -13,9 +13,9 @@ namespace RailTycoon.Tests;
 /// Ils vérifient trois choses de nature différente : que le scénario est
 /// réalisable et sain (bilan, invariants, économie vivante) ; que son bloc
 /// <c>anticipating</c> fait ce que son commentaire prétend ; et un <em>constat</em>
-/// — le relief se paie mais n'entre dans aucune décision — qui est l'état actuel
-/// du code, pas une propriété voulue. Voir docs/FINDINGS.md, « Relief et économie
-/// ensemble ».
+/// sur l'ancien modèle de coût « flat » — le relief s'y paie mais n'entre dans
+/// aucune décision —, qui est la raison du changement de défaut. Voir
+/// docs/FINDINGS.md, « Relief et économie ensemble ».
 /// </para>
 /// </summary>
 internal static class SierraTests
@@ -113,17 +113,18 @@ internal static class SierraTests
             });
         }
 
-        runner.Add("sierra — le bloc anticipating réglé bat la référence sans perdre de résultat", () =>
+        runner.Add("sierra — le bloc anticipating réglé achète de la mobilité pour moins de 5 % de résultat", () =>
         {
-            // Ce que revendique le commentaire du bloc : mesures du 27 septembre
-            // 2026, trois trains, 720 ticks —
-            //   référence   résultat 219 411   mobilité 0,384
-            //   anticipant  résultat 242 254   mobilité 0,548
-            // Avec l'entretien des voies (0,2 par km et par tick depuis le 30 septembre),
-            // 146 689 et 169 531 : 72 723 de moins chacun, mobilités inchangées.
-            // Les seuils gardent de la marge : ils protègent contre une régression,
-            // ils ne consacrent pas ces chiffres exacts. Le bloc de heartland, recopié
-            // tel quel, échouerait ici : 100 693 de résultat.
+            // Ce que revendique le commentaire du bloc. Sous le modèle de coût flat
+            // (mesures du 27 septembre 2026), il battait la référence en résultat et
+            // en mobilité. Sous le modèle mass, devenu le défaut le 27 octobre 2026,
+            // aucun réglage de la grille ne bat plus la référence en résultat : sur 40
+            // trajectoires voisines, le réglage livré perd 5 498 ± 1 615 (−3,3 %) pour
+            // une mobilité de 0,547 contre 0,370 (+48 %), et c'est le meilleur
+            // compromis de la grille (docs/FINDINGS.md, « Le coût marginal réel par
+            // défaut »). Parties telles qu'écrites : 165 176 contre 171 157, mobilités
+            // 0,549 et 0,381. Les seuils gardent de la marge : ils protègent contre une
+            // régression, ils ne consacrent pas ces chiffres exacts.
             var scenario = ScenarioLoader.Load(SierraPath());
             var (refSim, refStats) = Run(scenario, new ReferenceEconomySolver());
             var (sim, stats) = Run(scenario, new AnticipatingEconomySolver());
@@ -132,25 +133,28 @@ internal static class SierraTests
             double mobility = stats.MeanSpreadMobility(sim.World);
             Check.True(mobility > refMobility * 1.25,
                 $"mobilité {mobility:0.000} contre {refMobility:0.000} pour la référence");
-            Check.True(sim.World.Company.NetProfit >= refSim.World.Company.NetProfit,
+            Check.True(sim.World.Company.NetProfit >= 0.95 * refSim.World.Company.NetProfit,
                 $"résultat {sim.World.Company.NetProfit:0} contre {refSim.World.Company.NetProfit:0} pour la référence");
         });
 
-        runner.Add("sierra — constat : le relief se paie, mais n'entre dans aucune décision", () =>
+        runner.Add("sierra — constat de l'ancien modèle : sous flat, le relief se paie mais n'entre dans aucune décision", () =>
         {
-            // Ce test fige un état du code, pas une intention. Le relief atteint le
-            // transport par un seul canal — le coût kilométrique facturé — et ce
-            // canal ne remonte dans aucune décision : le transporteur choisit son
-            // fret sur des distances plates, et les trains roulent de toute façon.
-            // Conséquence mesurée : la trace des marchés est la même au bit près,
-            // que la montagne coûte ou non. Si ce test échoue parce que le relief
-            // entre désormais dans les décisions, c'est une bonne nouvelle : mettre
-            // à jour docs/FINDINGS.md (« Relief et économie ensemble »), qui chiffre
-            // les options, et retirer ce test. Le constat est celui du modèle de coût
-            // par défaut (« flat ») ; sous le modèle « mass », le relief entre dans
-            // les décisions, et MarginalCostTests vérifie le contraire.
-            var scenario = ScenarioLoader.Load(SierraPath());
-            var flat = ScenarioLoader.Load(SierraPath());
+            // Ce test fige le comportement du modèle de coût « flat », défaut jusqu'au
+            // 27 octobre 2026 et conservé en option. Le relief y atteint le transport
+            // par un seul canal — le coût kilométrique facturé — et ce canal ne
+            // remonte dans aucune décision : le transporteur choisit son fret sur des
+            // distances plates, et les trains roulent de toute façon. Conséquence
+            // mesurée : la trace des marchés est la même au bit près, que la montagne
+            // coûte ou non. C'est la raison pour laquelle « mass » est devenu le
+            // défaut ; MarginalCostTests vérifie le contraire sous lui.
+            ScenarioDef Flat()
+            {
+                var s = ScenarioLoader.Load(SierraPath());
+                s.Haulage.CostModel = RailTycoon.Sim.Transport.TrainCost.FlatModel;
+                return s;
+            }
+            var scenario = Flat();
+            var flat = Flat();
             flat.Network.Traction.ClimbEquivalentKm = 0;
 
             var (withRelief, reliefMarkets) = Trace(scenario);

@@ -20,6 +20,24 @@ public sealed class CargoDef
     /// hiver), 1 = très élastique (un produit de luxe).
     /// </summary>
     public double Elasticity { get; set; } = 0.6;
+
+    /// <summary>
+    /// Type de wagon qui porte un chargement de cette marchandise, parmi ceux de
+    /// <see cref="MassCostDef.WagonTypes"/> : <c>box</c> (couvert), <c>flat</c>
+    /// (plat), <c>gondola</c> (tombereau), <c>tank</c> (citerne).
+    /// <para>
+    /// Le wagon suit le chargement : il est attelé quand la marchandise est achetée,
+    /// dételé quand elle est vendue. Sa tare fait donc partie de ce que coûte un
+    /// chargement à porter, au même titre que la marchandise elle-même, et c'est
+    /// elle qui distingue deux marchandises de même prix sous le modèle de coût
+    /// <c>mass</c> : un chargement léger à porter voyage plus loin.
+    /// </para>
+    /// <para>
+    /// Le défaut, le wagon couvert, est le wagon générique de l'époque ; les
+    /// scénarios livrés déclarent tous le leur, et un test le vérifie.
+    /// </para>
+    /// </summary>
+    public string Wagon { get; set; } = "box";
 }
 
 public sealed class IngredientDef
@@ -221,37 +239,54 @@ public sealed class HaulageDef
     public double ExpectedLoadFactor { get; set; } = 0.6;
 
     /// <summary>
-    /// Modèle de coût d'exploitation des trains : <c>flat</c> (défaut) ou
-    /// <c>mass</c>. Voir <c>Transport/TrainCost.cs</c>.
+    /// Modèle de coût d'exploitation des trains : <c>mass</c> (défaut) ou
+    /// <c>flat</c>. Voir <c>Transport/TrainCost.cs</c>.
     /// <para>
-    /// <c>flat</c> — le train paie <c>costPerKm</c> par kilomètre, relief compris,
-    /// qu'il soit plein ou vide, et le transporteur impute à un chargement ce coût
-    /// réparti sur <see cref="ExpectedLoadFactor"/> de sa capacité, sur la distance
-    /// à plat. C'est le modèle de toutes les empreintes de référence.
+    /// <c>mass</c> — le coût kilométrique est proportionnel à la masse remorquée :
+    /// la locomotive, plus chaque chargement avec son wagon. Les deux sont
+    /// multipliés par le facteur de relief du tronçon et du sens. Le transporteur
+    /// décide d'acheter sur le seul surcoût qu'un chargement ajoute à cette facture,
+    /// relief compris : refuser un chargement économise exactement ce qu'il aurait
+    /// coûté. Défaut depuis le 27 octobre 2026 ; voir docs/FINDINGS.md, « Le coût
+    /// marginal réel » et « Le coût marginal réel par défaut ».
     /// </para>
     /// <para>
-    /// <c>mass</c> — le coût kilométrique est proportionnel à la masse remorquée
-    /// (tare + chargement), multiplié par le facteur de relief du tronçon et du
-    /// sens. Le transporteur décide d'acheter sur le seul surcoût qu'un chargement
-    /// ajoute à cette facture, relief compris : refuser un chargement économise
-    /// exactement ce qu'il aurait coûté. Opt-in par les données ; voir
-    /// docs/FINDINGS.md, « Le coût marginal réel ».
+    /// <c>flat</c> — l'ancien défaut, conservé pour relire les mesures antérieures :
+    /// le train paie <c>costPerKm</c> par kilomètre, relief compris, qu'il soit plein
+    /// ou vide, et le transporteur impute à un chargement ce coût réparti sur
+    /// <see cref="ExpectedLoadFactor"/> de sa capacité, sur la distance à plat.
     /// </para>
     /// </summary>
-    public string CostModel { get; set; } = "flat";
+    public string CostModel { get; set; } = "mass";
 
     /// <summary>Masses du modèle <c>mass</c>. Ignorées par le modèle <c>flat</c>.</summary>
     public MassCostDef MassCost { get; set; } = new();
 }
 
 /// <summary>
+/// Un type de wagon du modèle de coût <c>mass</c>. Seule sa tare le distingue : la
+/// charge d'un wagon est celle d'un chargement du jeu,
+/// <see cref="MassCostDef.TonnesPerLoad"/>, quel que soit le wagon.
+/// </summary>
+public sealed class WagonTypeDef
+{
+    public string Name { get; set; } = "";
+
+    /// <summary>Masse du wagon vide, en tonnes.</summary>
+    public double TareTonnes { get; set; }
+}
+
+/// <summary>
 /// Masses du modèle de coût <c>mass</c> (<see cref="HaulageDef.CostModel"/>), et
 /// la calibration qui relie le coût à la tonne au <c>costPerKm</c> de chaque train.
 /// <para>
-/// Un chargement est un wagon : un train de capacité 24 remorque 24 wagons, vides
-/// ou pleins, et leur tare est due dans les deux cas. Les valeurs par défaut sont
-/// celles d'un train de marchandises américain des années 1870 ; sources et
-/// estimations dans docs/SOURCES.md, « Masses du train ».
+/// Un chargement est un wagon, et <b>le wagon suit le chargement</b> : un train vide
+/// n'est que sa locomotive et son tender ; chaque chargement acheté y attelle un
+/// wagon du type que déclare sa marchandise (<see cref="CargoDef.Wagon"/>), qui est
+/// dételé à la vente. La part fixe d'un train est donc sa seule locomotive, et la
+/// part de chaque chargement est sa marchandise plus la tare de son wagon. Les
+/// valeurs par défaut sont celles d'un train de marchandises américain des années
+/// 1870 ; sources et estimations dans docs/SOURCES.md, « Masses du train ».
 /// </para>
 /// </summary>
 public sealed class MassCostDef
@@ -259,19 +294,36 @@ public sealed class MassCostDef
     /// <summary>Locomotive et tender, en tonnes. Dus que le train soit plein ou vide.</summary>
     public double LocomotiveTonnes { get; set; } = 48;
 
-    /// <summary>Tare d'un wagon, en tonnes, par chargement de capacité.</summary>
-    public double WagonTareTonnes { get; set; } = 9;
-
-    /// <summary>Masse d'un chargement, en tonnes.</summary>
+    /// <summary>Masse de marchandise d'un chargement, en tonnes, quel que soit son wagon.</summary>
     public double TonnesPerLoad { get; set; } = 9;
 
     /// <summary>
+    /// Les types de wagons, par identifiant. Chaque marchandise du scénario doit
+    /// nommer l'un d'eux ; un scénario qui déclare ce bloc remplace la liste entière.
+    /// </summary>
+    public Dictionary<string, WagonTypeDef> WagonTypes { get; set; } = new()
+    {
+        ["box"] = new WagonTypeDef { Name = "Wagon couvert", TareTonnes = 9 },
+        ["flat"] = new WagonTypeDef { Name = "Wagon plat", TareTonnes = 6 },
+        ["gondola"] = new WagonTypeDef { Name = "Tombereau", TareTonnes = 7 },
+        ["tank"] = new WagonTypeDef { Name = "Wagon-citerne", TareTonnes = 8 },
+    };
+
+    /// <summary>
+    /// Le wagon de la calibration : celui que porte le train de référence décrit par
+    /// <see cref="CalibrationLoadFactor"/>. Le wagon couvert, le plus répandu de
+    /// l'époque, et le plus lourd des types livrés.
+    /// </summary>
+    public string CalibrationWagon { get; set; } = "box";
+
+    /// <summary>
     /// Remplissage, en fraction de la capacité, auquel le train coûte exactement son
-    /// <c>costPerKm</c>. C'est une conversion d'unité : elle fixe le prix de la
-    /// tonne-kilomètre pour qu'à la charge moyenne mesurée le train coûte ce qu'il
-    /// coûtait dans le modèle <c>flat</c>, et qu'on compare deux façons de décider
-    /// sur une même économie. Plus elle est haute, moins la tonne coûte : le train
-    /// vide et chaque chargement paient moins.
+    /// <c>costPerKm</c> s'il porte des wagons de <see cref="CalibrationWagon"/>.
+    /// C'est une conversion d'unité : elle fixe le prix de la tonne-kilomètre pour
+    /// qu'à la charge moyenne mesurée le train coûte ce qu'il coûtait dans le modèle
+    /// <c>flat</c>, et qu'on compare deux façons de décider sur une même économie.
+    /// Plus elle est haute, moins la tonne coûte : le train vide et chaque
+    /// chargement paient moins.
     /// <para>
     /// Elle n'a pas le rôle de <see cref="HaulageDef.ExpectedLoadFactor"/>. Celui-là
     /// divise tout le coût du train, part fixe comprise, par une charge escomptée pour
@@ -279,11 +331,14 @@ public sealed class MassCostDef
     /// chargement n'économise pas ce qu'on lui a imputé. Celle-ci ne fait que fixer
     /// le prix de la tonne ; la décision lit la dérivée de la facture par rapport à
     /// la charge, qui dépend de ce prix — donc de cette calibration — mais d'aucune
-    /// charge escomptée au moment de décider. Elle se mesure une fois, elle ne se
-    /// règle pas (docs/FINDINGS.md, « Le coût marginal réel », calibration).
+    /// charge escomptée au moment de décider. Elle se mesure, elle ne se règle pas :
+    /// c'est le point fixe sur heartland, sous la référence, où le coût facturé aux
+    /// trains égale celui du modèle <c>flat</c> (docs/FINDINGS.md, « Le coût
+    /// marginal réel par défaut »). Elle se remesure à chaque changement de masses
+    /// ou de <c>costPerKm</c>.
     /// </para>
     /// </summary>
-    public double CalibrationLoadFactor { get; set; } = 0.89;
+    public double CalibrationLoadFactor { get; set; } = 0.77;
 }
 
 public sealed class ScenarioDef

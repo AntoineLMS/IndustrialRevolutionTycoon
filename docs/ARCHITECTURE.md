@@ -128,7 +128,10 @@ sa couverture, donc fait baisser le prix qu'on exploitait. L'arbitrage se referm
 tout seul. C'est ce qui empêche une ligne rentable de l'être pour l'éternité, et
 qui oblige le joueur à chercher la prochaine asymétrie. La campagne de mesure de
 [FINDINGS.md](FINDINGS.md) montre que cette propriété tient à l'échelle de la
-carte : le profit total culmine à trois trains et s'effondre à six.
+carte : le profit total culmine à trois trains et s'effondre à six sous l'ancien
+modèle de coût `flat` ; sous `mass`, le défaut, il culmine à quatre et ne s'érode
+que lentement — six trains gardent 88 % de l'optimum (FINDINGS.md, « Le coût
+marginal réel par défaut »).
 
 L'horizon de couverture n'est pas un réglage cosmétique : il fixe l'échelle du
 stock qui compte, donc ce qu'une seule livraison peut changer. Voir
@@ -285,19 +288,17 @@ trapèze symétrique, ce qui surestime le déblai à flanc de coteau — précis
 technique qui rendrait praticable le franchissement de la crête. Corriger cela
 demande la pente transversale du terrain, donc un échantillonnage latéral du relief.
 
-**Le relief est facturé, pas décidé.** `LegCostFactor` multiplie le coût
-kilométrique que paie un train, mais le coût que le transporteur impute à un
-chargement pour décider de l'acheter reste calculé sur la distance plate — et les
-trains roulent de toute façon, pleins ou vides. Mesuré sur `data/sierra.json` : la
-trace des marchés est identique au bit près que la montagne coûte 0, 0,03 ou 0,2
-kilomètre par mètre. Le relief est un impôt sur le kilomètre-train, pas une
-géographie économique, et le devis n'est débité nulle part. Les options sont
-chiffrées dans [FINDINGS.md](FINDINGS.md), « Relief et économie ensemble ».
-C'est le modèle de coût par défaut (`haulage.costModel = "flat"`). Le modèle
-`"mass"`, opt-in par les données, rend le coût proportionnel à la masse remorquée
-et fait décider le transporteur sur le surcoût réel d'un chargement, par la même
-formule que la facture (`Transport/TrainCost.cs`) : là, le relief entre dans les
-décisions — mesuré dans « Le coût marginal réel ».
+**Le relief est facturé et décidé par la même formule.** Sous le modèle de coût
+par défaut (`haulage.costModel = "mass"`, `Transport/TrainCost.cs`), le coût
+kilométrique est proportionnel à la masse remorquée — la locomotive, plus chaque
+chargement avec son wagon, dont la tare dépend du type que déclare la marchandise —,
+`LegCostFactor` multiplie les deux parts, et le transporteur décide sur le surcoût
+réel d'un chargement. La trace des marchés dépend donc du relief ; mesuré dans
+[FINDINGS.md](FINDINGS.md), « Le coût marginal réel par défaut ». Le devis, lui,
+n'est toujours débité nulle part. Sous l'ancien modèle `"flat"`, conservé en option,
+le relief est facturé mais jamais décidé : la trace des marchés y est identique au
+bit près que la montagne coûte 0, 0,03 ou 0,2 kilomètre par mètre (« Relief et
+économie ensemble »).
 
 ## La monnaie : `decimal` en finance, `double` partout ailleurs
 

@@ -5,8 +5,8 @@ Ce document couvre les deux livrables du module `content` :
 [`data/ironpeak.json`](../data/ironpeak.json) (second scénario, chaîne acier) ;
 et les événements historiques du module `events`, déclarés dans
 [`data/heartland-events.json`](../data/heartland-events.json) — voir la
-[dernière section](#evenements) ; et les masses du train du modèle de coût `mass`
-([`data/sierra-marginal.json`](../data/sierra-marginal.json)) — voir
+[dernière section](#evenements) ; et les masses du train du modèle de coût `mass`, défaut de tous les scénarios
+(`haulage.massCost`, défauts dans `Economy/Definitions.cs`) — voir
 [« Masses du train »](#masses-du-train).
 
 Principe suivi partout : une caractéristique **physique** (année, effort de
@@ -197,8 +197,11 @@ dont la doc XML renvoie ici.
 ## Masses du train — modèle de coût `mass` (`haulage.massCost`)
 
 Le modèle de coût `mass` (voir [FINDINGS.md](FINDINGS.md), « Le coût marginal
-réel ») a besoin de trois masses : la locomotive avec son tender, la tare d'un
-wagon, la charge d'un wagon — un chargement du jeu est un wagon. Le catalogue
+réel » et « Le coût marginal réel par défaut ») a besoin de trois sortes de masses :
+la locomotive avec son tender, la charge d'un wagon — un chargement du jeu est un
+wagon —, et la tare de chaque type de wagon. Depuis le 27 octobre 2026, le wagon
+suit le chargement : il est attelé à l'achat de la marchandise et dételé à la
+vente, si bien qu'un train vide ne pèse que sa locomotive. Le catalogue
 `data/locomotives.json` ne porte pas de masse (les masses documentées plus haut
 ne sont pas dans le fichier) ; les trois valeurs sont donc des paramètres du
 scénario, et c'est ici qu'elles se justifient.
@@ -221,37 +224,81 @@ n'ont été lues que par les extraits du moteur de recherche).
   [Wikipédia — Victorian Railways H class (1877)](https://en.wikipedia.org/wiki/Victorian_Railways_H_class_(1877)) ;
   [Wikipédia — Victorian Railways D class (1876)](https://en.wikipedia.org/wiki/Victorian_Railways_D_class_(1876)).
 
-### Wagon — 9 t de charge, 9 t de tare, estimés
+### Charge d'un wagon — 9 t, estimée
 
 - **Estimé** : un wagon couvert américain des années 1870 porte 10 short tons
-  (20 000 lb, **9,07 t**, retenu 9 t) et pèse à vide du même ordre (retenu
-  **9 t**, rapport tare / charge de 1).
-- Ce que les extraits donnent : une comparaison d'époque entre voie étroite et
-  voie normale indique qu'un wagon couvert de voie normale « pesait environ vingt
-  mille livres » (page non ouverte, extrait seulement) ; les wagons couverts de
-  voie étroite du Denver & Rio Grande, 1878-1883, portaient 10 tonnes, et un
-  relevé de marquage des années 1880 donne 20 000 lb de charge pour 8 350 lb de
-  tare (rapport 0,42 — plus léger, en voie étroite, et de source secondaire).
-  Aucune source trouvée ne documente directement la tare d'un wagon de voie
-  normale de 1875.
-- **C'est le paramètre qui compte** : le rapport tare / charge fixe la part
-  marginale du coût, donc le rayon économique. À 4,5 t de tare, la scierie de
-  Cedarton ne démarre pas même à relief faible ; à 18 t, elle survit au col à
-  forte traction (FINDINGS, « Sensibilité aux masses »). Une meilleure source est
-  la prochaine étape avant de s'y fier.
+  (20 000 lb, **9,07 t**, retenu 9 t). Le wagon de 20 tonnes n'apparaît qu'en
+  1875, celui de 30 tonnes une dizaine d'années plus tard (*Commercial &
+  Financial Chronicle*, 28 juillet 1900, extrait) : 10 tonnes est la charge
+  courante de la décennie. La même charge vaut pour tous les types de wagons, parce
+  qu'un chargement est l'unité de l'économie du jeu : un chargement de charbon et un
+  chargement de farine ont la même masse de marchandise, et seule la tare du wagon
+  les distingue.
+
+### Tare des wagons — une par type, estimées
+
+Recherches complémentaires via WebSearch le 27 octobre 2026 : aucune source
+trouvée ne donne la tare d'un wagon de voie normale de 1875, quel que soit son
+type. Les quatre valeurs sont donc **[estimé]**, par une méthode unique — partir du
+wagon couvert, le mieux renseigné, et retirer ce que l'autre type n'a pas — afin
+qu'elles restent cohérentes entre elles.
+
+| type (`wagonTypes`) | tare | marchandises livrées | méthode |
+|---|---|---|---|
+| `box` — wagon couvert | **9 t** | blé, farine, nourriture | rapport tare / charge de 1, voir ci-dessous |
+| `gondola` — tombereau | **7 t** | charbon, minerai, fonte | le couvert sans toit ni parois hautes : caisse ouverte |
+| `flat` — wagon plat | **6 t** | grumes, planches, acier | le couvert sans caisse : châssis, plancher, ranchers |
+| `tank` — wagon-citerne | **8 t** | aucune pour l'instant | voir ci-dessous |
+
+- **Wagon couvert.** Une comparaison d'époque entre voie étroite et voie normale
+  indique qu'un wagon couvert de voie normale « pesait environ vingt mille livres »
+  (page non ouverte, extrait seulement) ; les wagons couverts de voie étroite du
+  Denver & Rio Grande, 1878-1883, portaient 10 tonnes, et un relevé de marquage des
+  années 1880 donne 20 000 lb de charge pour 8 350 lb de tare (rapport 0,42 — plus
+  léger, en voie étroite, et de source secondaire).
+- **Tombereau.** Le charbon voyageait encore, sur le B&O, dans des wagons plats à
+  bacs à la fin du siècle, et les wagons-trémies ne se généralisent que dans les
+  années 1890 (la Pennsylvania GG de 35 tonnes date de 1895) : pour les années 1870,
+  le tombereau en bois est le wagon de vrac.
+- **Wagon-citerne.** Les wagons-citernes à cuve horizontale en fer, « type
+  chaudière », sont mis en service par l'Empire Line du Pennsylvania Railroad en
+  février 1869, pour 80 à 90 barils au début, puis 100 à la fin des années 1870
+  (environ 3 500 gallons, 12 t de pétrole brut). Aucune tare trouvée : 8 t est
+  l'estimation d'un châssis de wagon plat (6 t) portant une cuve de fer. Aucune
+  marchandise livrée ne l'utilise ; il est au catalogue pour le pétrole.
+- **Ce que la tare change, et ce qu'elle ne change pas.** Le wagon suivant le
+  chargement, sa tare fait partie du coût marginal de la marchandise : un chargement
+  en wagon plat (15 t) coûte à porter les 15/18 de ce que coûte un chargement en
+  wagon couvert (18 t). C'est un écart *entre* marchandises. Le niveau absolu des
+  tares, lui, pèse peu : la calibration fixe le prix de la tonne pour que le coût
+  total facturé reste le même, si bien que des tares plus lourdes rendent la tonne
+  moins chère. Mesuré : passer la tare du wagon plat de 6 à 3 t ou à 9 t, ou toutes
+  les tares à 0, ne déplace le résultat que de 0,1 % au plus sur heartland et de
+  2 % au plus sur la sierra, et ne fait démarrer aucune scierie lointaine (FINDINGS, « Le coût marginal réel par
+  défaut »). Une meilleure source reste souhaitable, mais elle ne changerait le jeu
+  qu'au second ordre.
 - Sources : [search.library.wisc.edu — comparaison voie étroite / voie normale](https://search.library.wisc.edu/digital/AJ4LAFP5BKIPLA8D/text/AFCTLVPW5EYVFQ8X) (extrait) ;
   [largescalecentral.com — wooden box car info](https://largescalecentral.com/t/wooden-box-car-info/73392) (D&RG, 1880s) ;
+  [fraser.stlouisfed.org — *Commercial & Financial Chronicle*, 28 juillet 1900](https://fraser.stlouisfed.org/title/commercial-financial-chronicle-1339/july-28-1900-539311/fulltext) (capacités des wagons, extrait) ;
+  [american-rails.com — freight cars](https://www.american-rails.com/freight.html) (le B&O et ses wagons à bacs) ;
+  [appalachianrailroadmodeling.com — A Brief History of Coal Hoppers](https://appalachianrailroadmodeling.com/author/dan_bourque/page/19/) (années 1890) ;
+  [petroleumhistory.org — evolution of tank cars](https://petroleumhistory.org/OilHistory/pages/TankCars/Evolution.html) ;
+  [Wikipédia — Tank car](https://en.wikipedia.org/wiki/Tank_car) ;
+  M. N. Forney (dir.), *The Car-Builder's Dictionary*, Railroad Gazette, 1879,
+  [numérisé par la Smithsonian](https://archive.org/details/carbuildersdicti00mast) —
+  la source d'époque à dépouiller pour remplacer ces estimations, non lue ;
   J. H. White Jr., *The American Railroad Freight Car: From the Wood-Car Era to the
-  Coming of Steel*, Johns Hopkins University Press, 1993 — la référence à consulter,
+  Coming of Steel*, Johns Hopkins University Press, 1993 — la référence moderne,
   non lue.
 
-### Calibration — 0,89, mesurée, pas documentée
+### Calibration — 0,77, mesurée, pas documentée
 
-`calibrationLoadFactor` n'est pas une donnée historique : c'est la charge moyenne
-que le modèle fait porter lui-même aux trains de heartland (89 % de la capacité,
-solveur de référence, 40 réalisations). Elle fixe le prix de la tonne-kilomètre
-pour que le coût facturé sur heartland reste celui du modèle `flat` ; le calcul est
-dans FINDINGS.md.
+`calibrationLoadFactor` n'est pas une donnée historique : c'est le point fixe où le
+coût facturé aux trains de heartland, sous le solveur de référence, égale celui du
+modèle `flat` (207 360 sur 720 ticks), en wagons couverts (`calibrationWagon`). Il
+fixe le prix de la tonne-kilomètre ; le calcul est dans FINDINGS.md. Il valait 0,89
+quand les wagons faisaient partie de la tare fixe du train ; il se remesure à chaque
+changement de masses ou de `costPerKm`.
 
 ## Second scénario — `data/ironpeak.json`
 

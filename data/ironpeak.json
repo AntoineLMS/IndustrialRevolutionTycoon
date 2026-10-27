@@ -5,6 +5,8 @@
   "startingCash": 100000,
   "initialCoverage": 1.0,
 
+  "//cout": "Modèle de coût mass, le défaut depuis le 27 octobre 2026 : minerai, charbon et fonte en tombereau, grumes, planches et acier sur wagon plat, nourriture en wagon couvert. Les chiffres des autres commentaires sont ceux de l'ancien modèle flat, qui les rejoue en passant haulage.costModel à flat.",
+
   "//geographie": "Géographie différente de heartland : une mine de minerai isolée en tête de ligne (Ironpeak, un seul produit, aucune industrie sur place), et une ligne qui descend d'un massif montagneux vers la plaine industrielle. Le moteur ne modélise pas encore le relief (pente, déblai/remblai — voir le module `network` dans CONTRACTS.md) : la montagne est donc représentée par l'isolement d'Ironpeak, pas par un coût kilométrique différent.",
 
   "//chaineacier": "Deuxième chaîne de production : minerai de fer → fonte (haut fourneau) → acier (aciérie), sur le même principe que heartland (chaque maillon multiplie la valeur par environ 1,7, voir docs/FINDINGS.md « une chaîne de valeur jamais calibrée »). Calcul vérifié : fonte = 46 = (3 × minerai à 9) × 1,7037 ; acier = 78 = (1 × fonte à 46) × 1,6957. Minerai et fonte ne sont jamais demandés par les habitants (comme le blé et la farine à Heartland) : charbon, planches, acier et nourriture, produits finis, le sont.",
@@ -40,19 +42,18 @@
   "haulage": {
     "minMargin": 0.10,
     "minProfitPerUnit": 1.5,
-    "expectedLoadFactor": 0.6,
     "priceImpactSlices": 8,
     "minTradeQty": 0.25
   },
 
   "cargos": [
-    { "id": "food",    "name": "Nourriture",     "basePrice": 20, "elasticity": 0.3 },
-    { "id": "coal",    "name": "Charbon",        "basePrice": 12, "elasticity": 0.2 },
-    { "id": "logs",    "name": "Grumes",         "basePrice": 8,  "elasticity": 0.7 },
-    { "id": "boards",  "name": "Planches",       "basePrice": 14, "elasticity": 0.8 },
-    { "id": "ironore", "name": "Minerai de fer", "basePrice": 9,  "elasticity": 0.6 },
-    { "id": "pigiron", "name": "Fonte",          "basePrice": 46, "elasticity": 0.5 },
-    { "id": "steel",   "name": "Acier",          "basePrice": 78, "elasticity": 0.4 }
+    { "id": "food",    "name": "Nourriture",     "basePrice": 20, "elasticity": 0.3, "wagon": "box" },
+    { "id": "coal",    "name": "Charbon",        "basePrice": 12, "elasticity": 0.2, "wagon": "gondola" },
+    { "id": "logs",    "name": "Grumes",         "basePrice": 8,  "elasticity": 0.7, "wagon": "flat" },
+    { "id": "boards",  "name": "Planches",       "basePrice": 14, "elasticity": 0.8, "wagon": "flat" },
+    { "id": "ironore", "name": "Minerai de fer", "basePrice": 9,  "elasticity": 0.6, "wagon": "gondola" },
+    { "id": "pigiron", "name": "Fonte",          "basePrice": 46, "elasticity": 0.5, "wagon": "gondola" },
+    { "id": "steel",   "name": "Acier",          "basePrice": 78, "elasticity": 0.4, "wagon": "flat" }
   ],
 
   "recipes": [

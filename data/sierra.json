@@ -13,17 +13,19 @@
 
   "//traction": "climbEquivalentKm reste à 0,03, la valeur des trois cartes d'essai, pour que les chiffres soient comparables. Mesuré sur 720 ticks à trois trains : le relief ajoute 8,8 % au coût d'exploitation (225 596 contre 207 360 à 0). La montagne seule (rugosité retirée) en coûte 5,9 %, la rugosité seule (montagne retirée) 4,3 % : les deux ne s'additionnent pas, et la seconde pèse presque autant que la première. La valeur elle-même est une décision ouverte : le commentaire de TractionDef la justifiait par « une rampe de 1 % triple la résistance », ce qui correspondrait à environ 0,2 ; à 0,03, une rampe de 1 % ne coûte que 30 % de plus.",
 
-  "//geographie": "Le constat principal, figé par un test : le relief se paie, mais n'entre dans aucune décision. La trace des marchés est identique au bit près à climbEquivalentKm = 0 ; 0,03 ; 0,09 ; 0,2, et sans montagne ou sans rugosité, sous les deux solveurs : mêmes prix, mêmes écarts, mêmes usines. Seul le résultat net bouge (237 647 → 219 411 → 182 940 → 116 075). La scierie de Cedarton reste à 0 % dans tous les cas, comme celle d'Ironhill dans heartland : ce n'est pas la montagne qui la tue, c'est la règle de coût imputé du transporteur (expectedLoadFactor), qui la fait démarrer à 19 % quand on la passe de 0,6 à 2.",
+  "//geographie": "Sous le modèle de coût mass, le défaut depuis le 27 octobre 2026, le relief entre dans les décisions : la trace des marchés dépend de climbEquivalentKm. Mais il ne sépare pas deux bassins : le wagon suit son chargement, presque tout le coût est marginal (0,03 par chargement et par km), et le rayon des grumes est déjà plus court que les 355 km de Pinecrest à Cedarton. La scierie de Cedarton reste à 0 % à toutes les tractions, relief nul compris, et les planches valent 1,0 × la référence à l'ouest et 1,9 à l'est quelle que soit la montagne (40 trajectoires voisines, docs/FINDINGS.md, « Le coût marginal réel par défaut »). Sous l'ancien modèle flat, la trace des marchés était identique au bit près à toute traction : le relief s'y payait sans entrer dans aucune décision, et un test le fige encore.",
 
   "//trains": "Trois trains, aux arrêts 0, 4 et 9 comme heartland. Balayage en ne changeant que le nombre de trains (au-delà de trois, copies du premier aux arrêts 7, 2, 6) — solveur de référence : 76 695 / 178 139 / 219 411 / 200 890 / 134 325 / 47 819 de 1 à 6 trains ; anticipant : 76 243 / 160 108 / 242 254 / 228 096 / 171 811 / 103 973. L'optimum est à trois sous les deux solveurs, et le taux d'usines desservies monte de 72 % à 82 % pendant que le résultat s'effondre : la même forme que heartland, relief compris.",
 
-  "//anticipating": "Réglé pour ce scénario, pas recopié : le bloc de heartland (4 ticks, poids 1, lissage 0,15) fait ici chuter le résultat de 219 411 (bloc neutre, c'est-à-dire la référence) à 100 693, parce que le charbon se met à tourner en rond — 29 558 chargements livrés pour 723 produits après chauffe, contre 5 389 sous la référence. Grille mesurée (horizon 0 à 8, poids 0,5 et 1, lissage 0,10 à 0,25) : 2 ticks, poids 1, lissage 0,15 donne 242 254 (+10 %), une mobilité de 0,548 contre 0,384 (+43 %) et un changement de tête de 24,3 % contre 20,1 %, avec des voisins cohérents (lissage 0,10 : 232 603 et 0,511 ; 0,25 : 222 325 et 0,587). À 4 et 5 trains il bat encore la référence en résultat et en mobilité ; à 2 trains il perd 10 % de résultat pour une mobilité un peu moindre (0,404 contre 0,442). Le paysage est bruité — un seul cran sur un réglage voisin fait bouger le résultat de 4 à 10 % —, ce qui interdit d'optimiser plus finement que ce voisinage.",
+  "//anticipating": "Sous le modèle de coût mass (27 octobre 2026), grille remesurée sur 40 trajectoires voisines (horizon 0 à 8, poids 0,5 et 1, lissage 0,10 à 0,25) : aucun réglage ne bat plus la référence en résultat. Le réglage ci-dessous reste le meilleur compromis : −3,3 % de résultat (−5 498 ± 1 615) pour une mobilité de 0,547 contre 0,370 (+48 %) ; ceux qui perdent moins n'apportent aucune mobilité. Mesure d'origine, sous l'ancien modèle flat : Réglé pour ce scénario, pas recopié : le bloc de heartland (4 ticks, poids 1, lissage 0,15) fait ici chuter le résultat de 219 411 (bloc neutre, c'est-à-dire la référence) à 100 693, parce que le charbon se met à tourner en rond — 29 558 chargements livrés pour 723 produits après chauffe, contre 5 389 sous la référence. Grille mesurée (horizon 0 à 8, poids 0,5 et 1, lissage 0,10 à 0,25) : 2 ticks, poids 1, lissage 0,15 donne 242 254 (+10 %), une mobilité de 0,548 contre 0,384 (+43 %) et un changement de tête de 24,3 % contre 20,1 %, avec des voisins cohérents (lissage 0,10 : 232 603 et 0,511 ; 0,25 : 222 325 et 0,587). À 4 et 5 trains il bat encore la référence en résultat et en mobilité ; à 2 trains il perd 10 % de résultat pour une mobilité un peu moindre (0,404 contre 0,442). Le paysage est bruité — un seul cran sur un réglage voisin fait bouger le résultat de 4 à 10 % —, ce qui interdit d'optimiser plus finement que ce voisinage.",
 
   "//saisons": "Aucune saison, et c'est mesuré. Celles de heartland coûtent 9 % de résultat (219 862) pour +1,5 % de mobilité. Une saison de chauffage sur le charbon, pourtant de circonstance en montagne, donne +15 % de mobilité à trois trains (amplitude 0,25) mais fait perdre 3,5 à 6 % de résultat à 2, 4 et 5 trains, et devient défavorable à 0,35 comme à 0,5 : un effet qui dépend du nombre de trains et n'est pas monotone n'est pas un réglage, c'est du bruit. Les grumes ne voyagent jamais (la scierie de Pinecrest consomme tout sur place) : leur saison laisse le résultat identique (242 254).",
 
   "//croissance": "growthRatePerTick à 0, pour la même raison que heartland, re-mesurée ici : 0,003, 0,01 et 0,05 font tomber la mobilité de 0,628 à 0,524, 0,486 et 0,529, et le résultat de 243 680 à 218 364, 212 681 et 202 472 (mesures faites avec la saison de charbon à 0,25, écartée ensuite).",
 
   "//entretien": "Entretien des voies à 0,2 par kilomètre de voie et par tick, décision de l'équipe du 30 septembre 2026 : 505 km de voie, 101 par tick, 72 723 sur 720 ticks. Charge fixe, due que les trains roulent ou non : la trace des marchés est identique au caractère près avec et sans elle, et tous les résultats cités dans ce fichier et dans docs/FINDINGS.md avant cette date se lisent donc diminués de 72 723 — 146 689 sous la référence, 169 531 sous l'anticipant, à trois trains.",
+
+  "//cout": "Modèle de coût mass, le défaut depuis le 27 octobre 2026 : chaque marchandise déclare son wagon (cargos[].wagon), dont la tare entre dans ce qu'un chargement coûte à porter. Résultat à trois trains : 171 157 sous la référence, 165 176 sous l'anticipant (165 308 ± 4 834 et 159 810 ± 9 475 sur 40 trajectoires voisines) ; optimum à quatre trains (180 345 ± 3 178). Les chiffres des commentaires //traction, //trains, //saisons, //croissance et //entretien sont ceux de l'ancien modèle flat, qui les rejoue en passant haulage.costModel à flat.",
 
   "//events": "Pas d'événements : ce scénario éprouve le couplage entre relief et économie, et un scénario éprouve une chose à la fois. Un choc local déplacerait la trajectoire de ±4 % à lui seul (voir « Événements historiques et aléatoires » dans docs/FINDINGS.md) et brouillerait la mesure du relief. Le module s'éprouve sur data/heartland-events.json.",
 
@@ -46,7 +48,6 @@
   "haulage": {
     "minMargin": 0.10,
     "minProfitPerUnit": 1.5,
-    "expectedLoadFactor": 0.6,
     "priceImpactSlices": 8,
     "minTradeQty": 0.25
   },
@@ -66,12 +67,12 @@
   },
 
   "cargos": [
-    { "id": "grain",  "name": "Blé",         "basePrice": 10, "elasticity": 0.4 },
-    { "id": "flour",  "name": "Farine",      "basePrice": 34, "elasticity": 0.5 },
-    { "id": "food",   "name": "Nourriture",  "basePrice": 58, "elasticity": 0.3 },
-    { "id": "logs",   "name": "Grumes",      "basePrice": 8,  "elasticity": 0.7 },
-    { "id": "boards", "name": "Planches",    "basePrice": 14, "elasticity": 0.8 },
-    { "id": "coal",   "name": "Charbon",     "basePrice": 14, "elasticity": 0.2 }
+    { "id": "grain",  "name": "Blé",         "basePrice": 10, "elasticity": 0.4, "wagon": "box" },
+    { "id": "flour",  "name": "Farine",      "basePrice": 34, "elasticity": 0.5, "wagon": "box" },
+    { "id": "food",   "name": "Nourriture",  "basePrice": 58, "elasticity": 0.3, "wagon": "box" },
+    { "id": "logs",   "name": "Grumes",      "basePrice": 8,  "elasticity": 0.7, "wagon": "flat" },
+    { "id": "boards", "name": "Planches",    "basePrice": 14, "elasticity": 0.8, "wagon": "flat" },
+    { "id": "coal",   "name": "Charbon",     "basePrice": 14, "elasticity": 0.2, "wagon": "gondola" }
   ],
 
   "recipes": [

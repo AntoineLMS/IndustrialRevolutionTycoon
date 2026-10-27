@@ -2,6 +2,14 @@
 
 *Première campagne de mesure — 27 septembre 2026, scénario `heartland`, 720 ticks (deux années de jeu).*
 
+> **Modèle de coût.** Jusqu'au 27 octobre 2026, tous les scénarios tournaient sous
+> le modèle de coût `flat`, et toutes les sections de ce document jusqu'à « Le coût
+> marginal réel » inclus sont mesurées sous lui, sauf mention contraire. Depuis, le
+> défaut est `mass`, avec une tare par type de wagon et un wagon qui suit son
+> chargement : voir « Le coût marginal réel par défaut », qui remesure les chiffres
+> principaux. Les mesures antérieures se relisent en passant `haulage.costModel` à
+> `flat`, qui rejoue les anciennes empreintes au bit près.
+
 ## La question posée
 
 Le prototype existe pour répondre à une seule question, avant d'engager des
@@ -905,6 +913,11 @@ détruire de valeur ?**
 
 ### Le modèle
 
+*Variante de cette campagne : les 24 wagons font partie de la tare fixe du train, et
+`data/sierra-marginal.json` est le seul scénario qui l'active. Remplacée le
+27 octobre 2026 par un wagon qui suit son chargement, avec une tare par type : voir
+« Le coût marginal réel par défaut ».*
+
 `haulage.costModel` choisit le modèle de coût, `flat` par défaut. Sous `mass`
 (`Transport/TrainCost.cs`), le coût kilométrique d'un train se décompose en une part
 fixe — locomotive, tender et wagons vides, dus plein ou vide — et une part par
@@ -1225,7 +1238,9 @@ deux conditions, et en changeant autre chose en passant.**
 Aucune n'est tranchée ici ; le modèle est livré en opt-in, sur la seule
 `data/sierra-marginal.json`.
 
-1. **Le modèle `mass` doit-il devenir le défaut ?**
+1. **Le modèle `mass` doit-il devenir le défaut ?** *Tranché le 27 octobre 2026 :
+   b, partout* — avec une tare par type de wagon et un wagon qui suit son
+   chargement, ce qui change les chiffres ci-dessous ; voir la section suivante.
    - *a. Non (livré)* : opt-in par les données. Aucune empreinte ne bouge, tous les
      chiffres de ce document restent valables.
    - *b. Partout* : les onze empreintes existantes bougent — le défaut réintroduit
@@ -1250,7 +1265,9 @@ Aucune n'est tranchée ici ; le modèle est livré en opt-in, sur la seule
    - *0,2 (« une rampe de 1 % triple la résistance »)* : 79 573, deux bassins, le
      relief coûte 118 000 sur deux ans ; l'optimum reste à trois trains.
 3. **Le rapport tare / charge des wagons est-il un paramètre physique ou un levier de
-   conception ?** Il décide du rayon : à 4,5 t de tare, pas de scierie lointaine
+   conception ?** *Tranché le 27 octobre 2026 : une constante physique qui dépend du
+   type de wagon* (couvert, tombereau, plat, citerne), et le wagon suit le
+   chargement. Il décide du rayon : à 4,5 t de tare, pas de scierie lointaine
    même à 0,03 ; à 18 t, pas de bassins même à 0,2. La valeur de 9 t est estimée, pas
    documentée (voir SOURCES.md). S'il doit être physique, il faut une meilleure
    source ; s'il est un levier, il faut le dire, et le régler par carte.
@@ -1267,6 +1284,201 @@ Aucune n'est tranchée ici ; le modèle est livré en opt-in, sur la seule
    à 0,03. Soit on l'accepte comme la faillite d'un scénario sans finance, soit les
    trains d'une compagnie sans trésorerie doivent s'arrêter comme sous
    administration.
+
+## Le coût marginal réel par défaut : le wagon suit son chargement
+
+*Décision de l'équipe, 27 octobre 2026, en réponse aux décisions 1 et 3 ci-dessus.
+Scénarios `heartland` et `sierra`, 720 ticks, 90 de chauffe exclus, ensembles de 40
+trajectoires voisines selon le protocole de la section précédente, solveur de
+référence sauf mention contraire.*
+
+### Ce qui a été décidé, et ce que cela change au modèle
+
+Deux décisions :
+
+1. **Le modèle `mass` est le défaut, partout.** `flat` reste disponible
+   (`haulage.costModel = "flat"`) pour relire les mesures antérieures ; il rejoue les
+   anciennes empreintes de heartland et de la sierra au bit près, et un test le
+   vérifie. `data/sierra-marginal.json`, devenu identique à `sierra.json`, est
+   retiré.
+2. **La tare d'un wagon est une constante qui dépend de son type** : couvert (9 t),
+   tombereau (7 t), plat (6 t), citerne (8 t). Chaque marchandise déclare le sien
+   (`cargos[].wagon`) ; sources et méthode dans [SOURCES.md](SOURCES.md), « Masses
+   du train ».
+
+Pour qu'une tare dépende de la marchandise, il fallait dire comment un train est
+composé. Le choix retenu : **le wagon suit le chargement**. Il est attelé quand la
+marchandise est achetée, dételé quand elle est vendue ; un train vide n'est que sa
+locomotive. La seconde option — une composition fixe par train, une capacité par type
+de wagon — a été écartée pour cette étape. La formule devient :
+
+```
+chargement(m) = tonnesPerLoad + tare(wagon de m)                           (15 à 18 t)
+masse_calib   = locomotiveTonnes + calibrationLoadFactor × capacité × 18 t  (380,6 t)
+PerTonneKm    = costPerKm / masse_calib                                      (0,00210)
+FixedPerKm    = PerTonneKm × locomotiveTonnes                                (0,101)
+décision(m)   = PerTonneKm × chargement(m) × Σ km × relief
+```
+
+La calibration a été remesurée au point fixe : à 0,77 (contre 0,89 quand les wagons
+faisaient partie de la tare du train), le coût facturé aux trains de heartland est de
+207 960 contre 207 360 sous `flat` (+0,3 %). Le point fixe oscille entre 0,764 et
+0,776 d'une itération à l'autre : un écart de ±1 % de coût, à l'échelle du bruit
+d'une partie.
+
+**La conséquence principale tient dans ces nombres : presque tout le coût devient
+marginal.** Un train vide coûte 12,6 % de son `costPerKm`, contre 58 % quand les
+24 wagons étaient toujours attelés. Le coût décidé d'un chargement, à plat, passe à :
+
+| | coût par chargement et par km |
+|---|---|
+| `flat` (coût moyen imputé, toute marchandise) | 0,0556 |
+| `mass`, wagons dans la tare du train (campagne précédente) | 0,0158 |
+| **`mass`, wagon plat** (grumes, planches, acier) | **0,0315** |
+| **`mass`, tombereau** (charbon, minerai, fonte) | **0,0336** |
+| **`mass`, wagon couvert** (blé, farine, nourriture) | **0,0378** |
+
+Le coût marginal d'un chargement double par rapport à la campagne précédente, et
+se rapproche du coût moyen de `flat`. Les grumes de Pinecrest à Cedarton (355 km)
+coûtent désormais 11,2 à porter à relief nul, 12,2 à 0,03 et 18,0 à 0,2, contre 5,6 à
+9,0 quand les wagons faisaient partie de la tare du train. Le gain sur ce trajet
+était de 7,6 sous l'ancien modèle.
+
+### Premier résultat : un gain de résultat, plus modeste
+
+| scénario, solveur | `flat` | `mass` (wagon suit le chargement) | `mass` − `flat` (apparié) | campagne précédente |
+|---|---|---|---|---|
+| heartland, référence | 251 011 ± 5 521 | **261 047 ± 3 615** | +10 037 ± 1 141 (+4 %) | 276 564 ± 1 766 |
+| heartland, anticipant | 237 523 ± 10 190 | 242 180 ± 6 819 | +4 657 ± 1 986 (+2 %) | 258 391 ± 5 864 |
+| sierra, référence | 148 590 ± 5 283 | **165 308 ± 4 834** | +16 718 ± 1 061 (+11 %) | 178 919 ± 1 552 |
+| sierra, anticipant | 160 687 ± 9 402 | 159 810 ± 9 475 | −877 ± 1 734 (0 %) | 175 232 ± 6 295 |
+
+*Parties telles qu'écrites : 261 994 (heartland), 237 124 (anticipant), 171 157
+(sierra), 165 176 (anticipant). Les empreintes de référence sont celles de ces
+parties.*
+
+Le modèle fait toujours mieux que `flat` sous la référence, avec une dispersion
+moindre, mais moitié moins que la variante où les wagons restaient attelés. Sous
+l'anticipant, le gain est faible sur heartland et nul sur la sierra.
+
+### Deuxième résultat : les scieries lointaines ne démarrent plus
+
+La scierie d'Ironhill (heartland) et celle de Cedarton (sierra, de l'autre côté du
+col) sont à **0 % dans les 40 réalisations**, sous les deux solveurs, comme sous
+`flat`. Sous la variante où les wagons restaient attelés, elles tournaient à 21 % et
+24 %. La campagne précédente l'avait établi : ce qui fait démarrer une scierie
+lointaine, c'est un coût décidé bas. Un wagon qui suit son chargement fait remonter
+ce coût à 0,03 par chargement et par km, trop haut pour que des grumes à 8 de
+référence traversent 250 à 355 km.
+
+**La tare ne rachète pas la distance.** Mesuré, une variable à la fois :
+
+| variante | heartland | sierra | scieries lointaines |
+|---|---|---|---|
+| tel qu'écrit | 261 047 ± 3 615 | 165 308 ± 4 834 | 0 % |
+| wagon plat à 3 t | 260 748 ± 3 540 | 167 019 ± 3 499 | 0 % |
+| wagon plat à 9 t | 261 230 ± 2 944 | 164 791 ± 3 194 | 0 % |
+| toutes les tares à 0 | 261 017 ± 2 315 | 162 551 ± 3 359 | 0 % |
+
+La calibration renormalise : des wagons plus légers rendent la tonne plus chère, et
+le coût d'un chargement bouge à peine. Ce que la tare fixe, c'est l'écart *entre*
+marchandises — un chargement sur wagon plat coûte 15/18 de ce que coûte un
+chargement en wagon couvert —, pas le rayon de l'ensemble. Ce qui fixe le rayon sous
+ce modèle, c'est la part de la locomotive dans la masse du train : 48 t sur 380.
+C'est elle qui décide quelle part du coût est fixe, donc ne décide de rien.
+
+### Troisième résultat : le relief entre dans les décisions, mais ne fait pas de bassins
+
+| traction | référence | anticipant | planches ouest / est | écart planches | charbon ouest / est | mobilité |
+|---|---|---|---|---|---|---|
+| `flat`, toute traction | 148 590 à 0,03 | 160 687 à 0,03 | 0,97 / 1,95 | ×4,74 | 0,46 / 1,10 | 0,400 |
+| 0 | 181 170 ± 3 527 | 175 851 ± 6 593 | 1,03 / 1,95 | ×4,03 | 0,53 / 1,06 | 0,382 |
+| **0,03** | **165 308 ± 4 834** | 159 810 ± 9 475 | 1,03 / 1,94 | ×3,95 | 0,49 / 1,05 | 0,370 |
+| 0,09 | 133 567 ± 4 368 | 119 740 ± 5 855 | 1,01 / 1,93 | ×3,91 | 0,45 / 1,01 | 0,325 |
+| 0,12 | 116 278 ± 3 823 | 100 860 ± 9 308 | | | | |
+| 0,15 | 100 410 ± 4 313 | 82 110 ± 10 483 | | | | |
+| 0,2 | 55 063 ± 14 199 | 24 822 ± 15 404 | 1,00 / 1,91 | ×3,53 | 0,33 / 0,84 | 0,225 |
+
+*Prix moyens chez les acheteurs, × le prix de référence, référence ; ouest = Westbrook,
+Fordham, Pinecrest ; est = d'Eastgate à Farport.*
+
+La trace des marchés dépend du coût du relief, ce que `flat` ne fait pas. Mais les
+deux bassins séparés par le col n'apparaissent pas comme sous la variante
+précédente : **les planches sont déjà séparées par la distance**, à 1,0 × la
+référence à l'ouest et 1,9 à l'est quelle que soit la traction, et Cedarton ne
+démarre à aucune. Ce que la traction déplace, c'est le reste : le charbon du col
+baisse des deux côtés, l'écart du blé se referme (×2,77 → ×1,81), et la mobilité
+des écarts tombe de 0,38 à 0,23 ; le mécanisme de ces trois effets n'a pas été
+isolé. La montagne coûte à peu près ce qu'elle coûtait sous `flat` (−70 % de
+résultat de 0 à 0,2, contre −73 %), mais le résultat devient instable à 0,2
+(± 14 199).
+
+### Quatrième résultat : la tension du capital s'adoucit beaucoup
+
+| trains | heartland, `flat` | heartland, `mass` | sierra, `flat` | sierra, `mass` |
+|---|---|---|---|---|
+| 1 | 89 038 ± 3 656 | 89 474 ± 5 351 | 10 522 ± 3 733 | 14 342 ± 3 479 |
+| 2 | 183 512 ± 6 704 | 190 009 ± 6 081 | 101 095 ± 5 758 | 106 031 ± 5 514 |
+| 3 | **251 011** ± 5 521 | 261 047 ± 3 615 | **148 590** ± 5 283 | 165 308 ± 4 834 |
+| 4 | 229 069 ± 4 891 | **276 787** ± 3 463 | 126 497 ± 5 528 | **180 345** ± 3 178 |
+| 5 | 161 723 ± 6 658 | 256 283 ± 2 372 | 55 338 ± 6 897 | 162 646 ± 4 300 |
+| 6 | 101 099 ± 6 465 | 243 497 ± 2 385 | −449 479 ± 5 729 | 150 051 ± 3 915 |
+
+*Au-delà de trois, copies du premier train aux arrêts 7, 2, 6. Usines desservies sous
+`mass`, heartland : 73 % à un train, 82 % à six.*
+
+Le rendement du capital s'inverse toujours, mais à quatre trains, et à peine : six
+trains gardent **88 % du résultat de l'optimum sur heartland** et 83 % sur la sierra,
+contre 40 % sous `flat` et 75 % sous la variante précédente. Un train vide ne paie
+plus que sa locomotive : la capacité en trop ne coûte presque rien à faire rouler.
+C'est la propriété qui fait le jeu — livrer referme l'occasion — qui s'affaiblit.
+Elle tient encore à l'échelle des prix (les usines desservies plafonnent à 82 %),
+mais plus à celle du compte d'exploitation.
+
+C'est le point le plus important de cette campagne pour la suite : tant que les
+trains ne coûtent rien à posséder, la tension entre profit et capacité repose sur
+le seul coût de la locomotive qui roule. Le coût de maintenance des véhicules et
+leur prix d'achat (VISION.md, « Les véhicules »), qui ne sont pas encore modélisés,
+deviennent ce qui la porte.
+
+### Ce que le changement a dérangé ailleurs
+
+- **Le bloc `anticipating` de la sierra** ne bat plus la référence en résultat. Grille
+  remesurée sous le nouveau modèle (horizon 0 à 8, poids 0,5 et 1, lissage 0,10 à
+  0,25, 40 réalisations chacun) : **aucun réglage ne bat la référence**. Le réglage
+  livré (2 ticks, poids 1, lissage 0,15) reste le meilleur compromis : −5 498 ± 1 615
+  (−3,3 %) pour une mobilité de 0,547 contre 0,370 (+48 %). Les réglages qui perdent
+  moins (horizon 1, poids 0,5) n'apportent aucune mobilité. Il est conservé, et le
+  test promet désormais de la mobilité pour moins de 5 % de résultat.
+- **Le magnat de `heartland-finance`** était ruiné au tick 101 : le cours tombe de 3,10
+  à 0,50 entre les ticks 76 et 101, juste après ses achats à crédit, et l'appel de
+  marge liquide toute sa ligne. Le scénario n'éprouvait plus les dividendes. Sa part
+  d'achat à crédit passe de 65 % à 60 % : cinq appels de marge, 8 420 actions au
+  premier dividende.
+- **Deux scénarios de faillite des tests de finance** passent explicitement sous
+  `flat` : ils ont besoin d'un train qui perd une somme fixe à chaque tick, qu'il
+  porte quelque chose ou non.
+- **Toutes les empreintes de référence** ont bougé, ce qui est voulu ; les anciennes
+  de heartland et de la sierra restent vérifiées sous `flat`.
+- **La rotation du charbon** : ×15,4 sur heartland (partie telle qu'écrite), contre
+  ×8,7 sous `flat` et ×24 sous la variante précédente. La nourriture reste vers ×74.
+
+### Décisions laissées à l'équipe
+
+1. **Composer les trains ?** Le wagon qui suit son chargement rend presque tout le
+   coût marginal, ce qui raccourcit le rayon et adoucit la tension du capital. La
+   composition fixe — un train déclare ses wagons par type, une marchandise ne se
+   charge que dans un wagon de son type, toute la tare est due plein ou vide —
+   rendrait au coût une part fixe d'environ 58 %, comme dans la campagne précédente,
+   et ferait de la composition une décision du joueur.
+2. **Un coût de possession des trains**, pour que la capacité en trop coûte même à
+   l'arrêt (VISION.md, « Les véhicules », coût de maintenance). Sous ce modèle, c'est
+   lui qui devra porter la tension du capital.
+3. **La valeur de `climbEquivalentKm`** reste ouverte, mais sa question change : il
+   n'y a plus de seuil de bassins à viser, et une traction forte rend le résultat
+   instable (± 14 199 à 0,2).
+4. **Le bloc `anticipating` de la sierra** perd 3 % de résultat : l'accepter pour sa
+   mobilité, ou le retirer.
 
 ## Questions ouvertes pour l'équipe
 
@@ -1316,3 +1528,9 @@ sur cette base, chacun derrière son contrat dans [CONTRACTS.md](CONTRACTS.md).
 
 Ce qui reste à trancher est de l'ordre du choix de conception, pas de la
 faisabilité.
+
+*Précisé le 27 octobre 2026* (« Le coût marginal réel par défaut ») : sous le modèle
+de coût `mass`, devenu le défaut, l'arbitrage entre profit et capacité s'adoucit
+beaucoup — l'optimum passe à quatre trains, et six en gardent 88 % du résultat. Il
+faudra un coût de possession des trains, ou une composition fixe, pour lui rendre sa
+force.
