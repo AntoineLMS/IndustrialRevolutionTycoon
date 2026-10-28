@@ -43,14 +43,14 @@ public sealed class HeightField
     public double HeightKm => (Rows - 1) * CellSizeKm;
 
     /// <summary>
-    /// Les fleuves de la carte, chacun une ligne brisée d'amont en aval. Le relief en
-    /// porte déjà la vallée ; ils sont gardés ici pour ce qui doit savoir où passe
-    /// l'eau — les charrettes, qui ne la franchissent qu'à gué.
+    /// Les fleuves de la carte. Le relief en porte déjà la vallée ; ils sont gardés ici
+    /// pour ce qui doit savoir où passe l'eau — les charrettes, qui ne la franchissent
+    /// qu'aux points de passage, les bateaux, et le géomètre, qui y jette un pont.
     /// </summary>
-    public IReadOnlyList<IReadOnlyList<GeoPoint>> Rivers { get; }
+    public IReadOnlyList<River> Rivers { get; }
 
     public HeightField(int columns, int rows, double cellSizeKm, double[] elevations,
-        IReadOnlyList<IReadOnlyList<GeoPoint>>? rivers = null)
+        IReadOnlyList<River>? rivers = null)
     {
         if (columns < 2 || rows < 2)
             throw new InvalidDataException("Le relief doit compter au moins deux colonnes et deux rangées.");
@@ -64,7 +64,7 @@ public sealed class HeightField
         Rows = rows;
         CellSizeKm = cellSizeKm;
         _elevations = elevations;
-        Rivers = rivers ?? Array.Empty<IReadOnlyList<GeoPoint>>();
+        Rivers = rivers ?? Array.Empty<River>();
     }
 
     public double ElevationAtCell(int column, int row)
@@ -153,11 +153,59 @@ public static class TerrainFactory
         ApplyFeatures(def, columns, rows, elevations);
         if (def.Noise is not null) ApplyNoise(def.Noise, def.CellSizeKm, columns, rows, elevations, scenarioSeed);
 
-        var rivers = def.Features
-            .Where(f => f.Kind == "river")
-            .Select(f => (IReadOnlyList<GeoPoint>)f.Points.Select(p => new GeoPoint(p.XKm, p.YKm)).ToList())
-            .ToList();
+        var rivers = def.Features.Where(f => f.Kind == "river").Select(BuildRiver).ToList();
         return new HeightField(columns, rows, def.CellSizeKm, elevations, rivers);
+    }
+
+    /// <summary>
+    /// Un fleuve tel que les données le déclarent. Ses points de passage et ses ports
+    /// doivent être sur son cours, à moins d'une demi-largeur de vallée : un gué posé à
+    /// côté de l'eau ne servirait à personne, sans que rien le dise.
+    /// </summary>
+    private static River BuildRiver(TerrainFeatureDef def)
+    {
+        string name = string.IsNullOrWhiteSpace(def.Name) ? "fleuve sans nom" : def.Name;
+        var course = def.Points.Select(p => new GeoPoint(p.XKm, p.YKm)).ToList();
+        var shell = new River { Name = name, Points = course, Crossings = [], Ports = [] };
+
+        GeoPoint OnCourse(double x, double y, string what)
+        {
+            var point = new GeoPoint(x, y);
+            var (_, distance) = shell.Project(point);
+            if (distance > def.HalfWidthKm + 1e-9)
+                throw new InvalidDataException(
+                    $"Le fleuve « {name} » : {what} est à {distance:0.##} km de son cours, plus que sa demi-largeur ({def.HalfWidthKm} km).");
+            return point;
+        }
+
+        var crossings = new List<RiverCrossing>();
+        foreach (var c in def.Crossings)
+        {
+            var kind = c.Kind switch
+            {
+                "ford" => CrossingKind.Ford,
+                "bridge" => CrossingKind.Bridge,
+                "ferry" => CrossingKind.Ferry,
+                _ => throw new InvalidDataException(
+                    $"Le fleuve « {name} » : passage « {c.Name} » de sorte inconnue « {c.Kind} » (attendu « ford », « bridge » ou « ferry »)."),
+            };
+            crossings.Add(new RiverCrossing(c.Name, OnCourse(c.XKm, c.YKm, $"le passage « {c.Name} »"), kind));
+        }
+
+        var ports = new List<RiverPort>();
+        foreach (var p in def.Ports)
+        {
+            var point = OnCourse(p.XKm, p.YKm, $"le port « {p.Name} »");
+            ports.Add(new RiverPort(p.Name, point, shell.Project(point).ChainageKm));
+        }
+        if (ports.Select(p => p.Name).Distinct().Count() != ports.Count)
+            throw new InvalidDataException($"Le fleuve « {name} » déclare deux ports du même nom.");
+
+        return new River
+        {
+            Name = name, Points = course, Crossings = crossings,
+            Ports = ports.OrderBy(p => p.ChainageKm).ThenBy(p => p.Name, StringComparer.Ordinal).ToList(),
+        };
     }
 
     private static double[] ParseExplicit(TerrainDef def, out int columns, out int rows)
@@ -290,6 +338,17 @@ public static class TerrainFactory
         return best;
     }
 
+    /// <summary>Le point où se coupent les droites (a, b) et (c, d) ; le milieu de [a, b] si elles sont parallèles.</summary>
+    public static GeoPoint IntersectionPoint(GeoPoint a, GeoPoint b, GeoPoint c, GeoPoint d)
+    {
+        var r = b - a;
+        var s = d - c;
+        double denominator = GeoPoint.Cross(r, s);
+        if (Math.Abs(denominator) < 1e-12) return a + r * 0.5;
+        double t = GeoPoint.Cross(c - a, s) / denominator;
+        return a + r * Maths.Clamp(t, 0, 1);
+    }
+
     /// <summary>Vrai si les segments [a, b] et [c, d] se coupent, extrémités comprises.</summary>
     public static bool SegmentsIntersect(GeoPoint a, GeoPoint b, GeoPoint c, GeoPoint d)
     {
@@ -310,5 +369,115 @@ public static class TerrainFactory
         if (lengthSquared <= 0) return (point - a).Norm;
         double t = Maths.Clamp(GeoPoint.Dot(point - a, ab) / lengthSquared, 0, 1);
         return (point - (a + ab * t)).Norm;
+    }
+}
+
+/// <summary>Sorte d'un point de passage sur un fleuve.</summary>
+public enum CrossingKind
+{
+    Ford,
+    Bridge,
+    Ferry,
+}
+
+/// <summary>Un point de passage sur un fleuve : là, et là seulement, une charrette le franchit.</summary>
+public sealed record RiverCrossing(string Name, GeoPoint Point, CrossingKind Kind);
+
+/// <summary>Un port sur un fleuve, avec sa position le long du cours, depuis la source.</summary>
+public sealed record RiverPort(string Name, GeoPoint Point, double ChainageKm);
+
+/// <summary>
+/// Un fleuve : son cours d'amont en aval, ses points de passage et ses ports. Le
+/// relief porte déjà sa vallée ; ce qui est ici sert à ce qui doit savoir où passe
+/// l'eau — les charrettes, qui ne la franchissent qu'aux points de passage, les
+/// bateaux, qui la suivent de port en port, et le géomètre, qui y jette un pont.
+/// </summary>
+public sealed class River
+{
+    public required string Name { get; init; }
+
+    /// <summary>Le cours, d'amont en aval.</summary>
+    public required IReadOnlyList<GeoPoint> Points { get; init; }
+
+    public required IReadOnlyList<RiverCrossing> Crossings { get; init; }
+
+    /// <summary>Les ports, de l'amont vers l'aval.</summary>
+    public required IReadOnlyList<RiverPort> Ports { get; init; }
+
+    /// <summary>Longueur du cours, en kilomètres.</summary>
+    public double LengthKm
+    {
+        get
+        {
+            double total = 0;
+            for (int i = 1; i < Points.Count; i++) total += (Points[i] - Points[i - 1]).Norm;
+            return total;
+        }
+    }
+
+    /// <summary>Distance le long du cours du point du fleuve le plus proche, et distance à lui.</summary>
+    public (double ChainageKm, double DistanceKm) Project(GeoPoint point)
+    {
+        double best = double.MaxValue, bestChainage = 0, chainage = 0;
+        for (int i = 1; i < Points.Count; i++)
+        {
+            var a = Points[i - 1];
+            var ab = Points[i] - a;
+            double length = ab.Norm;
+            double t = length > 0 ? Maths.Clamp(GeoPoint.Dot(point - a, ab) / (length * length), 0, 1) : 0;
+            double distance = (point - (a + ab * t)).Norm;
+            if (distance < best) { best = distance; bestChainage = chainage + t * length; }
+            chainage += length;
+        }
+        return (bestChainage, best);
+    }
+
+    /// <summary>Le point du cours à cette distance de la source.</summary>
+    public GeoPoint PointAt(double chainageKm)
+    {
+        double chainage = 0;
+        for (int i = 1; i < Points.Count; i++)
+        {
+            double length = (Points[i] - Points[i - 1]).Norm;
+            if (chainageKm <= chainage + length || i == Points.Count - 1)
+            {
+                double t = length > 0 ? Maths.Clamp((chainageKm - chainage) / length, 0, 1) : 0;
+                return Points[i - 1] + (Points[i] - Points[i - 1]) * t;
+            }
+            chainage += length;
+        }
+        return Points[^1];
+    }
+
+    /// <summary>Les sommets du cours strictement entre deux distances, dans le sens du trajet.</summary>
+    public IEnumerable<(GeoPoint Point, double ChainageKm)> VerticesBetween(double fromKm, double toKm)
+    {
+        var vertices = new List<(GeoPoint, double)>();
+        double chainage = 0;
+        for (int i = 0; i < Points.Count; i++)
+        {
+            if (i > 0) chainage += (Points[i] - Points[i - 1]).Norm;
+            if (chainage > Math.Min(fromKm, toKm) + 1e-9 && chainage < Math.Max(fromKm, toKm) - 1e-9)
+                vertices.Add((Points[i], chainage));
+        }
+        if (toKm < fromKm) vertices.Reverse();
+        return vertices;
+    }
+
+    /// <summary>
+    /// Les points où le segment [a, b] coupe le cours. Un segment qui passe par un
+    /// sommet du cours coupe les deux segments qui s'y rejoignent : le point n'est
+    /// compté qu'une fois, sans quoi un passage se paierait deux fois.
+    /// </summary>
+    public IEnumerable<GeoPoint> Intersections(GeoPoint a, GeoPoint b)
+    {
+        var found = new List<GeoPoint>();
+        for (int i = 1; i < Points.Count; i++)
+        {
+            if (!TerrainFactory.SegmentsIntersect(a, b, Points[i - 1], Points[i])) continue;
+            var point = TerrainFactory.IntersectionPoint(a, b, Points[i - 1], Points[i]);
+            if (found.All(p => (p - point).Norm > 1e-9)) found.Add(point);
+        }
+        return found;
     }
 }

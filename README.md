@@ -74,7 +74,8 @@ plafond de prix à jamais. Sur un scénario à événements, il affiche aussi le
 attendu du catalogue aléatoire : un catalogue qui ne frappe que dans un sens est
 un déséquilibre structurel du même genre.
 
-Pour la sierra — l'économie de heartland posée sur un relief :
+Pour la sierra — l'économie de heartland posée sur un relief, avec deux fleuves que
+la voie franchit sur des ponts, des gués, et des bateaux sur l'Eastwater :
 
 ```bash
 dotnet run --project src/RailTycoon.Harness -- --scenario data/sierra.json

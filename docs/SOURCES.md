@@ -316,8 +316,28 @@ sont **[estimé]**, par ordre de grandeur, et chacune est un réglage du scénar
 - **Pente maximale — 10 %.** Au-delà, une charrette chargée ne passe pas ; elle
   contourne. Les routes de montagne de l'époque se tenaient sous cette pente par des
   lacets, que la grille du relief ne représente pas à l'échelle d'une maille.
-- **Gué — 5 km.** Le détour jusqu'au gué, l'attente, le passage. Un fleuve se franchit
-  partout au même prix : il n'y a ni gués nommés, ni ponts ouverts aux charrettes.
+- **Points de passage — gué 5 km, bac 2 km, pont 0,5 km.** Ce que vaut le passage d'un
+  fleuve, en kilomètres de route : le détour par le gué et l'attente, le bac et son
+  péage, le pont. Un fleuve ne se franchit qu'à un point de passage (depuis le
+  28 octobre 2026) ; les ponts du chemin de fer en sont.
+
+## Transport par eau — `economy.waterways`
+
+Le transport par eau (FINDINGS.md, « Fleuves, points de passage et transport par eau »)
+a besoin de quatre valeurs. Elles sont **[estimé]**, par ordre de grandeur, et chacune
+est un réglage du scénario.
+
+- **Descente — 40 km par jour.** Une péniche ou un chaland portés par le courant, sur
+  une journée de navigation.
+- **Remontée — 15 km par jour.** Le halage, à la vitesse d'un attelage au pas : celle
+  d'une charrette.
+- **0,02 par chargement et par kilomètre.** Le fret fluvial était, au XIXᵉ siècle,
+  moins cher à la tonne-kilomètre que le chemin de fer : la valeur est posée sous le
+  coût marginal d'un train du jeu (0,03 à 0,04).
+- **1 par chargement et par déchargement.** La manutention au port, à chaque
+  transbordement — c'est elle qui rend le bateau inutile sur une courte distance.
+- **Le pont d'une voie sur un fleuve — 0,3 km au moins** (`alignment.riverBridgeLengthKm`),
+  quelle que soit la hauteur du remblai : une voie ne passe pas l'eau sur de la terre.
 
 ## Second scénario — `data/ironpeak.json`
 

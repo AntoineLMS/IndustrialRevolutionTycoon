@@ -11,8 +11,10 @@
 > marchandise s'est mis à suivre son entrepôt : voir « Le prix suit l'entrepôt du
 > producteur ». Puis chaque installation a reçu son propre marché : voir « Chaque
 > installation a son marché » ; et le charroi est devenu lent et sans plafond : voir
-> « Le charroi : tout passe, plus lentement » ; et les charrettes suivent le terrain :
-> voir « Les charrettes suivent le terrain ». Les mesures d'avant ce dernier changement ne se
+> « Le charroi : tout passe, plus lentement » ; les charrettes suivent le terrain :
+> voir « Les charrettes suivent le terrain » ; et la sierra a reçu deux fleuves, des
+> points de passage et des bateaux : voir « Fleuves, points de passage et transport par
+> eau ». Les mesures d'avant ce dernier changement ne se
 > rejouent plus au bit près : aucun réglage ne remet la forêt et la scierie d'une ville
 > sur un même marché.
 
@@ -1854,14 +1856,114 @@ pour −2,9 %.
 
 ### Décisions laissées à l'équipe
 
-1. **Mettre des fleuves sur les cartes.** Le modèle les connaît, aucune carte n'en a.
+1. **Mettre des fleuves sur les cartes.** *Fait le 28 octobre 2026 pour la sierra*
+   (section suivante). Le modèle les connaît, aucune carte n'en a.
    En ajouter un à la sierra changerait aussi son réseau — la vallée creusée déplace
    le devis et les rampes — et toutes ses mesures.
-2. **Les gués et les ponts.** Un fleuve se passe partout au même prix. Des gués nommés,
+2. **Les gués et les ponts.** *Fait le 28 octobre 2026* (section suivante). Un fleuve se
+   passe partout au même prix. Des gués nommés,
    ou les ponts du réseau ferré ouverts aux charrettes, feraient converger les routes
    vers des points de passage — là où une gare capterait le plus.
-3. **Le transport par eau.** Les fleuves ne portent rien : ni péniches, ni flottage du
-   bois. C'était le grand concurrent du chemin de fer au XIXᵉ siècle.
+3. **Le transport par eau.** *Fait le 28 octobre 2026* (section suivante). Les fleuves
+   ne portent rien : ni péniches, ni flottage du bois. C'était le grand concurrent du chemin de fer au XIXᵉ siècle.
+
+## Fleuves, points de passage et transport par eau
+
+*Décisions de l'équipe, 28 octobre 2026 : mettre des fleuves sur les cartes, mettre en
+place la logique des points de passage, et le transport par eau. Même protocole que les
+sections précédentes, sur la sierra.*
+
+### Le modèle
+
+**Un fleuve ne se franchit qu'à un point de passage.** Chaque fleuve déclare ses
+points de passage (`crossings`) : un gué (`ford`, 5 km de route), un pont (`bridge`,
+0,5 km) ou un bac (`ferry`, 2 km). Les ponts du chemin de fer s'y ajoutent d'eux-mêmes :
+là où une voie coupe un fleuve, le géomètre construit un pont de 0,3 km au moins
+(`alignment.riverBridgeLengthKm`), quelle que soit la hauteur du remblai, et les
+charrettes l'empruntent. Un pas de la route qui coupe le fleuve à plus d'une maille de
+tout passage ne passe pas : la route longe le fleuve jusqu'au passage le moins cher, ou
+le contourne par sa source.
+
+**Les fleuves portent des bateaux, de port en port** (`ports`). Un chargement qui voyage
+sans train prend la route la moins chère, qui peut être la route jusqu'à un port, le
+fleuve, et la route depuis un autre : chaque chargement et déchargement coûte 1, le
+fleuve 0,02 par chargement et par kilomètre, et le bateau fait 40 km par jour à la
+descente, 15 à la remontée (`economy.waterways`, valeurs estimées dans
+[SOURCES.md](SOURCES.md), « Transport par eau »). Un port se raccorde à la rive où il est
+posé, et à elle seule : un port n'est pas un passage. Comme une charrette, un bateau
+n'appartient à personne, et un train le capte quand il passe dans le rayon de sa gare.
+
+La route minimise le coût, et le temps se compte sur la route retenue : un chargement
+avance désormais en jours, au rythme de la charrette ou du bateau sur chaque tronçon.
+Sans fleuve, les routes et les traces sont celles d'avant, au bit près.
+
+**Une contrainte de dessin.** Un fleuve dont le cours passe exactement sur les nœuds de
+la grille du relief isole ces nœuds — chaque pas qui les touche compte comme un
+franchissement — et un port posé sur l'eau n'est alors joignable d'aucune rive. Le
+premier dessin de l'Eastwater, sur la rangée y = 82, laissait ses cinq ports
+injoignables et aucun bateau ne partait. Les cours passent donc entre les rangées de la
+grille, et les ports sur la rive qu'ils desservent.
+
+### Les fleuves de la sierra
+
+- **La Westwater**, torrent non navigable, descend du nord au sud et coupe la ligne
+  entre Westbrook et Fordham (x = 35), où la voie jette un pont. Un seul gué, 40 km au
+  sud : les charrettes entre les deux villes passent par le pont du chemin de fer.
+- **L'Eastwater** naît au pied du col, au sud de la ligne, la coupe entre Ashvale et
+  Baymouth (x = 332), où la voie jette un pont, puis la longe à 3 km au nord jusqu'à la
+  mer, à Farport. Navigable d'Ashvale à la mer : cinq ports, quatre à portée d'une gare.
+  Un gué en amont, le gué des Saules.
+
+Le devis du réseau passe de 1 524 566 à 1 584 566 : deux ponts de 30 000, à fleur de sol.
+La montagne se franchit toujours au col sans ouvrage.
+
+### Ce qui passe par l'eau
+
+*Partie telle qu'écrite, 720 ticks.*
+
+| marchandise | partie par l'eau | captée en route par un train |
+|---|---|---|
+| blé | 178 | — |
+| farine | 148 | 58 |
+| nourriture | 185 | 331 |
+| charbon | 155 | 18 |
+
+Le plus gros flux remonte le fleuve : le blé de Southfield vers le moulin d'Ashvale (178
+chargements), dont la farine redescend vers la boulangerie de Baymouth (91). Le charbon
+passe de port en port le long de la côte. De Baymouth à Farport, un chargement coûte
+8,84 par l'eau en 4,1 jours, contre 74 par la route en 10 jours ; d'Ashvale à Baymouth,
+6,72 en 2 jours.
+
+### Résultats
+
+| sierra | sans fleuve | avec fleuves |
+|---|---|---|
+| référence | 185 889 ± 3 701 | **183 148 ± 3 419** |
+| anticipant | 181 756 ± 6 011 | 178 720 ± 5 267 |
+
+*Parties telles qu'écrites : 184 306 et 176 361.*
+
+- **Les bateaux prennent un peu au chemin de fer** : −1,5 % de résultat sous la
+  référence. Ils servent ce que le train servait mal — le blé qui remonte vers Ashvale,
+  dont le moulin passe de 92 % à 96 % — et le train en capte une partie au passage de
+  ses gares.
+- **Le nombre de trains** : optimum à quatre (201 133 ± 2 377), six à 78 %.
+- **Le bloc `anticipating`** garde sa propriété en moyenne : −4 428 ± 897 (−2,4 %),
+  mobilité 0,449 contre 0,331 ; sur les dix voisines du test, ×1,39 pour −2,6 %.
+
+### Décisions laissées à l'équipe
+
+1. **Des fleuves sur les autres cartes.** Heartland, ironpeak et Timberford n'ont pas de
+   relief, donc pas de fleuve ; les cartes d'essai du réseau (plaine, vallée, col)
+   servent de référence à ses devis et n'en ont pas reçu. En poser exige de leur donner
+   un relief, ce qui change leur nature.
+2. **Les bateaux appartiennent à personne.** Une compagnie de navigation concurrente,
+   ou une compagnie de chemin de fer qui affrète des bateaux, serait un autre jeu.
+3. **Le prix du bateau.** À 0,02 par chargement et par kilomètre, le fleuve coûte moins
+   que le train (0,03 à 0,04 au coût marginal), mais va trois fois moins vite à la
+   descente et huit fois moins à la remontée, et paie deux manutentions : le train
+   gagne par la vitesse, par ses gares, qui ne sont pas toutes au bord de l'eau, et par
+   la capture. C'est le réglage qui décide qui tient la côte est.
 
 ## Questions ouvertes pour l'équipe
 

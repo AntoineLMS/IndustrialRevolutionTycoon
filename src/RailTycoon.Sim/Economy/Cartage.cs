@@ -1,9 +1,10 @@
 namespace RailTycoon.Sim.Economy;
 
 /// <summary>
-/// Une charrette en route : une marchandise partie d'un marché vers un autre, qui
-/// avance chaque jour et n'arrive qu'au bout du trajet. Elle n'appartient à personne ;
-/// un train peut la capter quand elle passe dans le rayon de sa gare.
+/// Un chargement en route sans train : une marchandise partie d'un marché vers un
+/// autre, en charrette et parfois en bateau, qui avance chaque jour sur sa route et
+/// n'arrive qu'au bout. Il n'appartient à personne ; un train peut le capter quand il
+/// passe dans le rayon de sa gare.
 /// </summary>
 public sealed class CartShipment
 {
@@ -11,11 +12,8 @@ public sealed class CartShipment
     public required Market From { get; init; }
     public required Market To { get; init; }
 
-    /// <summary>La route qu'elle suit : le terrain, ou la ligne droite sur une carte sans relief.</summary>
+    /// <summary>La route qu'il suit : le terrain et les fleuves, ou la ligne droite sur une carte sans relief.</summary>
     public required CartRoute Route { get; init; }
-
-    /// <summary>Longueur du trajet, en kilomètres de route : montées et gués compris.</summary>
-    public double DistanceKm => Route.LengthKm;
 
     /// <summary>Prix d'un chargement au marché de départ, au moment du départ.</summary>
     public required double SourcePrice { get; init; }
@@ -23,24 +21,35 @@ public sealed class CartShipment
     /// <summary>Chargements encore sur la charrette.</summary>
     public double Quantity;
 
-    /// <summary>Kilomètres de route déjà parcourus.</summary>
-    public double TravelledKm;
+    /// <summary>Jours de voyage déjà faits.</summary>
+    public double TravelledDays;
+
+    /// <summary>Vrai tant qu'il est sur un bateau.</summary>
+    public bool OnWater
+    {
+        get
+        {
+            for (int i = 0; i < Route.ByWater.Count; i++)
+                if (TravelledDays < Route.Days[i + 1] - 1e-12) return Route.ByWater[i];
+            return false;
+        }
+    }
 
     /// <summary>Position actuelle sur la carte, le long de sa route.</summary>
     public (double XKm, double YKm) Position
     {
         get
         {
-            var point = Route.PointAt(TravelledKm);
+            var point = Route.PointAt(TravelledDays);
             return (point.XKm, point.YKm);
         }
     }
 
     /// <summary>
-    /// Ce que coûte un chargement là où se trouve la charrette : son prix de départ,
-    /// plus le charroi déjà parcouru. C'est le prix qu'un train paie pour la capter.
+    /// Ce que coûte un chargement là où il se trouve : son prix de départ, plus le
+    /// voyage déjà fait. C'est le prix qu'un train paie pour le capter.
     /// </summary>
-    public double PriceHere(CartageDef cfg) => SourcePrice + cfg.CostPerLoad + cfg.CostPerLoadKm * TravelledKm;
+    public double PriceHere(CartageDef cfg) => SourcePrice + cfg.CostPerLoad + Route.CostAt(TravelledDays);
 }
 
 /// <summary>Ce que le charroi a fait depuis le début de la partie, par marchandise. Télémétrie.</summary>
@@ -61,7 +70,16 @@ public sealed class CartageState
     public double Delivered(string cargoId) => _delivered.GetValueOrDefault(cargoId);
     public double Captured(string cargoId) => _captured.GetValueOrDefault(cargoId);
 
-    internal void AddDispatched(string cargoId, double qty) => _dispatched[cargoId] = Dispatched(cargoId) + qty;
+    private readonly Dictionary<string, double> _byWater = new();
+
+    /// <summary>Chargements partis sur une route qui emprunte un fleuve.</summary>
+    public double DispatchedByWater(string cargoId) => _byWater.GetValueOrDefault(cargoId);
+
+    internal void AddDispatched(string cargoId, double qty, bool byWater)
+    {
+        _dispatched[cargoId] = Dispatched(cargoId) + qty;
+        if (byWater) _byWater[cargoId] = DispatchedByWater(cargoId) + qty;
+    }
     internal void AddDelivered(string cargoId, double qty) => _delivered[cargoId] = Delivered(cargoId) + qty;
     public void AddCaptured(string cargoId, double qty) => _captured[cargoId] = Captured(cargoId) + qty;
 
@@ -110,20 +128,20 @@ public static class Cartage
     {
         var cfg = world.Def.Economy.Cartage;
         var state = world.Cartage;
-        state.Router ??= new CartRouter(world.Terrain, cfg);
+        state.Router ??= new CartRouter(world);
 
-        Advance(state, cfg);
+        Advance(state);
         Dispatch(world, state, cfg);
     }
 
-    private static void Advance(CartageState state, CartageDef cfg)
+    private static void Advance(CartageState state)
     {
         var stillOnTheRoad = new List<CartShipment>(state.Shipments.Count);
         foreach (var shipment in state.Shipments)
         {
             if (shipment.Quantity <= 1e-12) continue;
-            shipment.TravelledKm = Math.Min(shipment.DistanceKm, shipment.TravelledKm + cfg.SpeedKmPerTick);
-            if (shipment.TravelledKm >= shipment.DistanceKm - 1e-9)
+            shipment.TravelledDays = Math.Min(shipment.Route.TotalDays, shipment.TravelledDays + 1);
+            if (shipment.TravelledDays >= shipment.Route.TotalDays - 1e-9)
             {
                 shipment.To.CartIn(shipment.Quantity);
                 state.AddDelivered(shipment.CargoId, shipment.Quantity);
@@ -179,12 +197,13 @@ public static class Cartage
                 double qty = Math.Min(cfg.LoadsPerCart, from.SellableStock(horizon, retained));
                 from.CartOut(qty);
                 incoming[to] = incoming.GetValueOrDefault(to) + qty;
+                var route = state.Router!.Route(from, to);
                 state.Shipments.Add(new CartShipment
                 {
                     CargoId = cargoId, From = from, To = to,
-                    Route = state.Router!.Route(from, to), SourcePrice = fromPrice, Quantity = qty,
+                    Route = route, SourcePrice = fromPrice, Quantity = qty,
                 });
-                state.AddDispatched(cargoId, qty);
+                state.AddDispatched(cargoId, qty, route.UsesWater);
             }
         }
     }
@@ -204,18 +223,29 @@ public static class Cartage
     public static CartRoute Route(WorldState world, Market from, Market to)
     {
         var state = world.Cartage;
-        state.Router ??= new CartRouter(world.Terrain, world.Def.Economy.Cartage);
+        state.Router ??= new CartRouter(world);
         return state.Router.Route(from, to);
     }
 
+    /// <summary>Le routeur du monde : routes, points de passage, ports.</summary>
+    public static CartRouter Router(WorldState world)
+        => world.Cartage.Router ??= new CartRouter(world);
+
     /// <summary>
-    /// Ce que coûte une charrette par chargement entre deux marchés, sur sa route.
-    /// Infini si aucune route ne passe — une pente trop raide partout.
+    /// Ce que coûte un chargement entre deux marchés sans train, sur sa route : le
+    /// chargement au départ, plus la route et le fleuve. Infini si rien ne passe — une
+    /// pente trop raide partout, un fleuve sans passage.
     /// </summary>
     public static double Cost(WorldState world, Market from, Market to)
+        => world.Def.Economy.Cartage.CostPerLoad + Route(world, from, to).TotalCost;
+
+    /// <summary>Refuse au chargement un transport par eau aux réglages absurdes.</summary>
+    public static void Validate(WaterwaysDef cfg)
     {
-        var cfg = world.Def.Economy.Cartage;
-        return cfg.CostPerLoad + cfg.CostPerLoadKm * Route(world, from, to).LengthKm;
+        if (cfg.DownstreamKmPerTick <= 0 || cfg.UpstreamKmPerTick <= 0)
+            throw new InvalidDataException("economy.waterways : un bateau qui n'avance pas n'arrive jamais.");
+        if (cfg.CostPerLoad < 0 || cfg.CostPerLoadKm < 0)
+            throw new InvalidDataException("economy.waterways : un coût ne peut pas être négatif.");
     }
 
     /// <summary>Refuse au chargement un charroi aux réglages absurdes.</summary>
@@ -229,8 +259,8 @@ public static class Cartage
             throw new InvalidDataException("economy.cartage.loadsPerCart doit être strictement positif.");
         if (cfg.MaxCartsPerTick < 0)
             throw new InvalidDataException("economy.cartage.maxCartsPerTick ne peut pas être négatif.");
-        if (cfg.ClimbKmPerMetre < 0 || cfg.RiverCrossingKm < 0)
-            throw new InvalidDataException("economy.cartage : une montée ou un gué ne peut pas raccourcir la route.");
+        if (cfg.ClimbKmPerMetre < 0 || cfg.FordKm < 0 || cfg.BridgeKm < 0 || cfg.FerryKm < 0)
+            throw new InvalidDataException("economy.cartage : une montée ou un passage ne peut pas raccourcir la route.");
         if (cfg.MaxGradePercent <= 0)
             throw new InvalidDataException("economy.cartage.maxGradePercent doit être strictement positif.");
     }

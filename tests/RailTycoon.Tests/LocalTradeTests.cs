@@ -128,13 +128,15 @@ internal static class LocalTradeTests
             sim.Step();
             var cart = sim.World.Cartage.Shipments.FirstOrDefault(c => c.CargoId == "logs" && ReferenceEquals(c.To, sawmill));
             Check.True(cart is not null, "une charrette de grumes doit partir vers la scierie");
-            Check.Near(45, cart!.DistanceKm, 1e-9, "la forêt est à 45 km de la scierie");
-            Check.Near(0, cart.TravelledKm, 1e-12, "partie aujourd'hui, elle n'a pas encore roulé");
+            Check.Near(45, cart!.Route.MapKm, 1e-9, "la forêt est à 45 km de la scierie");
+            Check.Near(3, cart.Route.TotalDays, 1e-9, "trois jours de route à 15 km par jour");
+            Check.Near(0, cart.TravelledDays, 1e-12, "partie aujourd'hui, elle n'a pas encore roulé");
 
             sim.Step();
-            Check.Near(15, cart.TravelledKm, 1e-9, "un jour de route");
+            Check.Near(1, cart.TravelledDays, 1e-9, "un jour de route");
+            Check.Near(15, cart.Position.XKm - cart.From.XKm, 1e-9, "quinze kilomètres faits");
             sim.Step();
-            Check.Near(30, cart.TravelledKm, 1e-9, "deux jours de route");
+            Check.Near(2, cart.TravelledDays, 1e-9, "deux jours de route");
             Check.True(sim.World.Cartage.Shipments.Contains(cart), "encore en route");
             Check.Near(0, sim.World.Cartage.Delivered("logs"), 1e-12, "rien n'est livré avant l'arrivée");
 
@@ -185,7 +187,7 @@ internal static class LocalTradeTests
             var cart = new CartShipment
             {
                 CargoId = "logs", From = city.ProductionMarket("logs")!, To = city.Industries.Single().Input("logs"),
-                Route = RailTycoon.Sim.Economy.CartRoute.Straight(new(0, 0), new(12, 0)), SourcePrice = 2.0, Quantity = 5,
+                Route = CartRoute.Straight(new(0, 0), new(12, 0), scenario.Economy.Cartage), SourcePrice = 2.0, Quantity = 5,
             };
             sim.World.Cartage.Shipments.Add(cart);
             double initial = Invariants.InitialStockTotal(sim.World) + 5;

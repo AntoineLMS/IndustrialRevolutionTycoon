@@ -51,7 +51,9 @@ internal static class ReferenceTraceTests
     /// l'autre, que les trains captent. Elles ont toutes bougé, et c'était voulu —
     /// sauf la plaine et la vallée au dernier changement : leurs deux villes sont trop
     /// loin pour qu'une charrette de blé paie son trajet. Quand les charrettes ont
-    /// suivi le terrain, seules les cartes à relief ont bougé : le col et la sierra. Les empreintes d'avant ne se
+    /// suivi le terrain, seules les cartes à relief ont bougé : le col et la sierra.
+    /// Reposées le 28 octobre 2026 pour la sierra seule, quand elle a reçu ses deux
+    /// fleuves, leurs ponts et ses bateaux. Les empreintes d'avant ne se
     /// rejouent plus : aucun réglage ne remet la forêt et la scierie d'une ville sur
     /// un même marché.
     /// </para>
@@ -70,8 +72,8 @@ internal static class ReferenceTraceTests
         new("terrain-plain.json", "reference", "5F2999D90D0AA937"),
         new("terrain-valley.json", "reference", "DDBA38044A8EFC76"),
         new("terrain-pass.json", "reference", "664AC088E2B0B1F1"),
-        new("sierra.json", "reference", "A9BEF9BA08986F15"),
-        new("sierra.json", "anticipating", "FC846852DF0ACEFC"),
+        new("sierra.json", "reference", "8AB504C344FC8A4E"),
+        new("sierra.json", "anticipating", "FEAF86DF1A70E7AD"),
         // Une ville, deux gares, un train qui n'en sort jamais : le commerce entre
         // installations d'une même ville.
         new("timberford.json", "reference", "CBC2302C94B8BFB3"),

@@ -381,6 +381,7 @@ internal static class WorldBuilder
     {
         TrainCost.Validate(s);
         Cartage.Validate(s.Economy.Cartage);
+        Cartage.Validate(s.Economy.Waterways);
 
         var prices = s.PriceModel;
         if (prices.ProducerMaxMultiplier < prices.MinMultiplier || prices.ProducerMaxMultiplier > prices.MaxMultiplier)

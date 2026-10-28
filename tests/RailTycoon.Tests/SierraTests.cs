@@ -34,25 +34,34 @@ internal static class SierraTests
                     $"{b.CargoName} : offre/demande = {b.Ratio:0.00} ({b.Verdict})");
         });
 
-        runner.Add("sierra — la montagne se franchit au col, sans ouvrage d'art", () =>
+        runner.Add("sierra — la montagne se franchit au col, et les fleuves sur deux ponts", () =>
         {
             // Le devis est une valeur de référence au même titre que ceux des cartes
             // d'essai : s'il bouge, le relief ou le géomètre a changé, et les
             // chiffres de FINDINGS.md avec lui. Le col est posé juste sous la rampe
             // maximale : un col qui exigerait des viaducs mesurerait le devis, pas
-            // le couplage réseau ↔ économie qu'on étudie ici.
+            // le couplage réseau ↔ économie qu'on étudie ici. Les seuls ouvrages sont
+            // les ponts sur la Westwater et l'Eastwater (28 octobre 2026), 30 000
+            // chacun : 1 524 566 sans eux.
             var world = new Simulation(ScenarioLoader.Load(SierraPath())).World;
             var network = world.Network ?? throw new AssertionException("sierra doit déclarer un réseau");
-            Check.Near(1_524_565.86, network.BuiltCost, 0.5, "devis total du réseau");
+            Check.Near(1_584_565.84, network.BuiltCost, 0.5, "devis total du réseau");
 
             double limit = world.Def.Network.Alignment.MaxGradePercent;
+            var bridged = new List<string>();
             foreach (var edge in network.Graph.Edges)
             {
-                Check.True(edge.Construction.Structures.Count == 0,
-                    $"{edge.Id} : {edge.Construction.Structures.Count} ouvrage(s), le col devait suffire");
+                foreach (var structure in edge.Construction.Structures)
+                {
+                    Check.True(structure.Kind == RailTycoon.Sim.Network.StructureKind.Bridge && structure.MaxHeightM < 1,
+                        $"{edge.Id} : {structure.Kind} de {structure.MaxHeightM:0} m, le col devait suffire");
+                    bridged.Add(edge.Id);
+                }
                 Check.True(edge.Construction.MaxGradePercent <= limit + 1e-6,
                     $"{edge.Id} : {edge.Construction.MaxGradePercent:0.###} % > {limit:0.###} %");
             }
+            Check.Equal("ash-bay,wes-for", string.Join(",", bridged.OrderBy(e => e, StringComparer.Ordinal)),
+                "un pont sur chaque fleuve, là où la ligne le coupe");
 
             // Le relief doit réellement peser sur l'exploitation, et dans un seul
             // sens : on monte au col depuis l'est (961 m), on en descend vers l'est.
@@ -130,7 +139,8 @@ internal static class SierraTests
             // tient en moyenne : −6 251 ± 1 282 de résultat (−3,4 %), mobilité 0,410
             // contre 0,303 (×1,35) ; et depuis que les charrettes suivent le terrain,
             // −4 133 ± 1 189 (−2,2 %), mobilité 0,440 contre 0,312, toujours 21 parties
-            // sur 40 au-dessus des deux seuils. Elle se vérifie donc sur la moyenne de dix
+            // sur 40 au-dessus des deux seuils ; avec les fleuves et les bateaux (28
+            // octobre), −4 428 ± 897, mobilité 0,449 contre 0,331, 21 sur 40. Elle se vérifie donc sur la moyenne de dix
             // trajectoires voisines, comme le changement de tête de heartland : une
             // partie unique est un tirage. Les seuils gardent de la marge : ils
             // protègent contre une régression, ils ne consacrent pas ces chiffres.

@@ -269,6 +269,36 @@ public sealed class EconomyDef
 
     /// <summary>Le charroi, entre tous les marchés de la carte. Voir <see cref="CartageDef"/>.</summary>
     public CartageDef Cartage { get; set; } = new();
+
+    /// <summary>Le transport par eau, de port en port sur les fleuves. Voir <see cref="WaterwaysDef"/>.</summary>
+    public WaterwaysDef Waterways { get; set; } = new();
+}
+
+/// <summary>
+/// Le transport par eau : des bateaux qui suivent le cours d'un fleuve, de port en port.
+/// <para>
+/// Il fait partie du charroi : une marchandise qui part d'un marché vers un autre prend
+/// la route la moins chère, qui peut être la route jusqu'à un port, le fleuve jusqu'à un
+/// autre, et la route jusqu'à l'arrivée. Le bateau est bon marché et lent, plus lent
+/// encore à la remontée ; chaque chargement ou déchargement dans un port se paie. Comme
+/// une charrette, un bateau n'appartient à personne, et un train peut le capter dans le
+/// rayon de sa gare. Décision de l'équipe du 28 octobre 2026 ; valeurs estimées, voir
+/// docs/SOURCES.md, « Transport par eau ».
+/// </para>
+/// </summary>
+public sealed class WaterwaysDef
+{
+    /// <summary>Coût d'un chargement ou d'un déchargement dans un port, par chargement.</summary>
+    public double CostPerLoad { get; set; } = 1.0;
+
+    /// <summary>Coût d'un chargement par kilomètre de fleuve.</summary>
+    public double CostPerLoadKm { get; set; } = 0.02;
+
+    /// <summary>Kilomètres par jour en descendant le fleuve.</summary>
+    public double DownstreamKmPerTick { get; set; } = 40;
+
+    /// <summary>Kilomètres par jour en le remontant, au halage.</summary>
+    public double UpstreamKmPerTick { get; set; } = 15;
 }
 
 /// <summary>
@@ -317,11 +347,17 @@ public sealed class CartageDef
     public double MaxGradePercent { get; set; } = 10;
 
     /// <summary>
-    /// Kilomètres de route que vaut le passage d'un fleuve à gué : le détour jusqu'au
-    /// gué, l'attente, le déchargement [estimé]. Une charrette ne franchit donc un
-    /// fleuve qu'une fois, et le longe sinon.
+    /// Kilomètres de route que vaut le passage d'un fleuve, selon le point de passage
+    /// [estimé]. Un fleuve ne se franchit qu'à un point de passage — un gué, un pont, un
+    /// bac déclarés sur son cours, ou un pont du chemin de fer — et la route y converge.
     /// </summary>
-    public double RiverCrossingKm { get; set; } = 5;
+    public double FordKm { get; set; } = 5;
+
+    /// <summary>Ce que vaut le passage d'un pont, routier ou ferroviaire, en kilomètres de route.</summary>
+    public double BridgeKm { get; set; } = 0.5;
+
+    /// <summary>Ce que vaut le passage d'un bac, en kilomètres de route.</summary>
+    public double FerryKm { get; set; } = 2;
 
     /// <summary>
     /// Chargements par charrette. Les départs se décident charrette par charrette : le

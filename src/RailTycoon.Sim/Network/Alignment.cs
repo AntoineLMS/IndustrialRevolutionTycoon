@@ -195,7 +195,8 @@ public static class Surveyor
         {
             double bias = candidates == 1 ? 0.5 : (double)k / (candidates - 1);
             var estimate = Estimate(
-                stations, ground, envelope.Blend(bias), plan, trackCount, alignment, costs, bias);
+                stations, ground, envelope.Blend(bias), plan, trackCount, alignment, costs, bias,
+                RiverBridgeStations(terrain, stations, alignment));
             if (best is null || estimate.TotalCost < best.TotalCost) best = estimate;
         }
         return best!;
@@ -209,7 +210,8 @@ public static class Surveyor
         int trackCount,
         AlignmentDef alignment,
         ConstructionCostDef costs,
-        double profileBias)
+        double profileBias,
+        bool[] riverBridges)
     {
         int n = stations.Count;
 
@@ -224,6 +226,10 @@ public static class Surveyor
         }
 
         var kinds = ClassifyStructures(stations, ground, rail, alignment);
+        // Là où la voie franchit un fleuve, un pont, quelle que soit la hauteur : une
+        // voie ne passe pas l'eau sur de la terre. Un tunnel reste un tunnel.
+        for (int i = 0; i < n; i++)
+            if (riverBridges[i] && kinds[i] != StructureKind.Tunnel) kinds[i] = StructureKind.Bridge;
 
         double width = alignment.FormationWidthM + alignment.ExtraWidthPerTrackM * (trackCount - 1);
         double structureFactor = 1.0 + costs.ExtraTrackStructureFactor * (trackCount - 1);
@@ -317,6 +323,36 @@ public static class Surveyor
             Structures = structures,
             Profile = profile,
         };
+    }
+
+    /// <summary>
+    /// Les stations du tracé qui portent un pont sur un fleuve : celles à moins d'une
+    /// demi-longueur de pont de chaque point où le tracé coupe le cours, et toujours les
+    /// deux qui encadrent ce point.
+    /// </summary>
+    private static bool[] RiverBridgeStations(
+        HeightField terrain, IReadOnlyList<AlignmentStation> stations, AlignmentDef alignment)
+    {
+        var bridges = new bool[stations.Count];
+        if (terrain.Rivers.Count == 0) return bridges;
+
+        double half = Math.Max(0, alignment.RiverBridgeLengthKm) * 0.5;
+        for (int i = 1; i < stations.Count; i++)
+        {
+            var a = stations[i - 1].Position;
+            var b = stations[i].Position;
+            foreach (var river in terrain.Rivers)
+                foreach (var point in river.Intersections(a, b))
+                {
+                    double span = (b - a).Norm;
+                    double chainage = stations[i - 1].ChainageKm
+                        + (span > 0 ? (point - a).Norm / span : 0) * (stations[i].ChainageKm - stations[i - 1].ChainageKm);
+                    bridges[i - 1] = bridges[i] = true;
+                    for (int j = 0; j < stations.Count; j++)
+                        if (Math.Abs(stations[j].ChainageKm - chainage) <= half) bridges[j] = true;
+                }
+        }
+        return bridges;
     }
 
     /// <summary>

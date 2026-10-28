@@ -741,7 +741,7 @@ internal sealed class FreightRotation
 
     public void Print(WorldState world)
     {
-        Console.WriteLine("Rotation du fret (après chauffe : livrés par train ÷ produits, puis livrés par charrette ; captés : charrettes achetées par un train, toute la partie)");
+        Console.WriteLine("Rotation du fret (après chauffe : livrés par train ÷ produits, puis livrés sans train ; par eau : partis sur un fleuve, et captés : achetés en route par un train, toute la partie)");
         foreach (string cargoId in world.CargoOrder)
         {
             double delivered = _delivered.GetValueOrDefault(cargoId);
@@ -749,7 +749,8 @@ internal sealed class FreightRotation
             string ratio = produced > 1e-9 ? "×" + (delivered / produced).ToString("0.0", Ci) : "—";
             Console.WriteLine($"  {world.Cargo(cargoId).Name,-13}{delivered.ToString("N0", Ci),10} livrés" +
                               $"{produced.ToString("N0", Ci),10} produits{ratio,9}" +
-                              $"{_carted.GetValueOrDefault(cargoId).ToString("N0", Ci),10} par charrette" +
+                              $"{_carted.GetValueOrDefault(cargoId).ToString("N0", Ci),10} sans train" +
+                              $"{world.Cartage.DispatchedByWater(cargoId).ToString("N0", Ci),8} par eau" +
                               $"{world.Cartage.Captured(cargoId).ToString("N0", Ci),8} captés");
         }
         Console.WriteLine();

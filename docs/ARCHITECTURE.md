@@ -98,9 +98,12 @@ par charrette (`Economy/Cartage.cs`), dans une ville ou d'une ville à l'autre, 
 limite de quantité : une charrette part du marché le moins cher vers le marché acheteur
 le plus cher tant que l'écart de prix paie le trajet — 1 par chargement plus 0,5 par
 kilomètre de route —, en comptant à l'arrivée ce qui y roule déjà. Sur une carte à
-relief, la route suit le terrain (`Economy/CartRouter.cs`) : plus court chemin sur la
-grille du relief, où une montée allonge la route, une pente trop raide ne passe pas et
-un fleuve ne se franchit qu'à gué. Elle avance
+relief, la route suit le terrain (`Economy/CartRouter.cs`) : la route la moins chère sur
+la grille du relief, où une montée allonge la route, une pente trop raide ne passe pas et
+un fleuve ne se franchit qu'à un point de passage — gué, pont, bac, ou pont du chemin de
+fer. Elle peut emprunter un fleuve, de port en port, en bateau. Le coût et le temps se
+comptent séparément : un chargement avance en jours, au rythme de la charrette ou du
+bateau. Elle avance
 de 15 km par jour et ne livre qu'au bout du trajet ; ce qui est en route compte dans le
 bilan matière. Un train à l'arrêt peut capter une charrette qui passe dans le rayon de
 sa gare, au prix qu'elle coûte là : son prix de départ plus le charroi parcouru. Il se place avant l'économie, sur les

@@ -55,6 +55,43 @@ public sealed class TerrainFeatureDef
     /// et <see cref="HalfWidthKm"/> sa demi-largeur.
     /// </summary>
     public List<MapPointDef> Points { get; set; } = new();
+
+    /// <summary>Nom du fleuve, pour <c>river</c>. Sert aux messages et aux ports.</summary>
+    public string Name { get; set; } = "";
+
+    /// <summary>
+    /// Points de passage du fleuve, pour <c>river</c> : les seuls endroits où une
+    /// charrette le franchit. Les ponts du chemin de fer s'y ajoutent d'eux-mêmes, là
+    /// où une voie coupe le fleuve. Ailleurs, le fleuve ne se passe pas : on le longe
+    /// jusqu'au prochain passage, ou on le contourne par sa source.
+    /// </summary>
+    public List<RiverCrossingDef> Crossings { get; set; } = new();
+
+    /// <summary>
+    /// Ports du fleuve, pour <c>river</c>. Un bateau charge et décharge dans un port, et
+    /// navigue de l'un à l'autre en suivant le cours. Un fleuve sans deux ports au
+    /// moins ne porte rien.
+    /// </summary>
+    public List<RiverPortDef> Ports { get; set; } = new();
+}
+
+/// <summary>Un point de passage sur un fleuve : un gué, un pont ou un bac.</summary>
+public sealed class RiverCrossingDef
+{
+    public string Name { get; set; } = "";
+    public double XKm { get; set; }
+    public double YKm { get; set; }
+
+    /// <summary>« ford » (gué), « bridge » (pont) ou « ferry » (bac). Le coût du passage dépend de la sorte : voir <c>economy.cartage</c>.</summary>
+    public string Kind { get; set; } = "ford";
+}
+
+/// <summary>Un port sur un fleuve, où un bateau charge et décharge.</summary>
+public sealed class RiverPortDef
+{
+    public string Name { get; set; } = "";
+    public double XKm { get; set; }
+    public double YKm { get; set; }
 }
 
 /// <summary>
@@ -140,6 +177,13 @@ public sealed class AlignmentDef
 
     /// <summary>Profondeur de déblai au-delà de laquelle on perce un tunnel.</summary>
     public double TunnelMinDepthM { get; set; } = 18.0;
+
+    /// <summary>
+    /// Longueur du pont qu'une voie construit là où elle franchit un fleuve, quelle que
+    /// soit la hauteur de son remblai : une voie ne passe pas l'eau sur de la terre.
+    /// Ce pont est aussi un point de passage pour les charrettes [estimé].
+    /// </summary>
+    public double RiverBridgeLengthKm { get; set; } = 0.3;
 
     /// <summary>
     /// Longueur minimale d'un ouvrage. En dessous, le franchissement reste du
