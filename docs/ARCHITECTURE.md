@@ -101,7 +101,10 @@ kilomètre de route —, en comptant à l'arrivée ce qui y roule déjà. Sur un
 relief, la route suit le terrain (`Economy/CartRouter.cs`) : la route la moins chère sur
 la grille du relief, où une montée allonge la route, une pente trop raide ne passe pas et
 un fleuve ne se franchit qu'à un point de passage — gué, pont, bac, ou pont du chemin de
-fer. Elle peut emprunter un fleuve, de port en port, en bateau. Le coût et le temps se
+fer, que le routeur pose lui-même sur une ligne saisie à la main, là où le segment entre
+deux arrêts consécutifs coupe le fleuve. Les cartes sans réseau sur relief (heartland,
+ironpeak, Timberford) déclarent pour cela une carte plate, qui ne sert qu'à la route et
+à l'eau. Elle peut emprunter un fleuve, de port en port, en bateau. Le coût et le temps se
 comptent séparément : un chargement avance en jours, au rythme de la charrette ou du
 bateau. Elle avance
 de 15 km par jour et ne livre qu'au bout du trajet ; ce qui est en route compte dans le

@@ -54,18 +54,25 @@ public sealed class CartRoute
         return i < 0 ? Cost[0] : Cost[i] + (Cost[i + 1] - Cost[i]) * t;
     }
 
+    /// <summary>
+    /// Le segment où se trouve le chargement après <paramref name="days"/> jours : le
+    /// premier dont la fin n'est pas dépassée, cherché par dichotomie — une route sur
+    /// le relief compte des centaines de points, et chaque gare interroge chaque
+    /// chargement en route à chaque passage d'un train.
+    /// </summary>
     private int SegmentAt(double days, out double t)
     {
         t = 0;
         if (Points.Count < 2) return -1;
-        for (int i = 0; i < Points.Count - 1; i++)
+        int low = 0, high = Points.Count - 2;
+        while (low < high)
         {
-            if (days > Days[i + 1] && i < Points.Count - 2) continue;
-            double span = Days[i + 1] - Days[i];
-            t = span > 0 ? Math.Clamp((days - Days[i]) / span, 0, 1) : (days >= Days[i + 1] ? 1 : 0);
-            return i;
+            int mid = (low + high) / 2;
+            if (days > Days[mid + 1]) low = mid + 1; else high = mid;
         }
-        return -1;
+        double span = Days[low + 1] - Days[low];
+        t = span > 0 ? Math.Clamp((days - Days[low]) / span, 0, 1) : (days >= Days[low + 1] ? 1 : 0);
+        return low;
     }
 
     /// <summary>La ligne droite par la route, sur une carte sans relief.</summary>
@@ -145,12 +152,30 @@ public sealed class CartRouter
         {
             var crossings = new List<RiverCrossing>(river.Crossings);
             // Les ponts du chemin de fer sont des points de passage : là où un tronçon
-            // de voie coupe le fleuve, une charrette passe.
+            // de voie coupe le fleuve, une charrette passe. Sur un réseau posé sur le
+            // relief, les tronçons sont ceux du graphe ; sur une ligne saisie à la
+            // main, la voie va en ligne droite d'une gare à la suivante, et franchit
+            // le fleuve sur un pont qu'aucun devis ne compte.
             if (world.Network is { } network)
+            {
                 foreach (var edge in network.Graph.Edges)
                     for (int i = 1; i < edge.ControlPoints.Count; i++)
                         foreach (var point in river.Intersections(edge.ControlPoints[i - 1], edge.ControlPoints[i]))
                             crossings.Add(new RiverCrossing($"pont du chemin de fer « {edge.Id} »", point, CrossingKind.Bridge));
+            }
+            else
+            {
+                foreach (var line in world.Lines)
+                    for (int i = 1; i < line.Stops.Count; i++)
+                    {
+                        var a = new GeoPoint(line.Stops[i - 1].XKm, line.Stops[i - 1].YKm);
+                        var b = new GeoPoint(line.Stops[i].XKm, line.Stops[i].YKm);
+                        foreach (var point in river.Intersections(a, b))
+                            crossings.Add(new RiverCrossing(
+                                $"pont du chemin de fer « {line.Id} », entre {line.Stops[i - 1].CityId} et {line.Stops[i].CityId}",
+                                point, CrossingKind.Bridge));
+                    }
+            }
             _crossings.Add(crossings);
 
             foreach (var port in river.Ports)
@@ -295,10 +320,13 @@ public sealed class CartRouter
         // le premier, ce qui rend la route indépendante de la file elle-même.
         var queue = new PriorityQueue<int, (double, int)>();
         queue.Enqueue(source, (0, source));
+        var neighbours = new List<(int Node, double Cost)>(16);
         while (queue.TryDequeue(out int node, out var priority))
         {
             if (priority.Item1 > cost[node]) continue;
-            foreach (var (next, edgeCost) in Neighbours(node))
+            neighbours.Clear();
+            Neighbours(node, neighbours);
+            foreach (var (next, edgeCost) in neighbours)
             {
                 double candidate = cost[node] + edgeCost;
                 if (candidate < cost[next])
@@ -314,8 +342,8 @@ public sealed class CartRouter
         return (cost, parent);
     }
 
-    /// <summary>Les voisins d'un nœud, et ce qu'il coûte d'y aller.</summary>
-    private IEnumerable<(int Node, double Cost)> Neighbours(int node)
+    /// <summary>Les voisins d'un nœud, et ce qu'il coûte d'y aller, ajoutés à <paramref name="into"/>.</summary>
+    private void Neighbours(int node, List<(int Node, double Cost)> into)
     {
         int grid = GridCount;
         if (node < grid)
@@ -328,23 +356,23 @@ public sealed class CartRouter
                 if (nx < 0 || ny < 0 || nx >= columns || ny >= _terrain.Rows) continue;
                 int next = ny * columns + nx;
                 double km = StepKm(node, next, k);
-                if (!double.IsInfinity(km)) yield return (next, _cart.CostPerLoadKm * km);
+                if (!double.IsInfinity(km)) into.Add((next, _cart.CostPerLoadKm * km));
             }
             if (_portsAtNode.TryGetValue(node, out var ports))
                 foreach (int p in ports)
-                    yield return (grid + p, _cart.CostPerLoadKm * (_ports[p].Port.Point - NodePoint(node)).Norm + _water.CostPerLoad);
+                    into.Add((grid + p, _cart.CostPerLoadKm * (_ports[p].Port.Point - NodePoint(node)).Norm + _water.CostPerLoad));
         }
         else
         {
             var (river, port, gridNode) = _ports[node - grid];
-            yield return (gridNode, _cart.CostPerLoadKm * (port.Point - NodePoint(gridNode)).Norm + _water.CostPerLoad);
+            into.Add((gridNode, _cart.CostPerLoadKm * (port.Point - NodePoint(gridNode)).Norm + _water.CostPerLoad));
             // Les ports voisins sur le même fleuve, en amont et en aval : un bateau
             // descend ou remonte le cours de port en port.
             for (int k = 0; k < _ports.Count; k++)
             {
                 if (k == node - grid || !ReferenceEquals(_ports[k].River, river)) continue;
                 if (!Adjacent(river, port, _ports[k].Port)) continue;
-                yield return (grid + k, _water.CostPerLoadKm * Math.Abs(_ports[k].Port.ChainageKm - port.ChainageKm));
+                into.Add((grid + k, _water.CostPerLoadKm * Math.Abs(_ports[k].Port.ChainageKm - port.ChainageKm)));
             }
         }
     }
@@ -414,6 +442,11 @@ public sealed class CartRouter
         double reach = _terrain!.CellSizeKm;
         double total = 0;
         for (int r = 0; r < _terrain.Rivers.Count; r++)
+        {
+            // Rejet rapide : la plupart des pas sont loin de tout fleuve.
+            var (minX, minY, maxX, maxY) = Bounds(r);
+            if (Math.Max(a.XKm, b.XKm) < minX || Math.Min(a.XKm, b.XKm) > maxX
+                || Math.Max(a.YKm, b.YKm) < minY || Math.Min(a.YKm, b.YKm) > maxY) continue;
             foreach (var point in _terrain.Rivers[r].Intersections(a, b))
             {
                 double best = double.PositiveInfinity;
@@ -427,7 +460,20 @@ public sealed class CartRouter
                         });
                 total += best;
             }
+        }
         return total;
+    }
+
+    private readonly Dictionary<int, (double, double, double, double)> _bounds = new();
+
+    /// <summary>La boîte englobante du cours d'un fleuve.</summary>
+    private (double MinX, double MinY, double MaxX, double MaxY) Bounds(int river)
+    {
+        if (_bounds.TryGetValue(river, out var box)) return box;
+        var points = _terrain!.Rivers[river].Points;
+        box = (points.Min(p => p.XKm), points.Min(p => p.YKm), points.Max(p => p.XKm), points.Max(p => p.YKm));
+        _bounds[river] = box;
+        return box;
     }
 
     /// <summary>Un raccord en ligne droite : longueur, montée et passage ; infini s'il coupe un fleuve hors d'un passage. Sans limite de pente : il est court.</summary>

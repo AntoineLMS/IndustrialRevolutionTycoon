@@ -41,7 +41,15 @@
         { "kind": "bowl", "xKm": 56, "yKm": 52, "halfWidthKm": 11, "amplitudeM": -300 },
         { "kind": "ridge", "x1Km": 0, "y1Km": 22, "x2Km": 80, "y2Km": 22, "halfWidthKm": 9, "amplitudeM": -45 },
         { "kind": "bowl", "xKm": 28, "yKm": 22, "halfWidthKm": 7, "amplitudeM": 100 },
-        { "kind": "bowl", "xKm": 46, "yKm": 22, "halfWidthKm": 7, "amplitudeM": 100 }
+        { "kind": "bowl", "xKm": 46, "yKm": 22, "halfWidthKm": 7, "amplitudeM": 100 },
+        { "kind": "river", "name": "la Valewater", "halfWidthKm": 1.5, "amplitudeM": -5,
+          "//": "Le fleuve du fond de vallée, d'ouest en est. Il contourne les deux contreforts par le sud et reste à 1,5 km de la ligne de la vallée, qu'il ne touche pas ; les lignes du col et de la crête le franchissent sur un pont. Navigable de Lowfield à Eastmouth, son embouchure. Un gué au milieu. Les cartes de la vallée et du col le partagent, comme tout leur relief.",
+          "points": [{"xKm": -1, "yKm": 20.5}, {"xKm": 17, "yKm": 20.5}, {"xKm": 28, "yKm": 14.5}, {"xKm": 37, "yKm": 15.5}, {"xKm": 46, "yKm": 14.5}, {"xKm": 57, "yKm": 20.5}, {"xKm": 81, "yKm": 20.5}],
+          "crossings": [ { "name": "gué du Milieu", "xKm": 37, "yKm": 15.5, "kind": "ford" } ],
+          "ports": [
+            { "name": "quai de Lowfield", "xKm": 8, "yKm": 21.5 },
+            { "name": "port d'Eastmouth", "xKm": 68, "yKm": 21.5 }
+          ] }
       ],
       "noise": { "amplitudeM": 25, "wavelengthKm": 4, "octaves": 3, "seed": 12 }
     },

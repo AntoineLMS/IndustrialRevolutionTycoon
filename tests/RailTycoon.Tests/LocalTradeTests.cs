@@ -115,7 +115,9 @@ internal static class LocalTradeTests
         {
             // Sans train, et la forêt reculée à 45 km de la scierie : trois jours de
             // route. La charrette avance d'un jour à l'autre, et ne livre qu'à l'arrivée.
+            // Sans sa carte : le test parle du temps de route, pas du ruisseau.
             var scenario = ScenarioLoader.Load(TimberfordPath());
+            scenario.Network.Terrain = null;
             scenario.Trains.Clear();
             scenario.Cities.Single().ProductionSites["logs"].DxKm = -39;
             scenario.Cities.Single().InitialStock["logs"] = 20;

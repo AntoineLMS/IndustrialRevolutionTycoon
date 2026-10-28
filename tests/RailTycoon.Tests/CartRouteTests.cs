@@ -18,7 +18,10 @@ internal static class CartRouteTests
     {
         runner.Add("route — sans relief, une charrette va en ligne droite", () =>
         {
-            var world = new Simulation(ScenarioLoader.Load(Path.Combine(Fixtures.RepoRoot(), "data", "timberford.json"))).World;
+            // Timberford sans sa carte : la route est la ligne droite.
+            var scenario = ScenarioLoader.Load(Path.Combine(Fixtures.RepoRoot(), "data", "timberford.json"));
+            scenario.Network.Terrain = null;
+            var world = new Simulation(scenario).World;
             var city = world.CityById("timberford");
             var cfg = world.Def.Economy.Cartage;
             var route = Cartage.Route(world, city.ProductionMarket("logs")!, city.Industries.Single().Input("logs"));

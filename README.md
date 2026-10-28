@@ -81,6 +81,12 @@ la voie franchit sur des ponts, des gués, et des bateaux sur l'Eastwater :
 dotnet run --project src/RailTycoon.Harness -- --scenario data/sierra.json
 ```
 
+Toutes les cartes ont désormais leurs fleuves : heartland, ironpeak et Timberford une
+carte plate, qui ne sert qu'aux charrettes et aux bateaux, et les trois cartes d'essai
+du réseau un torrent ou un fleuve que la voie franchit sur un pont. Les bateaux, comme
+les charrettes, n'appartiennent à personne ; une compagnie qui affrète ses bateaux est
+une évolution possible, pas encore une décision.
+
 Tous les scénarios tournent sous le modèle de coût « mass » : le coût kilométrique
 d'un train suit la masse qu'il remorque — sa locomotive, plus chaque chargement avec
 son wagon, dont la tare dépend du type que déclare la marchandise (couvert,

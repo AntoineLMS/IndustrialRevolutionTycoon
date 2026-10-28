@@ -594,7 +594,7 @@ internal static class Program
             // l'anticipant ne dépasse pas la référence de trois points (24,6 % contre
             // 22,0 %) ; sur 40 voisines, 26,0 % contre 20,8 % en moyenne, et 39 au-dessus
             // du seuil. Une partie unique est un tirage : c'est la leçon de FINDINGS.md.
-            double refChurn = 0, churn = 0;
+            double refChurn = 0, churn = 0, refFood = 0, food = 0;
             var neighbours = Fixtures.Neighbours(ScenarioLoader.Load(Fixtures.HeartlandPath()), 10);
             foreach (var perturb in neighbours)
             {
@@ -602,6 +602,8 @@ internal static class Program
                 var (a, s) = RunHeartland(new AnticipatingEconomySolver(), perturb);
                 refChurn += rs.MeanLeaderChurn(r.World) / neighbours.Count;
                 churn += s.MeanLeaderChurn(a.World) / neighbours.Count;
+                refFood += rs.SpreadMobility("food") / neighbours.Count;
+                food += s.SpreadMobility("food") / neighbours.Count;
             }
             Check.True(churn > refChurn + 0.03,
                 $"changement de ville la plus chère {churn * 100:0.0} % contre " +
@@ -611,10 +613,14 @@ internal static class Program
             // La nourriture était la marchandise la plus uniforme du scénario, et
             // c'était une question ouverte de FINDINGS.md : dix acheteurs nourris au
             // prix de référence par un transporteur omniscient. C'est elle qui doit
-            // le plus profiter de l'anticipation.
-            Check.True(stats.SpreadMobility("food") > refStats.SpreadMobility("food") * 2.0,
-                $"nourriture : mobilité {stats.SpreadMobility("food"):0.000} contre " +
-                $"{refStats.SpreadMobility("food"):0.000} pour la référence");
+            // le plus profiter de l'anticipation. Elle aussi se lit sur les dix
+            // voisines : depuis que les fleuves sont sur la carte (28 octobre 2026),
+            // la partie telle qu'écrite ne fait que ×1,8 (0,168 contre 0,092), quand
+            // la moyenne de 20 voisines fait ×4,6 (0,439 contre 0,096), 17 au-dessus
+            // de ×2.
+            Check.True(food > refFood * 2.0,
+                $"nourriture : mobilité {food:0.000} contre {refFood:0.000} pour la " +
+                $"référence, en moyenne sur {neighbours.Count} trajectoires voisines");
         });
 
         // ----------------------------------------------------------- validation
@@ -714,18 +720,20 @@ internal static class Program
             // relief des deux derniers est identique ; seul change le tracé.
             var expected = new (string Scenario, string Edge, double Cost)[]
             {
-                // plaine : 180 093, dont 180 009 de pose de voie. Une plaine coûte le
-                // prix des rails, et c'est le plancher.
-                ("terrain-plain.json", "plain", 180_092.65),
+                // plaine : 210 093, dont 180 009 de pose de voie. Une plaine coûte le
+                // prix des rails, et c'est le plancher ; s'y ajoutent les 30 000 du
+                // pont sur la Plainwater, que le géomètre ne peut pas éviter.
+                ("terrain-plain.json", "plain", 210_092.79),
                 // vallée : 219 402, soit 1,2 × la plaine. Le couloir naturel se paie
                 // 39 000 de terrassement pour traverser deux contreforts, rien de plus.
                 ("terrain-valley.json", "valley", 219_402.33),
-                // col : 1 219 880, soit 6,8 × la plaine. 326 000 de terrassement et
-                // 713 000 de viaducs sur les deux rampes d'accès.
-                ("terrain-pass.json", "col", 1_219_880.03),
-                // crête : 2 689 446, soit 14,9 × la plaine. Le même relief attaqué de
+                // col : 1 249 995, soit 5,9 × la plaine. 326 000 de terrassement et
+                // 713 000 de viaducs sur les deux rampes d'accès, plus 30 000 de pont
+                // sur la Valewater.
+                ("terrain-pass.json", "col", 1_249_995.0),
+                // crête : 2 719 446, soit 12,9 × la plaine. Le même relief attaqué de
                 // front à 36 km du col : un tunnel de 19 km, et la réponse est « non ».
-                ("terrain-pass.json", "crest", 2_689_445.91),
+                ("terrain-pass.json", "crest", 2_719_445.91),
             };
 
             foreach (var (scenario, edgeId, cost) in expected)

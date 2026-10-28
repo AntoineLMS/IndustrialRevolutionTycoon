@@ -12,7 +12,19 @@
   "//charroi": "Tout peut passer par charrette, sans limite de quantité, mais à 15 km par jour et à 1 par chargement plus 0,5 par chargement et par kilomètre : 7 de la forêt à la scierie (12 km), un jour de route ; 4 de la scierie à la place (6 km). Le train fait le même trajet pour 0,4 par chargement, et capte au passage les charrettes qui traversent le rayon de ses gares.",
 
   "//anticipating": "Pas de bloc anticipating : ce scénario éprouve le commerce entre installations d'une même ville, pas l'anticipation des prix, et un scénario éprouve une chose à la fois.",
-  "//network": "Pas de réseau sur relief : une ligne de 12 km saisie à la main suffit, et le relief ne ferait que renchérir les deux sens de la navette sans rien apprendre de plus.",
+  "//network": "Pas de réseau sur relief : une ligne de 12 km saisie à la main suffit. Depuis le 28 octobre 2026, une carte plate, qui ne sert qu'aux charrettes : un ruisseau sépare la forêt de la ville, et la voie le passe sur un pont, que les charrettes empruntent aussi.",
+
+  "network": {
+    "terrain": {
+      "columns": 15, "rows": 11, "cellSizeKm": 1.0, "baseElevationM": 200,
+      "features": [
+        { "kind": "river", "name": "le ru des Saules", "halfWidthKm": 1, "amplitudeM": -3,
+          "//": "Il coupe la ligne entre la forêt (x = 0) et la place (x = 6), vers x = 3,3. Non navigable ; un gué 5 km au nord.",
+          "points": [{"xKm": 3.5, "yKm": 11}, {"xKm": 2.5, "yKm": 5}, {"xKm": 3.5, "yKm": -1}],
+          "crossings": [ { "name": "gué du ru", "xKm": 2.5, "yKm": 5, "kind": "ford" } ] }
+      ]
+    }
+  },
   "//finance": "Pas de finance : la question est de savoir si la navette rapporte, pas comment la financer.",
   "//events": "Pas d'événements : un choc local brouillerait la seule mesure que ce scénario existe pour faire.",
 

@@ -1953,17 +1953,141 @@ passe de port en port le long de la côte. De Baymouth à Farport, un chargement
 
 ### Décisions laissées à l'équipe
 
-1. **Des fleuves sur les autres cartes.** Heartland, ironpeak et Timberford n'ont pas de
-   relief, donc pas de fleuve ; les cartes d'essai du réseau (plaine, vallée, col)
-   servent de référence à ses devis et n'en ont pas reçu. En poser exige de leur donner
-   un relief, ce qui change leur nature.
-2. **Les bateaux appartiennent à personne.** Une compagnie de navigation concurrente,
-   ou une compagnie de chemin de fer qui affrète des bateaux, serait un autre jeu.
-3. **Le prix du bateau.** À 0,02 par chargement et par kilomètre, le fleuve coûte moins
+1. **Le prix du bateau.** À 0,02 par chargement et par kilomètre, le fleuve coûte moins
    que le train (0,03 à 0,04 au coût marginal), mais va trois fois moins vite à la
    descente et huit fois moins à la remontée, et paie deux manutentions : le train
    gagne par la vitesse, par ses gares, qui ne sont pas toutes au bord de l'eau, et par
    la capture. C'est le réglage qui décide qui tient la côte est.
+
+*Les deux autres décisions de cette section sont prises : voir la suivante.*
+
+## Des fleuves sur toutes les cartes
+
+*Décisions de l'équipe, 28 octobre 2026 : mettre des fleuves sur les autres cartes
+aussi ; pour le moment, les bateaux sont comme les charrettes. Même protocole : 40
+trajectoires voisines, 720 ticks, la partie telle qu'écrite à part.*
+
+### Les bateaux restent comme les charrettes
+
+Un bateau n'appartient à personne, ne se commande pas, et part de lui-même quand l'écart
+de prix paie le trajet, exactement comme une charrette ; un train le capte quand il passe
+dans le rayon de sa gare. Le code n'a pas changé. **C'est une évolution possible, pas un
+oubli** : une compagnie de navigation concurrente, ou une compagnie de chemin de fer qui
+affrète ses bateaux, est un autre jeu, à décider le jour où le transport par eau doit
+devenir une décision du joueur.
+
+### Une carte plate pour les cartes sans relief
+
+Heartland (et ses variantes finance et événements), ironpeak et Timberford n'ont pas de
+réseau sur relief : leurs lignes sont saisies à la main, et leurs distances sont celles
+des campagnes de mesure. Elles reçoivent une **carte plate**, qui ne sert qu'aux
+charrettes et aux bateaux ; les lignes y courent sur le bord sud, une gare à
+`distanceKm` étant au point (`distanceKm`, 0). Le relief ne coûte toujours rien à
+l'exploitation des trains.
+
+Une ligne saisie à la main n'a pas de tracé, donc pas de pont : le routeur en pose un
+lui-même là où le segment entre deux arrêts consécutifs coupe un fleuve, et les
+charrettes l'empruntent, comme celles de la sierra empruntent les ponts du géomètre.
+
+- **Heartland.** La Fairwater, torrent non navigable, coupe la ligne entre Millbrook et
+  Pinegrove (gué 40 km au nord). La Kingswater descend jusqu'à Rivertown, longe la ligne
+  jusqu'à Kingsport et la coupe pour gagner la mer : trois ports, Rivertown, Ashford,
+  Kingsport.
+- **Ironpeak.** La Cinder descend du massif et longe la ligne d'Emberford à Forgeton :
+  quatre ports, un par haut fourneau et par aciérie. Le torrent des Pins coupe la ligne
+  plus loin, avec un gué.
+- **Timberford.** Le ru des Saules sépare la forêt de la place ; la voie le passe sur un
+  pont, avec un gué au nord.
+- **Les cartes d'essai du réseau.** La plaine reçoit un torrent qui coupe sa ligne près
+  d'Eastfield ; la vallée et le col partagent la Valewater, navigable, qui suit le
+  sillon à 1,5 km de la ligne de la vallée sans la toucher, et que les lignes du col et
+  de la crête franchissent sur un pont.
+
+### Les devis
+
+| tronçon | sans fleuve | avec fleuve |
+|---|---|---|
+| plaine | 180 093 | **210 093** |
+| vallée | 219 402 | 219 402 |
+| col | 1 219 880 | **1 249 995** |
+| crête | 2 689 446 | **2 719 446** |
+
+Chaque ligne qui coupe un fleuve paie un pont de 30 000, à fleur de sol ; la vallée, qui
+le longe, ne paie rien. L'ordre des trois cartes, qui est la propriété protégée par les
+tests, ne bouge pas : la vallée reste sous le quart du col, le col sous la crête.
+
+**Un pont trop court corrigé en route.** Le géomètre marquait comme pont les stations
+du tracé à moins d'une demi-longueur de pont du point de franchissement, et toujours les
+deux qui l'encadrent. Sur la ligne de la crête, échantillonnée à 0,25 km, cela donnait
+un pont de 0,25 km, sous les 0,3 du seuil des ouvrages : la règle commune le comptait
+alors comme du terrassement. Le géomètre ajoute désormais la station voisine la plus
+proche du franchissement tant que le pont n'atteint pas `riverBridgeLengthKm`.
+
+### Ce qui passe par l'eau
+
+*Parties telles qu'écrites, 720 ticks, solveur de référence.*
+
+| carte | partie par l'eau | captée en route par un train |
+|---|---|---|
+| heartland | farine 234, nourriture 89, charbon 61, planches 2 | farine 85, nourriture 234 |
+| ironpeak | fonte 1 590, acier 941, charbon 119, nourriture 54, planches 46 | fonte 1 025, acier 1 122, charbon 271 |
+| vallée | blé 4 | — |
+
+À heartland, la farine du moulin d'Ashford, le seul qui ait un port, part par la
+Kingswater vers les boulangeries de Rivertown et de Kingsport. À ironpeak, la Cinder relie les deux hauts fourneaux aux
+deux aciéries : toute la fonte qui voyage sans train passe par l'eau, et les trains en
+captent les deux tiers à leurs gares, qui sont toutes au bord du fleuve.
+
+### Résultats
+
+| scénario | sans fleuve | avec fleuves | écart apparié |
+|---|---|---|---|
+| heartland, référence | 279 598 ± 3 179 | **275 635 ± 3 345** | −3 963 ± 833 |
+| heartland, anticipant | 241 570 ± 8 218 | 249 839 ± 6 599 | +8 269 ± 1 793 |
+| ironpeak, référence | 237 926 ± 14 200 | **254 714 ± 11 091** | +16 788 ± 2 882 |
+| Timberford | 15 275 ± 35 | 15 275 ± 35 | 0 |
+
+*Parties telles qu'écrites : heartland 279 360 (référence) et 252 509 (anticipant),
+ironpeak 268 949, Timberford 15 275. Les cartes d'essai du réseau bougent de quelques
+unités : elles mesurent un devis, pas une économie.*
+
+- **À heartland, les bateaux prennent un peu au chemin de fer** sous la référence
+  (−1,4 %), comme à la sierra : ils servent la côte de Rivertown à Kingsport, où la
+  ligne passait déjà. L'anticipant y gagne 3,4 %, sans que la mesure dise encore
+  pourquoi : ses écarts de prix plus mobiles ouvrent peut-être plus souvent le fleuve.
+- **À ironpeak, ils lui rapportent** (+7,1 %, et une dispersion ramenée de ±14 200 à ±11 091).
+  L'aciérie de Forgeton passe de 67 % à 79 %, le haut fourneau d'Ashfurnace de 49 % à
+  56 % : le fleuve dessert la chaîne acier là où la ligne la desservait mal, et le train
+  capte ce qu'il porte. La scierie de Pinewood perd en échange (87 % → 76 %).
+- **À Timberford, rien ne change**, au chiffre près : le ruisseau coupe le chemin entre
+  la forêt et la place, et la voie le passe sur un pont que les charrettes empruntent
+  aussi. L'empreinte de la trace de référence est la même.
+- **Le nombre de trains.** Heartland garde son optimum à quatre (298 098 ± 2 839, contre
+  299 955 sans fleuve). Ironpeak fait jeu égal à deux et à trois trains (252 611 ± 2 081
+  et 254 714 ± 11 091) : le fleuve porte une part de la chaîne acier que le troisième
+  train portait, et le quatrième perd un quart du résultat (192 605).
+- **L'anticipation garde sa propriété.** À heartland, la mobilité de l'amplitude passe
+  de 0,309 sous la référence à 0,453 (×1,47), le changement de tête de 21,7 % à 27,1 %.
+  La nourriture reste la marchandise qui en profite le plus (0,097 → 0,353, ×3,6), mais
+  la partie telle qu'écrite n'en fait que ×1,8 (0,092 → 0,168) : c'est un tirage, et le
+  test lit désormais ce critère sur les dix voisines, comme le changement de tête.
+
+### Ce que le changement a coûté
+
+**Le temps de calcul.** Une carte de 251 × 41 mailles fait tourner le routeur sur dix
+mille nœuds pour chaque couple de marchés : une partie de heartland passe de 74 à
+environ 280 ms, et la suite de tests d'environ 26 s à 70 s. Le routeur cherche
+désormais par dichotomie le tronçon d'une route, écarte d'un rectangle englobant les
+fleuves trop loin d'un pas, et ne réalloue plus ses voisins à chaque nœud.
+
+### Décisions laissées à l'équipe
+
+1. **Des bateaux à soi.** Voir ci-dessus : l'évolution possible, quand l'eau doit
+   devenir une décision du joueur.
+2. **Ironpeak et son fleuve.** La Cinder rend ironpeak plus rentable de 7 %, et déplace
+   l'équilibre entre ses deux scieries. Si ironpeak doit rester la carte où la chaîne
+   acier se distribue mal — c'était sa raison d'être, « deux acheteurs par marchandise
+   intermédiaire » —, il faut éloigner le fleuve des aciéries ou le rendre non navigable.
 
 ## Questions ouvertes pour l'équipe
 

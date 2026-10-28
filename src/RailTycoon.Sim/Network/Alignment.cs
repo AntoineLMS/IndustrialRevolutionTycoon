@@ -328,7 +328,10 @@ public static class Surveyor
     /// <summary>
     /// Les stations du tracé qui portent un pont sur un fleuve : celles à moins d'une
     /// demi-longueur de pont de chaque point où le tracé coupe le cours, et toujours les
-    /// deux qui encadrent ce point.
+    /// deux qui encadrent ce point ; puis, tant que le pont mesure moins que
+    /// <see cref="AlignmentDef.RiverBridgeLengthKm"/>, la station voisine la plus proche
+    /// du point de franchissement. Un pont plus court que le seuil des ouvrages serait
+    /// compté comme du terrassement par la règle commune.
     /// </summary>
     private static bool[] RiverBridgeStations(
         HeightField terrain, IReadOnlyList<AlignmentStation> stations, AlignmentDef alignment)
@@ -348,8 +351,22 @@ public static class Surveyor
                     double chainage = stations[i - 1].ChainageKm
                         + (span > 0 ? (point - a).Norm / span : 0) * (stations[i].ChainageKm - stations[i - 1].ChainageKm);
                     bridges[i - 1] = bridges[i] = true;
+                    int first = i - 1, last = i;
                     for (int j = 0; j < stations.Count; j++)
-                        if (Math.Abs(stations[j].ChainageKm - chainage) <= half) bridges[j] = true;
+                        if (Math.Abs(stations[j].ChainageKm - chainage) <= half)
+                        {
+                            bridges[j] = true;
+                            first = Math.Min(first, j);
+                            last = Math.Max(last, j);
+                        }
+                    while (stations[last].ChainageKm - stations[first].ChainageKm < 2 * half - 1e-9
+                           && (first > 0 || last < stations.Count - 1))
+                    {
+                        bool before = first > 0
+                            && (last == stations.Count - 1
+                                || chainage - stations[first - 1].ChainageKm <= stations[last + 1].ChainageKm - chainage);
+                        if (before) bridges[--first] = true; else bridges[++last] = true;
+                    }
                 }
         }
         return bridges;

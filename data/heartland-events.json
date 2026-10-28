@@ -291,7 +291,28 @@
     ]
   },
 
-  "//network": "Ce scénario n'a pas de relief, et c'est un choix : ses distances kilométriques ci-dessous sont celles de la campagne de mesure de docs/FINDINGS.md, et les traces de régression en dépendent. Le module réseau reste donc inactif ici (mode de compatibilité : sans bloc « network », les lignes posées à la main font foi et le relief ne coûte rien à l'exploitation). Les cartes à relief sont data/terrain-*.json. Poser heartland sur un relief est un chantier de conception à part entière — il déplacera tous les chiffres de FINDINGS.md, ce qui doit être une décision, pas un effet de bord.",
+  "//network": "Pas de réseau sur relief : les distances kilométriques des lignes sont celles de la campagne de mesure de docs/FINDINGS.md, et la ligne posée à la main fait foi (mode de compatibilité). Depuis le 28 octobre 2026, le scénario déclare pourtant une carte, plate, qui ne sert qu'aux charrettes et aux bateaux : la ligne y court d'ouest en est sur son bord sud (une gare à distanceKm est au point (distanceKm, 0)), et deux fleuves la traversent ou la longent. Le relief ne coûte toujours rien à l'exploitation des trains.",
+
+  "network": {
+    "terrain": {
+      "columns": 251, "rows": 41, "cellSizeKm": 2.0, "baseElevationM": 100,
+      "//": "500 × 80 km, plate, au nord de la ligne. Les cours passent entre les nœuds de la grille (x impairs) : posé sur eux, un fleuve les isolerait.",
+      "features": [
+        { "kind": "river", "name": "la Fairwater", "halfWidthKm": 2, "amplitudeM": -5,
+          "//": "Torrent du nord, non navigable, qui coupe la ligne entre Millbrook et Pinegrove (x = 71) : les charrettes le passent au pont du chemin de fer, ou au gué, 40 km au nord.",
+          "points": [{"xKm": 63, "yKm": 81}, {"xKm": 69, "yKm": 40}, {"xKm": 71, "yKm": 10}, {"xKm": 71, "yKm": -3}],
+          "crossings": [ { "name": "gué de la Fairwater", "xKm": 69, "yKm": 40, "kind": "ford" } ] },
+        { "kind": "river", "name": "la Kingswater", "halfWidthKm": 2, "amplitudeM": -6,
+          "//": "Descend du nord jusqu'à Rivertown, longe la ligne à 3 km au nord jusqu'à Kingsport, et la coupe juste à l'est (x = 332) pour gagner la mer. Navigable de Rivertown à Kingsport : trois ports sur la rive de la ligne.",
+          "points": [{"xKm": 151, "yKm": 81}, {"xKm": 181, "yKm": 41}, {"xKm": 211, "yKm": 3}, {"xKm": 271, "yKm": 3}, {"xKm": 331, "yKm": 3}, {"xKm": 333, "yKm": -3}],
+          "ports": [
+            { "name": "quai de Rivertown", "xKm": 211, "yKm": 1 },
+            { "name": "quai d'Ashford", "xKm": 265, "yKm": 1 },
+            { "name": "port de Kingsport", "xKm": 329, "yKm": 1 }
+          ] }
+      ]
+    }
+  },
 
   "lines": [
     {

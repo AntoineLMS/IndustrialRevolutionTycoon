@@ -60,18 +60,18 @@ internal static class ReferenceTraceTests
     /// </summary>
     private static readonly Case[] Cases =
     [
-        new("heartland.json", "reference", "76E6908C0302B92C"),
-        new("heartland.json", "anticipating", "D0A4610B64F3A0B5"),
-        new("heartland-finance.json", "reference", "F6436D1D370DF3FB"),
+        new("heartland.json", "reference", "813B6C7318DE7A56"),
+        new("heartland.json", "anticipating", "C31B3715D9F3EDF3"),
+        new("heartland-finance.json", "reference", "8C4069D1B8F7AA35"),
         // Le scénario du module events, sous les deux solveurs : chacun compose les
         // multiplicateurs du jour dans ses propres taux, et l'empreinte porte aussi
         // le journal des événements déclenchés.
-        new("heartland-events.json", "reference", "00587F2AEA0DFBCC"),
-        new("heartland-events.json", "anticipating", "30F6D8D165FDB01E"),
-        new("ironpeak.json", "reference", "DD524E9A56B7A943"),
-        new("terrain-plain.json", "reference", "5F2999D90D0AA937"),
-        new("terrain-valley.json", "reference", "DDBA38044A8EFC76"),
-        new("terrain-pass.json", "reference", "664AC088E2B0B1F1"),
+        new("heartland-events.json", "reference", "860492AF43F4E903"),
+        new("heartland-events.json", "anticipating", "9A1A55F5FA61A93B"),
+        new("ironpeak.json", "reference", "18A769BFCD0A8857"),
+        new("terrain-plain.json", "reference", "7AFA0A14160C43C9"),
+        new("terrain-valley.json", "reference", "E7DD71788ED8ECC4"),
+        new("terrain-pass.json", "reference", "65EFDAC1CFA00FCC"),
         new("sierra.json", "reference", "8AB504C344FC8A4E"),
         new("sierra.json", "anticipating", "FEAF86DF1A70E7AD"),
         // Une ville, deux gares, un train qui n'en sort jamais : le commerce entre

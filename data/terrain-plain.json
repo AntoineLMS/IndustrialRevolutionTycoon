@@ -33,7 +33,11 @@
       "cellSizeKm": 1.0,
       "baseElevationM": 120,
       "features": [
-        { "kind": "bowl", "xKm": 40, "yKm": 40, "halfWidthKm": 30, "amplitudeM": 120 }
+        { "kind": "bowl", "xKm": 40, "yKm": 40, "halfWidthKm": 30, "amplitudeM": 120 },
+        { "kind": "river", "name": "la Plainwater", "halfWidthKm": 1.5, "amplitudeM": -6,
+          "//": "Un torrent qui contourne le bombement par l'est et coupe la ligne à 1,5 km d'Eastfield (x = 66,5) : la voie le franchit sur un pont. Non navigable ; un gué 20 km au sud. Son cours passe entre les nœuds de la grille.",
+          "points": [{"xKm": 65.5, "yKm": 81}, {"xKm": 67.5, "yKm": 60}, {"xKm": 66.5, "yKm": 40}, {"xKm": 64.5, "yKm": 20}, {"xKm": 65.5, "yKm": -1}],
+          "crossings": [ { "name": "gué de la Plainwater", "xKm": 64.5, "yKm": 20, "kind": "ford" } ] }
       ],
       "noise": { "amplitudeM": 25, "wavelengthKm": 4, "octaves": 3, "seed": 11 }
     },

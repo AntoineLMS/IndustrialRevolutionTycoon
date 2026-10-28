@@ -19,7 +19,28 @@
 
   "//anticipating": "Pas de bloc anticipating, en connaissance de cause : sans réglage, le solveur anticipant rend ici la trace de la référence au bit près — ses gains mesurés sur heartland sont ceux de heartland, pas ceux du moteur. Régler ce bloc pour la chaîne acier est un travail d'équilibrage à part entière (mesurer mobilité et résultat, comme l'a fait heartland), pas une copie de ses valeurs.",
 
-  "//network": "Pas de relief : la montagne est représentée par l'isolement d'Ironpeak et par les distances saisies à la main (voir « //geographie »). Poser ce scénario sur une carte déplacerait tous les chiffres de « //trains ».",
+  "//network": "Pas de réseau sur relief : la montagne est représentée par l'isolement d'Ironpeak et par les distances saisies à la main (voir « //geographie »). Depuis le 28 octobre 2026, une carte plate, qui ne sert qu'aux charrettes et aux bateaux : la ligne court sur son bord sud, et deux fleuves la longent ou la traversent.",
+
+  "network": {
+    "terrain": {
+      "columns": 256, "rows": 41, "cellSizeKm": 2.0, "baseElevationM": 300,
+      "features": [
+        { "kind": "river", "name": "la Cinder", "halfWidthKm": 2, "amplitudeM": -6,
+          "//": "La rivière des forges : elle descend du massif jusqu'à Emberford, longe la ligne à 3 km au nord par Steelford, Ashfurnace et Forgeton, et la coupe entre Blackseam et Pinewood (x ≈ 202). Navigable d'Emberford à Forgeton : la fonte et le charbon peuvent y descendre.",
+          "points": [{"xKm": 21, "yKm": 81}, {"xKm": 37, "yKm": 3}, {"xKm": 71, "yKm": 3}, {"xKm": 151, "yKm": 3}, {"xKm": 187, "yKm": 3}, {"xKm": 203, "yKm": -3}],
+          "ports": [
+            { "name": "quai d'Emberford", "xKm": 37, "yKm": 1 },
+            { "name": "quai de Steelford", "xKm": 71, "yKm": 1 },
+            { "name": "quai d'Ashfurnace", "xKm": 151, "yKm": 1 },
+            { "name": "quai de Forgeton", "xKm": 185, "yKm": 1 }
+          ] },
+        { "kind": "river", "name": "le torrent des Pins", "halfWidthKm": 2, "amplitudeM": -5,
+          "//": "Non navigable ; il coupe la ligne entre Pinewood et Cedarville (x = 271). Un gué, 40 km au nord.",
+          "points": [{"xKm": 271, "yKm": 81}, {"xKm": 269, "yKm": 40}, {"xKm": 271, "yKm": -3}],
+          "crossings": [ { "name": "gué des Pins", "xKm": 269, "yKm": 40, "kind": "ford" } ] }
+      ]
+    }
+  },
 
   "//finance": "Pas de finance : ce scénario éprouve la chaîne de production du module content, et un scénario éprouve une chose à la fois. Le volet financier vit dans data/heartland-finance.json.",
 

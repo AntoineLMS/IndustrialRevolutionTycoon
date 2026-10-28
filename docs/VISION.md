@@ -288,6 +288,9 @@ Deux écarts avec le moteur actuel (`OpportunisticHaulageSolver`) :
   à sa portée, y compris les charrettes qui y passent. Une industrie mal placée peut
   n'être desservie par aucune gare ; tout peut lui parvenir ou partir de chez elle
   par charrette, à 15 km par jour et bien plus cher qu'en train.
+  Sur un fleuve navigable, elle peut aussi passer par bateau, de port en port ; les
+  bateaux, comme les charrettes, n'appartiennent à personne (28 octobre 2026), et une
+  flotte à soi est une évolution possible.
 - **Le prochain arrêt seulement.** Le moteur actuel estime la revente sur tous les
   arrêts à venir. La règle retenue est plus simple, plus lisible pour le joueur,
   et plus myope : un train ne charge pas pour un arrêt lointain s'il ne gagne rien
